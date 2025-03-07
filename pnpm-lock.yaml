@@ -35,6 +35,9 @@ importers:
       '@radix-ui/react-tabs':
         specifier: ^1.1.3
         version: 1.1.3(@types/react-dom@18.2.0)(@types/react@18.2.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      '@supabase/ssr':
+        specifier: ^0.5.2
+        version: 0.5.2(@supabase/supabase-js@2.21.0)
       '@supabase/supabase-js':
         specifier: 2.21.0
         version: 2.21.0
@@ -625,6 +628,11 @@ packages:
   '@supabase/realtime-js@2.11.5':
     resolution: {integrity: sha512-tc2dzAIP2bJJCFupS5VV/cmAiG8sVuYF3n/yzde/W3g2b67yln1W6nao500asGCvPKg8TdNuHrl2rzC4+YUdeg==}
 
+  '@supabase/ssr@0.5.2':
+    resolution: {integrity: sha512-n3plRhr2Bs8Xun1o4S3k1CDv17iH5QY9YcoEvXX3bxV1/5XSasA0mNXYycFmADIdtdE6BG9MRjP5CGIs8qxC8A==}
+    peerDependencies:
+      '@supabase/supabase-js': ^2.43.4
+
   '@supabase/storage-js@2.7.1':
     resolution: {integrity: sha512-asYHcyDR1fKqrMpytAS1zjyEfvxuOIp1CIXX7ji4lHHcJKqyk+sLl/Vxgm4sN6u8zvuUtae9e4kDxQP2qrwWBA==}
 
@@ -648,6 +656,9 @@ packages:
         optional: true
       react-native:
         optional: true
+
+  '@types/cookie@0.6.0':
+    resolution: {integrity: sha512-4Kh9a6B2bQciAhf7FSuMRRkUWecJgJu9nPnx3yzpsfXX/c50REIqpHY4C82bXP90qrLtXtkDxTZosYO3UpOwlA==}
 
   '@types/json5@0.0.29':
     resolution: {integrity: sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==}
@@ -901,6 +912,10 @@ packages:
 
   concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
+
+  cookie@0.7.2:
+    resolution: {integrity: sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==}
+    engines: {node: '>= 0.6'}
 
   cross-fetch@3.2.0:
     resolution: {integrity: sha512-Q+xVJLoGOeIMXZmbUK4HYk+69cQH6LudR0Vu/pRm2YlU/hDV9CiS0gKUMaWY5f2NeUH9C1nV3bsTlCo0FsTV1Q==}
@@ -2716,6 +2731,12 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
+  '@supabase/ssr@0.5.2(@supabase/supabase-js@2.21.0)':
+    dependencies:
+      '@supabase/supabase-js': 2.21.0
+      '@types/cookie': 0.6.0
+      cookie: 0.7.2
+
   '@supabase/storage-js@2.7.1':
     dependencies:
       '@supabase/node-fetch': 2.6.15
@@ -2746,6 +2767,8 @@ snapshots:
       use-sync-external-store: 1.4.0(react@18.2.0)
     optionalDependencies:
       react-dom: 18.2.0(react@18.2.0)
+
+  '@types/cookie@0.6.0': {}
 
   '@types/json5@0.0.29': {}
 
@@ -3026,6 +3049,8 @@ snapshots:
   commander@4.1.1: {}
 
   concat-map@0.0.1: {}
+
+  cookie@0.7.2: {}
 
   cross-fetch@3.2.0:
     dependencies:
