@@ -18,8 +18,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useAuth } from "@/providers/AuthProvider";
 import { ProfileUpdate } from "@/types/database";
+import { useAuth } from "@/hooks/useAuth";
 
 const profileSchema = z.object({
   username: z
