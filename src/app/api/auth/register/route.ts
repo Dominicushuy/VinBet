@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       email: validatedData.email,
       password: validatedData.password,
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/callback`,
         data: {
           referred_by: referredBy,
         },
