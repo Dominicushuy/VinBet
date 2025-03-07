@@ -1,17 +1,24 @@
-// src/app/auth/callback/route.ts
-import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+// Cập nhật src/app/api/auth/callback/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
 
 export async function GET(request: NextRequest) {
-  const requestUrl = new URL(request.url)
-  const code = requestUrl.searchParams.get('code')
+  const requestUrl = new URL(request.url);
+  const code = requestUrl.searchParams.get("code");
+  const next = requestUrl.searchParams.get("next") || "/";
 
   if (code) {
-    const supabase = createRouteHandlerClient({ cookies })
-    await supabase.auth.exchangeCodeForSession(code)
+    const supabase = createRouteHandlerClient({ cookies });
+    await supabase.auth.exchangeCodeForSession(code);
   }
 
-  // URL để chuyển hướng sau khi xác thực
-  return NextResponse.redirect(requestUrl.origin)
+  if (next === "/reset-password") {
+    return NextResponse.redirect(
+      `${requestUrl.origin}/reset-password?type=recovery`
+    );
+  }
+
+  // Chuyển hướng đến trang được chỉ định hoặc trang chủ
+  return NextResponse.redirect(`${requestUrl.origin}${next}`);
 }

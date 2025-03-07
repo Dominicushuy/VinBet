@@ -62,6 +62,13 @@ export function useAuth() {
     return updateProfileMutation.mutateAsync(data);
   };
 
+  const isPasswordResetSession = (): boolean => {
+    return (
+      !!user &&
+      new URL(window.location.href).searchParams.get("type") === "recovery"
+    );
+  };
+
   return {
     user,
     profile,
@@ -73,5 +80,6 @@ export function useAuth() {
     resetPassword,
     updateProfile,
     refreshSession,
+    isPasswordResetSession,
   };
 }
