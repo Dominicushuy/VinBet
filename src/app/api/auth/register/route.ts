@@ -17,28 +17,31 @@ export async function POST(request: NextRequest) {
 
     const supabase = createRouteHandlerClient({ cookies })
 
-    // Tìm referrer nếu có mã giới thiệu
-    let referrerId = null
-    if (validatedData.referralCode) {
-      const { data: referrer } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('referral_code', validatedData.referralCode)
-        .single()
+    // Gọi function register_new_user để validate trước
+    const { data: validationResult, error: validationError } =
+      await supabase.rpc('register_new_user', {
+        email: validatedData.email,
+        password: validatedData.password,
+        referral_code: validatedData.referralCode,
+      })
 
-      if (referrer) {
-        referrerId = referrer.id
-      }
+    if (validationError) {
+      return NextResponse.json(
+        { error: validationError.message },
+        { status: 400 }
+      )
     }
 
-    // Đăng ký người dùng mới
+    // Nếu validation passed, tiến hành đăng ký qua Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email: validatedData.email,
       password: validatedData.password,
       options: {
         emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
         data: {
-          referred_by: referrerId,
+          referred_by: validatedData.referralCode
+            ? await getReferrerId(supabase, validatedData.referralCode)
+            : null,
         },
       },
     })
@@ -55,4 +58,23 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: 'Lỗi server' }, { status: 500 })
   }
+}
+
+// Helper function để lấy referrer ID từ referral code
+async function getReferrerId(
+  supabase: any,
+  referralCode: string
+): Promise<string | null> {
+  const { data: referrer, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('referral_code', referralCode)
+    .single()
+
+  if (error) {
+    console.error('Error getting referrer ID:', error.message)
+    return null
+  }
+
+  return referrer?.id || null
 }

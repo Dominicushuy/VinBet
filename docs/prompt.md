@@ -1,52 +1,31 @@
 Theo file `plan.md`, hãy giúp tôi tiếp tục phát triển dự án, hãy bắt đầu với các công việc sau:
 
-## 2. Hệ thống xác thực và quản lý người dùng (6 ngày)
-
-### 2.1 Xây dựng hệ thống Authentication (3 ngày)
+### 2.2 Quản lý hồ sơ người dùng (3 ngày)
 
 #### Backend - 1 ngày
-- [ ] Cấu hình Email authentication
-  - [ ] Tùy chỉnh email templates
-  - [ ] Thiết lập flow xác thực
-- [ ] Tạo function register_new_user
-  - [ ] Thêm validation cơ bản
-  - [ ] Xử lý referral code (nếu có)
+- [ ] Tạo function update_user_profile
+  - [ ] Validation thông tin profile
+- [ ] Tạo function upload_avatar
+  - [ ] Xử lý upload và lưu ảnh
 
-#### Frontend Components - 1 ngày
-- [ ] Tạo AuthLayout
-  - [ ] Thiết kế layout với logo, background
-  - [ ] Đảm bảo responsive
-- [ ] Tạo LoginForm component
-  - [ ] Form đăng nhập với validation
-  - [ ] Xử lý lỗi đăng nhập
-- [ ] Tạo RegisterForm component
-  - [ ] Form đăng ký với các trường cần thiết
-  - [ ] Validate email và password
-- [ ] Tạo ForgotPasswordForm component
-  - [ ] Form email recovery
-  - [ ] Thông báo xác nhận
-- [ ] Tạo ResetPasswordForm component
-  - [ ] Form reset password
-  - [ ] Validation matching passwords
+#### Frontend Components - 1.5 ngày
+- [ ] Tạo ProfileForm component
+  - [ ] Form cập nhật thông tin cá nhân
+  - [ ] Validation các trường
+- [ ] Tạo AvatarUpload component
+  - [ ] Upload và preview avatar
+  - [ ] Hiển thị progress
+- [ ] Tạo UserStatistics component
+  - [ ] Hiển thị thống kê cơ bản
+  - [ ] Hiển thị win/loss ratio
 
 #### API Routes - 0.5 ngày
-- [ ] Tạo route /api/auth/register
-  - [ ] Xử lý đăng ký mới
-- [ ] Tạo route /api/auth/login
-  - [ ] Xử lý đăng nhập
-- [ ] Tạo route /api/auth/verify-email
-  - [ ] Xác minh email
-- [ ] Tạo route /api/auth/reset-password
-  - [ ] Xử lý reset password
-
-#### Services & Hooks - 0.5 ngày
-- [ ] Tạo AuthService
-  - [ ] Implement login, register, resetPassword
-- [ ] Tạo hook useAuth
-  - [ ] Quản lý auth state
-  - [ ] Expose auth methods
-- [ ] Tạo middleware auth
-  - [ ] Bảo vệ routes yêu cầu đăng nhập
+- [ ] Tạo route /api/profile
+  - [ ] GET và PUT thông tin profile
+- [ ] Tạo route /api/profile/avatar
+  - [ ] Upload và cập nhật avatar
+- [ ] Tạo route /api/profile/change-password
+  - [ ] Đổi mật khẩu
 
 *Lưu ý:
 - Kết quả trả về chỉ bao gồm những mục tôi liệt kê ở trên, tôi sẽ hỏi bạn thêm sau đó.
