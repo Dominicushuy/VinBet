@@ -38,7 +38,8 @@ export function GameFilters({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onFilterChange({
-      status: statusFilter || undefined,
+      // status: statusFilter || undefined,
+      status: statusFilter === "all" ? undefined : status,
       fromDate: fromDateFilter || undefined,
       toDate: toDateFilter || undefined,
     });
@@ -69,7 +70,7 @@ export function GameFilters({
                   <SelectValue placeholder="Tất cả" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tất cả</SelectItem>
+                  <SelectItem value="all">Tất cả</SelectItem>
                   <SelectItem value="scheduled">Sắp diễn ra</SelectItem>
                   <SelectItem value="active">Đang diễn ra</SelectItem>
                   <SelectItem value="completed">Đã kết thúc</SelectItem>

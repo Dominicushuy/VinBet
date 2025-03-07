@@ -1,12 +1,11 @@
 // src/components/profile/UserStatistics.tsx
 "use client";
 
-import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { useAuth } from "@/hooks/useAuth";
-import { createClient } from "@/lib/supabase/client";
+import { useUserStatsQuery } from "@/hooks/queries/useProfileQueries";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface StatProps {
   title: string;
@@ -30,88 +29,8 @@ function StatCard({ title, value, description }: StatProps) {
   );
 }
 
-interface UserStats {
-  totalGames: number;
-  totalBets: number;
-  wins: number;
-  losses: number;
-  winRate: number;
-  totalWinAmount: number;
-  totalBetAmount: number;
-  netProfit: number;
-}
-
 export function UserStatistics() {
-  const { profile } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
-  const [stats, setStats] = useState<UserStats>({
-    totalGames: 0,
-    totalBets: 0,
-    wins: 0,
-    losses: 0,
-    winRate: 0,
-    totalWinAmount: 0,
-    totalBetAmount: 0,
-    netProfit: 0,
-  });
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      if (!profile) return;
-
-      setIsLoading(true);
-      const supabase = createClient();
-
-      try {
-        // Lấy tổng số tiền đặt cược
-        const { data: betData, error: betError } = await supabase
-          .from("bets")
-          .select("amount, status")
-          .eq("profile_id", profile.id);
-
-        if (betError) throw betError;
-
-        // Lấy các giao dịch thắng
-        const { data: winData, error: winError } = await supabase
-          .from("transactions")
-          .select("amount")
-          .eq("profile_id", profile.id)
-          .eq("type", "win");
-
-        if (winError) throw winError;
-
-        // Tính toán thống kê
-        const totalBets = betData?.length || 0;
-        const wins = betData?.filter((bet) => bet.status === "won").length || 0;
-        const losses =
-          betData?.filter((bet) => bet.status === "lost").length || 0;
-        const winRate = totalBets > 0 ? (wins / totalBets) * 100 : 0;
-
-        const totalBetAmount =
-          betData?.reduce((sum, bet) => sum + bet.amount, 0) || 0;
-        const totalWinAmount =
-          winData?.reduce((sum, tx) => sum + tx.amount, 0) || 0;
-        const netProfit = totalWinAmount - totalBetAmount;
-
-        setStats({
-          totalGames: 0, // Sẽ lấy từ API khác
-          totalBets,
-          wins,
-          losses,
-          winRate,
-          totalWinAmount,
-          totalBetAmount,
-          netProfit,
-        });
-      } catch (error) {
-        console.error("Error fetching stats:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchStats();
-  }, [profile]);
+  const { data: stats, isLoading } = useUserStatsQuery();
 
   // Format number to money
   const formatMoney = (value: number) => {
@@ -120,6 +39,10 @@ export function UserStatistics() {
       currency: "VND",
     }).format(value);
   };
+
+  if (isLoading) {
+    return <StatisticsSkeleton />;
+  }
 
   return (
     <Tabs defaultValue="overview" className="w-full">
@@ -132,17 +55,17 @@ export function UserStatistics() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Số dư hiện tại"
-            value={formatMoney(profile?.balance || 0)}
+            value={formatMoney(stats?.balance || 0)}
           />
           <StatCard
             title="Lợi nhuận"
-            value={formatMoney(stats.netProfit)}
-            description={stats.netProfit >= 0 ? "Lãi" : "Lỗ"}
+            value={formatMoney(stats?.netProfit || 0)}
+            description={stats?.netProfit >= 0 ? "Lãi" : "Lỗ"}
           />
-          <StatCard title="Số lần đặt cược" value={stats.totalBets} />
+          <StatCard title="Số lần đặt cược" value={stats?.totalBets || 0} />
           <StatCard
             title="Tỷ lệ thắng"
-            value={`${stats.winRate.toFixed(1)}%`}
+            value={`${(stats?.winRate || 0).toFixed(1)}%`}
           />
         </div>
       </TabsContent>
@@ -151,15 +74,15 @@ export function UserStatistics() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <StatCard
             title="Tổng tiền đặt cược"
-            value={formatMoney(stats.totalBetAmount)}
+            value={formatMoney(stats?.totalBetAmount || 0)}
           />
           <StatCard
             title="Tổng tiền thắng"
-            value={formatMoney(stats.totalWinAmount)}
+            value={formatMoney(stats?.totalWinAmount || 0)}
           />
           <StatCard
             title="Thắng/Thua"
-            value={`${stats.wins}/${stats.losses}`}
+            value={`${stats?.wins || 0}/${stats?.losses || 0}`}
           />
         </div>
 
@@ -170,23 +93,50 @@ export function UserStatistics() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Số lần thắng</p>
-              <p className="text-lg font-medium">{stats.wins}</p>
+              <p className="text-lg font-medium">{stats?.wins || 0}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Số lần thua</p>
-              <p className="text-lg font-medium">{stats.losses}</p>
+              <p className="text-lg font-medium">{stats?.losses || 0}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Số cược đã đặt</p>
-              <p className="text-lg font-medium">{stats.totalBets}</p>
+              <p className="text-lg font-medium">{stats?.totalBets || 0}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Tỷ lệ thắng</p>
-              <p className="text-lg font-medium">{stats.winRate.toFixed(1)}%</p>
+              <p className="text-lg font-medium">
+                {(stats?.winRate || 0).toFixed(1)}%
+              </p>
             </div>
           </div>
         </div>
       </TabsContent>
     </Tabs>
+  );
+}
+
+function StatisticsSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2 mb-4">
+        <Skeleton className="h-10 w-20" />
+        <Skeleton className="h-10 w-20" />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i}>
+            <CardHeader className="py-3">
+              <Skeleton className="h-5 w-24" />
+            </CardHeader>
+            <CardContent className="py-2">
+              <Skeleton className="h-8 w-16 mb-1" />
+              <Skeleton className="h-3 w-20" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
   );
 }

@@ -18,6 +18,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { useChangePasswordMutation } from "@/hooks/queries/useProfileQueries";
 
 const changePasswordSchema = z
   .object({
@@ -33,10 +34,11 @@ const changePasswordSchema = z
 type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
 
 export function ChangePasswordForm() {
-  const [isLoading, setIsLoading] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const { isLoading, mutateAsync, isError } = useChangePasswordMutation();
 
   const form = useForm<ChangePasswordFormValues>({
     resolver: zodResolver(changePasswordSchema),
@@ -48,30 +50,13 @@ export function ChangePasswordForm() {
   });
 
   async function onSubmit(data: ChangePasswordFormValues) {
-    setIsLoading(true);
-    try {
-      const response = await fetch("/api/profile/change-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          currentPassword: data.currentPassword,
-          newPassword: data.newPassword,
-        }),
-      });
+    await mutateAsync({
+      currentPassword: data.currentPassword,
+      newPassword: data.newPassword,
+    });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Đổi mật khẩu thất bại");
-      }
-
-      toast.success("Đổi mật khẩu thành công");
+    if (!isError) {
       form.reset();
-    } catch (error: any) {
-      toast.error(error.message || "Đổi mật khẩu thất bại");
-    } finally {
-      setIsLoading(false);
     }
   }
 

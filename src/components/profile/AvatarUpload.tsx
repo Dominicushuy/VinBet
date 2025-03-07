@@ -3,18 +3,20 @@
 
 import { useState, useRef } from "react";
 import { toast } from "react-hot-toast";
-import { Upload, X, Camera } from "lucide-react";
+import { Upload, X, Camera, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/useAuth";
+import { useUploadAvatarMutation } from "@/hooks/queries/useProfileQueries";
 
 export function AvatarUpload() {
-  const { profile, refreshSession } = useAuth();
-  const [isUploading, setIsUploading] = useState(false);
+  const { profile } = useAuth();
   const [uploadProgress, setUploadProgress] = useState(0);
   const [preview, setPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { isLoading, mutateAsync } = useUploadAvatarMutation();
 
   // Hàm xử lý khi chọn file
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,51 +48,32 @@ export function AvatarUpload() {
 
   // Hàm upload avatar
   const uploadAvatar = async (file: File) => {
-    try {
-      setIsUploading(true);
-      setUploadProgress(0);
-
-      const formData = new FormData();
-      formData.append("avatar", file);
-
-      // Giả lập progress
-      const intervalId = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(intervalId);
-            return prev;
-          }
-          return prev + 10;
-        });
-      }, 300);
-
-      const response = await fetch("/api/profile/avatar", {
-        method: "POST",
-        body: formData,
+    // Setup progress tracking
+    setUploadProgress(0);
+    const progressInterval = setInterval(() => {
+      setUploadProgress((prev) => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return prev;
+        }
+        return prev + 10;
       });
+    }, 300);
 
-      clearInterval(intervalId);
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    try {
+      await mutateAsync(formData);
+      clearInterval(progressInterval);
       setUploadProgress(100);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Upload failed");
-      }
-
-      const data = await response.json();
-
-      // Refresh session để cập nhật avatar trong context
-      await refreshSession();
-
-      toast.success("Avatar đã được cập nhật");
-    } catch (error: any) {
-      toast.error(error.message || "Upload avatar thất bại");
-      console.error("Upload error:", error);
-    } finally {
       setTimeout(() => {
-        setIsUploading(false);
         setUploadProgress(0);
       }, 500);
+    } catch (error) {
+      clearInterval(progressInterval);
+      setUploadProgress(0);
     }
   };
 
@@ -121,7 +104,7 @@ export function AvatarUpload() {
             className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
             size="icon"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
+            disabled={isLoading}
           >
             <Camera className="h-4 w-4" />
             <span className="sr-only">Change avatar</span>
@@ -134,10 +117,10 @@ export function AvatarUpload() {
           accept="image/*"
           className="hidden"
           onChange={handleFileChange}
-          disabled={isUploading}
+          disabled={isLoading}
         />
 
-        {isUploading && (
+        {isLoading && (
           <div className="w-full max-w-xs space-y-2">
             <Progress value={uploadProgress} className="h-2 w-full" />
             <p className="text-center text-sm text-muted-foreground">
@@ -146,7 +129,7 @@ export function AvatarUpload() {
           </div>
         )}
 
-        {preview && !isUploading && (
+        {preview && !isLoading && (
           <div className="flex items-center gap-2">
             <Button
               size="sm"
@@ -160,7 +143,7 @@ export function AvatarUpload() {
           </div>
         )}
 
-        {!preview && !isUploading && (
+        {!preview && !isLoading && (
           <Button
             variant="outline"
             size="sm"

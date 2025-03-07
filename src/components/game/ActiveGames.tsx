@@ -1,51 +1,20 @@
 // src/components/game/ActiveGames.tsx
 "use client";
 
-import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GameCard } from "@/components/game/GameCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useActiveGamesQuery } from "@/hooks/queries/useGameQueries";
 import { GameRound } from "@/types/database";
 
 export function ActiveGames() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [activeGames, setActiveGames] = useState<GameRound[]>([]);
-  const [upcomingGames, setUpcomingGames] = useState<GameRound[]>([]);
+  const { data, isLoading, error } = useActiveGamesQuery();
 
-  const fetchActiveGames = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const response = await fetch("/api/game-rounds/active");
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to fetch active games");
-      }
-
-      const data = await response.json();
-      setActiveGames(data.active || []);
-      setUpcomingGames(data.upcoming || []);
-    } catch (err: any) {
-      setError(err.message || "Không thể tải thông tin lượt chơi");
-      console.error("Active games fetch error:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchActiveGames();
-
-    // Auto-refresh every 1 minute
-    const intervalId = setInterval(fetchActiveGames, 60000);
-    return () => clearInterval(intervalId);
-  }, []);
+  const activeGames = data?.active || [];
+  const upcomingGames = data?.upcoming || [];
 
   const LoadingSkeleton = () => (
     <div className="space-y-4">
@@ -87,7 +56,9 @@ export function ActiveGames() {
         {error ? (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>
+              {(error as Error).message || "Không thể tải thông tin lượt chơi"}
+            </AlertDescription>
           </Alert>
         ) : (
           <Tabs defaultValue="active">
@@ -109,7 +80,7 @@ export function ActiveGames() {
                 </p>
               ) : (
                 <div className="space-y-4">
-                  {activeGames.map((game) => (
+                  {activeGames.map((game: GameRound) => (
                     <GameCard key={game.id} game={game} />
                   ))}
                 </div>
@@ -125,7 +96,7 @@ export function ActiveGames() {
                 </p>
               ) : (
                 <div className="space-y-4">
-                  {upcomingGames.map((game) => (
+                  {upcomingGames.map((game: GameRound) => (
                     <GameCard key={game.id} game={game} />
                   ))}
                 </div>

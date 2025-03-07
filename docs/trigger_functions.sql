@@ -548,7 +548,8 @@ CREATE OR REPLACE FUNCTION get_game_rounds(
   to_date TIMESTAMP WITH TIME ZONE DEFAULT NULL,
   page_number INTEGER DEFAULT 1,
   page_size INTEGER DEFAULT 10
-) RETURNS TABLE (
+)
+RETURNS TABLE (
   id UUID,
   start_time TIMESTAMP WITH TIME ZONE,
   end_time TIMESTAMP WITH TIME ZONE,
@@ -560,33 +561,32 @@ CREATE OR REPLACE FUNCTION get_game_rounds(
   total_count BIGINT
 ) AS $$
 DECLARE
-  offset_value INTEGER := (page_number - 1) * page_size;
+  offset_val INTEGER;
 BEGIN
+  offset_val := (page_number - 1) * page_size;
+
   RETURN QUERY
-  WITH filtered_rounds AS (
-    SELECT *
-    FROM game_rounds
-    WHERE 
-      (status_filter IS NULL OR status = status_filter) AND
-      (from_date IS NULL OR start_time >= from_date) AND
-      (to_date IS NULL OR end_time <= to_date)
-  ),
-  counted AS (
-    SELECT COUNT(*) AS total FROM filtered_rounds
-  )
   SELECT 
-    fr.id,
-    fr.start_time,
-    fr.end_time,
-    fr.result,
-    fr.status,
-    fr.created_by,
-    fr.created_at,
-    fr.updated_at,
-    c.total
-  FROM filtered_rounds fr, counted c
-  ORDER BY fr.start_time DESC
-  LIMIT page_size
-  OFFSET offset_value;
+    gr.id,
+    gr.start_time,
+    gr.end_time,
+    gr.result,
+    gr.status, -- Sửa: chỉ định rõ gr.status thay vì status
+    gr.created_by,
+    gr.created_at,
+    gr.updated_at,
+    COUNT(*) OVER() AS total_count
+  FROM 
+    game_rounds gr
+  WHERE
+    (status_filter IS NULL OR gr.status = status_filter) -- Sửa: gr.status
+    AND (from_date IS NULL OR gr.start_time >= from_date) -- Sửa: gr.start_time
+    AND (to_date IS NULL OR gr.start_time <= to_date) -- Sửa: gr.start_time
+  ORDER BY
+    gr.start_time DESC
+  LIMIT
+    page_size
+  OFFSET
+    offset_val;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;

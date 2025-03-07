@@ -1,7 +1,7 @@
 // src/components/admin/GameRoundManagement.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -47,9 +47,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { format } from "date-fns";
-import { toast } from "react-hot-toast";
-import { GameRound } from "@/types/database";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { GameRound } from "@/types/database";
+import { toast } from "react-hot-toast";
+import {
+  useCreateGameRoundMutation,
+  useGameRoundsQuery,
+  useUpdateGameRoundMutation,
+} from "@/hooks/queries/useGameQueries";
 
 // Form schema for creating a new game round
 const createGameRoundSchema = z.object({
@@ -68,15 +73,6 @@ export function GameRoundManagement() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [gameRounds, setGameRounds] = useState<GameRound[]>([]);
-  const [pagination, setPagination] = useState({
-    total: 0,
-    page: 1,
-    pageSize: 10,
-    totalPages: 0,
-  });
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [selectedGame, setSelectedGame] = useState<GameRound | null>(null);
@@ -84,10 +80,10 @@ export function GameRoundManagement() {
   const status = searchParams.get("status") || undefined;
   const fromDate = searchParams.get("fromDate") || undefined;
   const toDate = searchParams.get("toDate") || undefined;
-  const page = Number(searchParams.get("page") || pagination.page);
-  const pageSize = Number(searchParams.get("pageSize") || pagination.pageSize);
+  const page = Number(searchParams.get("page") || 1);
+  const pageSize = Number(searchParams.get("pageSize") || 10);
 
-  // Form for creating a new game round
+  // Create form
   const createForm = useForm<z.infer<typeof createGameRoundSchema>>({
     resolver: zodResolver(createGameRoundSchema),
     defaultValues: {
@@ -96,7 +92,7 @@ export function GameRoundManagement() {
     },
   });
 
-  // Form for updating a game round
+  // Update form
   const updateForm = useForm<z.infer<typeof updateGameRoundSchema>>({
     resolver: zodResolver(updateGameRoundSchema),
     defaultValues: {
@@ -105,105 +101,25 @@ export function GameRoundManagement() {
     },
   });
 
-  // Fetch game rounds
-  const fetchGameRounds = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  // React Query hooks
+  const { data, isLoading, error, refetch } = useGameRoundsQuery({
+    status,
+    fromDate,
+    toDate,
+    page,
+    pageSize,
+  });
 
-      const params = new URLSearchParams();
-      if (status) params.append("status", status);
-      if (fromDate) params.append("fromDate", fromDate);
-      if (toDate) params.append("toDate", toDate);
-      params.append("page", page.toString());
-      params.append("pageSize", pageSize.toString());
+  const createGameRoundMutation = useCreateGameRoundMutation();
 
-      const response = await fetch(`/api/game-rounds?${params.toString()}`);
+  const updateGameRoundMutation = useUpdateGameRoundMutation();
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to fetch game rounds");
-      }
-
-      const data = await response.json();
-      setGameRounds(data.gameRounds);
-      setPagination(data.pagination);
-    } catch (err: any) {
-      setError(err.message || "An error occurred while fetching game rounds");
-      console.error("Game rounds fetch error:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Create a new game round
-  const handleCreateGameRound = async (
-    data: z.infer<typeof createGameRoundSchema>
-  ) => {
-    try {
-      const response = await fetch("/api/game-rounds", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          startTime: data.startTime,
-          endTime: data.endTime,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create game round");
-      }
-
-      toast.success("Lượt chơi đã được tạo thành công");
-      setCreateDialogOpen(false);
-      createForm.reset();
-      fetchGameRounds();
-    } catch (err: any) {
-      toast.error(err.message || "Không thể tạo lượt chơi");
-      console.error("Create game round error:", err);
-    }
-  };
-
-  // Update a game round
-  const handleUpdateGameRound = async (
-    data: z.infer<typeof updateGameRoundSchema>
-  ) => {
-    try {
-      if (!selectedGame) return;
-
-      // Validate result when status is completed
-      if (data.status === "completed" && !data.result) {
-        toast.error("Kết quả là bắt buộc khi trạng thái là 'Đã kết thúc'");
-        return;
-      }
-
-      const response = await fetch(`/api/game-rounds/${selectedGame.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: data.status,
-          result: data.result,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update game round");
-      }
-
-      toast.success("Lượt chơi đã được cập nhật thành công");
-      setUpdateDialogOpen(false);
-      updateForm.reset();
-      fetchGameRounds();
-    } catch (err: any) {
-      toast.error(err.message || "Không thể cập nhật lượt chơi");
-      console.error("Update game round error:", err);
-    }
+  const gameRounds = data?.gameRounds || [];
+  const pagination = data?.pagination || {
+    total: 0,
+    page,
+    pageSize,
+    totalPages: 0,
   };
 
   const updateFilters = (filters: any) => {
@@ -236,9 +152,31 @@ export function GameRoundManagement() {
     setUpdateDialogOpen(true);
   };
 
-  useEffect(() => {
-    fetchGameRounds();
-  }, [status, fromDate, toDate, page, pageSize]);
+  const handleCreateGameRound = (
+    data: z.infer<typeof createGameRoundSchema>
+  ) => {
+    createGameRoundMutation.mutate(data);
+  };
+
+  const handleUpdateGameRound = (
+    data: z.infer<typeof updateGameRoundSchema>
+  ) => {
+    if (!selectedGame) return;
+
+    // Validate result when status is completed
+    if (data.status === "completed" && !data.result) {
+      toast.error("Kết quả là bắt buộc khi trạng thái là 'Đã kết thúc'");
+      return;
+    }
+
+    updateGameRoundMutation.mutate({
+      id: selectedGame.id,
+      data: {
+        status: data.status,
+        result: data.result,
+      },
+    });
+  };
 
   // Format date for display
   const formatDate = (date: string) => {
@@ -264,7 +202,7 @@ export function GameRoundManagement() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Button onClick={() => fetchGameRounds()}>
+        <Button onClick={() => refetch()}>
           <RefreshCw className="mr-2 h-4 w-4" />
           Làm mới
         </Button>
@@ -318,7 +256,14 @@ export function GameRoundManagement() {
                 />
 
                 <DialogFooter>
-                  <Button type="submit">Tạo lượt chơi</Button>
+                  <Button
+                    type="submit"
+                    disabled={createGameRoundMutation.isLoading}
+                  >
+                    {createGameRoundMutation.isLoading
+                      ? "Đang tạo..."
+                      : "Tạo lượt chơi"}
+                  </Button>
                 </DialogFooter>
               </form>
             </Form>
@@ -336,7 +281,7 @@ export function GameRoundManagement() {
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{(error as Error).message}</AlertDescription>
         </Alert>
       )}
 
@@ -381,7 +326,7 @@ export function GameRoundManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {gameRounds.map((game) => (
+                    {gameRounds.map((game: GameRound) => (
                       <TableRow key={game.id}>
                         <TableCell className="font-medium">
                           {game.id.substring(0, 8)}...
@@ -506,7 +451,14 @@ export function GameRoundManagement() {
                 )}
 
                 <DialogFooter>
-                  <Button type="submit">Cập nhật</Button>
+                  <Button
+                    type="submit"
+                    disabled={updateGameRoundMutation.isLoading}
+                  >
+                    {updateGameRoundMutation.isLoading
+                      ? "Đang cập nhật..."
+                      : "Cập nhật"}
+                  </Button>
                 </DialogFooter>
               </form>
             </Form>
