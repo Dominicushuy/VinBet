@@ -8,10 +8,8 @@ ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE referrals ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies to ensure clean setup
-DROP POLICY IF EXISTS "Users can read their own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can insert their own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
-DROP POLICY IF EXISTS "Admins can read all profiles" ON profiles;
 DROP POLICY IF EXISTS "Admins can update all profiles" ON profiles;
 
 DROP POLICY IF EXISTS "Everyone can read game rounds" ON game_rounds;
@@ -37,9 +35,9 @@ DROP POLICY IF EXISTS "Users can read their referrals" ON referrals;
 DROP POLICY IF EXISTS "Admins can read all referrals" ON referrals;
 
 -- Policies for profiles table
-CREATE POLICY "Users can read their own profile"
+CREATE POLICY "Allow profile access"
 ON profiles FOR SELECT
-USING (auth.uid() = id);
+USING (true); -- Cho phép đọc tất cả profiles
 
 CREATE POLICY "Users can insert their own profile"
 ON profiles FOR INSERT
@@ -48,16 +46,6 @@ WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users can update their own profile"
 ON profiles FOR UPDATE
 USING (auth.uid() = id);
-
-CREATE POLICY "Admins can read all profiles"
-ON profiles FOR SELECT
-USING (
-  CASE 
-    WHEN auth.uid() = id THEN TRUE -- Luôn cho phép người dùng xem profile của chính họ
-    WHEN (SELECT is_admin FROM profiles WHERE id = auth.uid()) = TRUE THEN TRUE -- Admin xem tất cả
-    ELSE FALSE
-  END
-);
 
 CREATE POLICY "Admins can update all profiles"
 ON profiles FOR UPDATE

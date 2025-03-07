@@ -4,6 +4,7 @@ import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { nanoid } from "nanoid";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -60,17 +61,19 @@ export async function POST(request: NextRequest) {
       const referralCode = nanoid(8);
 
       // Tạo profile mới
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: data.user.id,
-        email: validatedData.email,
-        username: generateUsername(validatedData.email),
-        referral_code: referralCode,
-        referred_by: referredBy,
-        balance: 0,
-        is_admin: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+      const { error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .insert({
+          id: data.user.id,
+          email: validatedData.email,
+          username: generateUsername(validatedData.email),
+          referral_code: referralCode,
+          referred_by: referredBy,
+          balance: 0,
+          is_admin: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
 
       if (profileError) {
         console.error("Error creating profile:", profileError.message);
