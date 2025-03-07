@@ -1,34 +1,40 @@
 Theo file `plan.md`, hãy giúp tôi tiếp tục phát triển dự án, hãy bắt đầu với các công việc sau:
 
-### 2.2 Quản lý hồ sơ người dùng (3 ngày)
+## 3. Hệ thống Game và Cá cược (10 ngày)
+
+### 3.1 Quản lý lượt chơi (3 ngày)
 
 #### Backend - 1 ngày
 
-- [ ] Tạo function update_user_profile
-  - [ ] Validation thông tin profile
-- [ ] Tạo function upload_avatar
-  - [ ] Xử lý upload và lưu ảnh
+- [ ] Tạo function create_game_round
+  - [ ] Thiết lập thông tin lượt chơi
+- [ ] Tạo function update_game_round_status
+  - [ ] Cập nhật trạng thái lượt chơi
+- [ ] Tạo function get_game_rounds
+  - [ ] Lấy danh sách lượt chơi với filters
 
 #### Frontend Components - 1.5 ngày
 
-- [ ] Tạo ProfileForm component
-  - [ ] Form cập nhật thông tin cá nhân
-  - [ ] Validation các trường
-- [ ] Tạo AvatarUpload component
-  - [ ] Upload và preview avatar
-  - [ ] Hiển thị progress
-- [ ] Tạo UserStatistics component
-  - [ ] Hiển thị thống kê cơ bản
-  - [ ] Hiển thị win/loss ratio
+- [ ] Tạo GameList component
+  - [ ] Hiển thị danh sách lượt chơi
+  - [ ] Pagination và filters
+- [ ] Tạo GameCard component
+  - [ ] Hiển thị thông tin lượt chơi
+  - [ ] Countdown timer
+- [ ] Tạo GameFilters component
+  - [ ] Bộ lọc theo trạng thái
+  - [ ] Lọc theo thời gian
+- [ ] Tạo GameListSkeleton component
+  - [ ] Loading state cho danh sách game
 
 #### API Routes - 0.5 ngày
 
-- [ ] Tạo route /api/profile
-  - [ ] GET và PUT thông tin profile
-- [ ] Tạo route /api/profile/avatar
-  - [ ] Upload và cập nhật avatar
-- [ ] Tạo route /api/profile/change-password
-  - [ ] Đổi mật khẩu
+- [ ] Tạo route /api/game-rounds
+  - [ ] GET danh sách với filters
+- [ ] Tạo route /api/game-rounds/[id]
+  - [ ] GET thông tin chi tiết lượt chơi
+- [ ] Tạo route /api/game-rounds/active
+  - [ ] GET các lượt đang diễn ra
 
 \*Lưu ý:
 

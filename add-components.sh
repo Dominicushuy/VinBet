@@ -9,12 +9,13 @@ components=(
   avatar
   tabs
   sheet
-  toast
+  sonner
   table
   badge
   progress
   separator
   alert
+  select
 )
 
 for comp in "${components[@]}"; do

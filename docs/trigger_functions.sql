@@ -474,3 +474,119 @@ CREATE TRIGGER on_profile_update
 BEFORE UPDATE ON profiles
 FOR EACH ROW
 EXECUTE FUNCTION validate_user_profile();
+
+-- Function để tạo game round mới
+CREATE OR REPLACE FUNCTION create_game_round(
+  start_time TIMESTAMP WITH TIME ZONE,
+  end_time TIMESTAMP WITH TIME ZONE,
+  created_by UUID
+) RETURNS UUID AS $$
+DECLARE
+  new_game_round_id UUID;
+BEGIN
+  -- Validate input
+  IF start_time >= end_time THEN
+    RAISE EXCEPTION 'End time must be after start time';
+  END IF;
+
+  -- Insert new game round
+  INSERT INTO game_rounds (
+    start_time,
+    end_time,
+    status,
+    created_by,
+    created_at,
+    updated_at
+  ) VALUES (
+    start_time,
+    end_time,
+    'scheduled',
+    created_by,
+    NOW(),
+    NOW()
+  ) RETURNING id INTO new_game_round_id;
+
+  RETURN new_game_round_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function để cập nhật trạng thái game round
+CREATE OR REPLACE FUNCTION update_game_round_status(
+  game_round_id UUID,
+  new_status TEXT,
+  game_result TEXT DEFAULT NULL
+) RETURNS SETOF game_rounds AS $$
+DECLARE
+  valid_statuses TEXT[] := ARRAY['scheduled', 'active', 'completed', 'cancelled'];
+BEGIN
+  -- Validate status
+  IF NOT (new_status = ANY(valid_statuses)) THEN
+    RAISE EXCEPTION 'Invalid status. Must be one of: scheduled, active, completed, cancelled';
+  END IF;
+
+  -- Validate result when status is completed
+  IF new_status = 'completed' AND game_result IS NULL THEN
+    RAISE EXCEPTION 'Result is required when status is completed';
+  END IF;
+
+  -- Update game round
+  RETURN QUERY
+  UPDATE game_rounds
+  SET 
+    status = new_status,
+    result = CASE WHEN new_status = 'completed' THEN game_result ELSE result END,
+    updated_at = NOW()
+  WHERE id = game_round_id
+  RETURNING *;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function để lấy danh sách game rounds theo bộ lọc
+CREATE OR REPLACE FUNCTION get_game_rounds(
+  status_filter TEXT DEFAULT NULL,
+  from_date TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+  to_date TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+  page_number INTEGER DEFAULT 1,
+  page_size INTEGER DEFAULT 10
+) RETURNS TABLE (
+  id UUID,
+  start_time TIMESTAMP WITH TIME ZONE,
+  end_time TIMESTAMP WITH TIME ZONE,
+  result TEXT,
+  status TEXT,
+  created_by UUID,
+  created_at TIMESTAMP WITH TIME ZONE,
+  updated_at TIMESTAMP WITH TIME ZONE,
+  total_count BIGINT
+) AS $$
+DECLARE
+  offset_value INTEGER := (page_number - 1) * page_size;
+BEGIN
+  RETURN QUERY
+  WITH filtered_rounds AS (
+    SELECT *
+    FROM game_rounds
+    WHERE 
+      (status_filter IS NULL OR status = status_filter) AND
+      (from_date IS NULL OR start_time >= from_date) AND
+      (to_date IS NULL OR end_time <= to_date)
+  ),
+  counted AS (
+    SELECT COUNT(*) AS total FROM filtered_rounds
+  )
+  SELECT 
+    fr.id,
+    fr.start_time,
+    fr.end_time,
+    fr.result,
+    fr.status,
+    fr.created_by,
+    fr.created_at,
+    fr.updated_at,
+    c.total
+  FROM filtered_rounds fr, counted c
+  ORDER BY fr.start_time DESC
+  LIMIT page_size
+  OFFSET offset_value;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

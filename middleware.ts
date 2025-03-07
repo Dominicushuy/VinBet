@@ -36,6 +36,7 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
+    "/",
     // Routes cần bảo vệ
     "/profile/:path*",
     "/games/:path*",
