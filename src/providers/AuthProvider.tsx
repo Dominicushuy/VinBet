@@ -11,7 +11,7 @@ import { Session, User } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import { toast } from 'react-hot-toast'
 import { Profile, ProfileUpdate } from '@/types/database'
-import { createClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase/client'
 
 type AuthState = {
   user: User | null
@@ -45,7 +45,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>(initialState)
   const router = useRouter()
-  const supabase = createClient()
 
   useEffect(() => {
     const getSession = async () => {
