@@ -12,7 +12,7 @@ DROP TABLE IF EXISTS profiles CASCADE;
 
 -- Create profiles table
 CREATE TABLE IF NOT EXISTS profiles (
-  id UUID REFERENCES auth.users(id) PRIMARY KEY,
+  id UUID REFERENCES auth.users(id) NOT NULL PRIMARY KEY,
   username TEXT UNIQUE,
   display_name TEXT,
   email TEXT UNIQUE,

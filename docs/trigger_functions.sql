@@ -4,43 +4,8 @@ DROP TRIGGER IF EXISTS on_bet_created ON bets;
 DROP TRIGGER IF EXISTS on_game_round_completed ON game_rounds;
 
 -- Drop existing functions
-DROP FUNCTION IF EXISTS handle_new_user();
 DROP FUNCTION IF EXISTS update_balance_on_bet();
 DROP FUNCTION IF EXISTS complete_game_round();
-
--- Function to handle new user creation
-CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
-DECLARE
-  new_referral_code TEXT;
-BEGIN
-  -- Generate unique referral code
-  new_referral_code := LOWER(SUBSTRING(MD5(NEW.id::TEXT || RANDOM()::TEXT) FOR 8));
-  
-  -- Create a new profile for the user
-  INSERT INTO profiles (
-    id, 
-    username, 
-    email, 
-    referral_code,
-    balance
-  ) VALUES (
-    NEW.id, 
-    NEW.email, 
-    NEW.email, 
-    new_referral_code,
-    0
-  );
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Trigger for new user creation
-CREATE TRIGGER on_auth_user_created
-AFTER INSERT ON auth.users
-FOR EACH ROW
-EXECUTE FUNCTION handle_new_user();
 
 -- Function để xử lý đăng ký người dùng mới với validation
 CREATE OR REPLACE FUNCTION register_new_user(
@@ -481,3 +446,31 @@ CREATE TRIGGER on_deposit_complete_referral
 AFTER UPDATE ON payment_requests
 FOR EACH ROW
 EXECUTE FUNCTION complete_referral_on_deposit();
+
+-- Function để validation thông tin profile trước khi update
+CREATE OR REPLACE FUNCTION validate_user_profile()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Validation cho username (không chứa ký tự đặc biệt)
+  IF NEW.username ~ '[^a-zA-Z0-9_]' THEN
+    RAISE EXCEPTION 'Username chỉ được chứa chữ cái, số và dấu gạch dưới';
+  END IF;
+  
+  -- Validation cho phone_number (chỉ chứa số)
+  IF NEW.phone_number IS NOT NULL AND NEW.phone_number ~ '[^0-9+]' THEN
+    RAISE EXCEPTION 'Số điện thoại chỉ được chứa số và dấu +';
+  END IF;
+  
+  -- Cập nhật updated_at
+  NEW.updated_at := NOW();
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger cho validation profile
+DROP TRIGGER IF EXISTS on_profile_update ON profiles;
+CREATE TRIGGER on_profile_update
+BEFORE UPDATE ON profiles
+FOR EACH ROW
+EXECUTE FUNCTION validate_user_profile();

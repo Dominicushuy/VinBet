@@ -52,10 +52,11 @@ USING (auth.uid() = id);
 CREATE POLICY "Admins can read all profiles"
 ON profiles FOR SELECT
 USING (
-  EXISTS (
-    SELECT 1 FROM profiles
-    WHERE id = auth.uid() AND is_admin = TRUE
-  )
+  CASE 
+    WHEN auth.uid() = id THEN TRUE -- Luôn cho phép người dùng xem profile của chính họ
+    WHEN (SELECT is_admin FROM profiles WHERE id = auth.uid()) = TRUE THEN TRUE -- Admin xem tất cả
+    ELSE FALSE
+  END
 );
 
 CREATE POLICY "Admins can update all profiles"

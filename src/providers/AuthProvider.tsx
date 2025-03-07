@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import {
   createContext,
@@ -6,68 +6,68 @@ import {
   useState,
   useContext,
   ReactNode,
-} from 'react'
-import { Session, User } from '@supabase/supabase-js'
-import { useRouter } from 'next/navigation'
-import { toast } from 'react-hot-toast'
-import { Profile, ProfileUpdate } from '@/types/database'
-import { supabaseClient as supabase } from '@/lib/supabase/client'
+} from "react";
+import { Session, User } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
+import { Profile, ProfileUpdate } from "@/types/database";
+import { supabaseClient as supabase } from "@/lib/supabase/client";
 
 type AuthState = {
-  user: User | null
-  session: Session | null
-  profile: Profile | null
-  isLoading: boolean
-}
+  user: User | null;
+  session: Session | null;
+  profile: Profile | null;
+  isLoading: boolean;
+};
 
 type AuthContextType = AuthState & {
-  signIn: (email: string, password: string) => Promise<void>
+  signIn: (email: string, password: string) => Promise<void>;
   signUp: (
     email: string,
     password: string,
     data?: { referralCode?: string }
-  ) => Promise<void>
-  signOut: () => Promise<void>
-  resetPassword: (email: string) => Promise<void>
-  updateProfile: (data: Partial<ProfileUpdate>) => Promise<void>
-  refreshSession: () => Promise<void>
-}
+  ) => Promise<void>;
+  signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updateProfile: (data: Partial<ProfileUpdate>) => Promise<void>;
+  refreshSession: () => Promise<void>;
+};
 
 const initialState: AuthState = {
   user: null,
   session: null,
   profile: null,
   isLoading: true,
-}
+};
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>(initialState)
-  const router = useRouter()
+  const [state, setState] = useState<AuthState>(initialState);
+  const router = useRouter();
 
   useEffect(() => {
     const getSession = async () => {
       try {
         const {
           data: { session },
-        } = await supabase.auth.getSession()
+        } = await supabase.auth.getSession();
         if (session) {
           const { data: profileData, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single()
+            .from("profiles")
+            .select("*")
+            .eq("id", session.user.id)
+            .single();
 
           if (error || !profileData) {
-            console.error('Error fetching profile:', error)
+            console.error("Error fetching profile:", error);
             setState({
               session,
               user: session.user,
               profile: null,
               isLoading: false,
-            })
-            return
+            });
+            return;
           }
 
           setState({
@@ -75,43 +75,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             user: session.user,
             profile: profileData as unknown as Profile,
             isLoading: false,
-          })
+          });
         } else {
           setState({
             ...initialState,
             isLoading: false,
-          })
+          });
         }
       } catch (error) {
-        console.error('Error loading session:', error)
+        console.error("Error loading session:", error);
         setState({
           ...initialState,
           isLoading: false,
-        })
+        });
       }
-    }
+    };
 
-    getSession()
+    getSession();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
         const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .single();
 
         if (error || !profileData) {
-          console.error('Error fetching profile on auth change:', error)
+          console.error("Error fetching profile on auth change:", error);
           setState({
             session,
             user: session.user,
             profile: null,
             isLoading: false,
-          })
-          return
+          });
+          return;
         }
 
         setState({
@@ -119,34 +119,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           user: session.user,
           profile: profileData as unknown as Profile,
           isLoading: false,
-        })
+        });
       } else {
         setState({
           ...initialState,
           isLoading: false,
-        })
+        });
       }
-      router.refresh()
-    })
+      router.refresh();
+    });
 
     return () => {
-      subscription.unsubscribe()
-    }
-  }, [supabase, router])
+      subscription.unsubscribe();
+    };
+  }, [supabase, router]);
 
   const signIn = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
-      })
+      });
 
-      if (error) throw error
+      if (error) throw error;
     } catch (error: any) {
-      toast.error(error.message || 'Đăng nhập thất bại')
-      throw error
+      toast.error(error.message || "Đăng nhập thất bại");
+      throw error;
     }
-  }
+  };
 
   const signUp = async (
     email: string,
@@ -163,90 +163,90 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             referral_code: data?.referralCode,
           },
         },
-      })
+      });
 
-      if (error) throw error
+      if (error) throw error;
 
-      toast.success('Vui lòng kiểm tra email để xác thực tài khoản')
+      toast.success("Vui lòng kiểm tra email để xác thực tài khoản");
     } catch (error: any) {
-      toast.error(error.message || 'Đăng ký thất bại')
-      throw error
+      toast.error(error.message || "Đăng ký thất bại");
+      throw error;
     }
-  }
+  };
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut()
-      router.push('/auth/login')
+      await supabase.auth.signOut();
+      router.push("/auth/login");
     } catch (error: any) {
-      toast.error(error.message || 'Đăng xuất thất bại')
+      toast.error(error.message || "Đăng xuất thất bại");
     }
-  }
+  };
 
   const resetPassword = async (email: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`,
-      })
+      });
 
-      if (error) throw error
+      if (error) throw error;
 
-      toast.success('Vui lòng kiểm tra email để đặt lại mật khẩu')
+      toast.success("Vui lòng kiểm tra email để đặt lại mật khẩu");
     } catch (error: any) {
-      toast.error(error.message || 'Yêu cầu đặt lại mật khẩu thất bại')
-      throw error
+      toast.error(error.message || "Yêu cầu đặt lại mật khẩu thất bại");
+      throw error;
     }
-  }
+  };
 
   const updateProfile = async (data: Partial<ProfileUpdate>) => {
     try {
-      if (!state.user) throw new Error('Chưa đăng nhập')
+      if (!state.user) throw new Error("Chưa đăng nhập");
 
       const { error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update(data)
-        .eq('id', state.user.id)
+        .eq("id", state.user.id);
 
-      if (error) throw error
+      if (error) throw error;
 
       // Refresh profile data
       const { data: profileData, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', state.user.id)
-        .single()
+        .from("profiles")
+        .select("*")
+        .eq("id", state.user.id)
+        .single();
 
       if (fetchError || !profileData) {
-        throw new Error('Không thể lấy thông tin profile sau khi cập nhật')
+        throw new Error("Không thể lấy thông tin profile sau khi cập nhật");
       }
 
       setState({
         ...state,
         profile: profileData as unknown as Profile,
-      })
+      });
 
-      toast.success('Cập nhật thông tin thành công')
+      toast.success("Cập nhật thông tin thành công");
     } catch (error: any) {
-      toast.error(error.message || 'Cập nhật thông tin thất bại')
-      throw error
+      toast.error(error.message || "Cập nhật thông tin thất bại");
+      throw error;
     }
-  }
+  };
 
   const refreshSession = async () => {
     try {
       const {
         data: { session },
-      } = await supabase.auth.getSession()
+      } = await supabase.auth.getSession();
       if (session) {
         const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .single();
 
         if (error || !profileData) {
-          console.error('Error refreshing profile:', error)
-          return
+          console.error("Error refreshing profile:", error);
+          return;
         }
 
         setState({
@@ -254,12 +254,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           user: session.user,
           profile: profileData as unknown as Profile,
           isLoading: false,
-        })
+        });
       }
     } catch (error) {
-      console.error('Error refreshing session:', error)
+      console.error("Error refreshing session:", error);
     }
-  }
+  };
 
   const value = {
     ...state,
@@ -269,15 +269,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     resetPassword,
     updateProfile,
     refreshSession,
-  }
+  };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export const useAuth = () => {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error("useAuth must be used within an AuthProvider");
   }
-  return context
-}
+  return context;
+};
