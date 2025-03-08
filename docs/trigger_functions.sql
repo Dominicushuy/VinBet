@@ -590,3 +590,126 @@ BEGIN
     offset_val;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Function to place a bet
+CREATE OR REPLACE FUNCTION place_bet(
+  p_profile_id UUID,
+  p_game_round_id UUID,
+  p_chosen_number TEXT,
+  p_amount DECIMAL(15, 2)
+)
+RETURNS UUID AS $$
+DECLARE
+  v_game_status TEXT;
+  v_potential_win DECIMAL(15, 2);
+  v_user_balance DECIMAL(15, 2);
+  v_new_bet_id UUID;
+  v_multiplier DECIMAL(15, 2) := 9.0; -- Hệ số nhân tiền thưởng, có thể điều chỉnh
+BEGIN
+  -- Check if game round exists and is active
+  SELECT status INTO v_game_status
+  FROM game_rounds
+  WHERE id = p_game_round_id;
+  
+  IF v_game_status IS NULL THEN
+    RAISE EXCEPTION 'Game round not found';
+  END IF;
+  
+  IF v_game_status != 'active' THEN
+    RAISE EXCEPTION 'Game round is not active for betting';
+  END IF;
+  
+  -- Check if user has enough balance
+  SELECT balance INTO v_user_balance
+  FROM profiles
+  WHERE id = p_profile_id;
+  
+  IF v_user_balance < p_amount THEN
+    RAISE EXCEPTION 'Insufficient balance';
+  END IF;
+  
+  -- Calculate potential win
+  v_potential_win := p_amount * v_multiplier;
+  
+  -- Create bet
+  INSERT INTO bets (
+    profile_id,
+    game_round_id,
+    chosen_number,
+    amount,
+    potential_win,
+    status,
+    created_at,
+    updated_at
+  ) VALUES (
+    p_profile_id,
+    p_game_round_id,
+    p_chosen_number,
+    p_amount,
+    v_potential_win,
+    'pending',
+    NOW(),
+    NOW()
+  ) RETURNING id INTO v_new_bet_id;
+  
+  -- Return the new bet ID
+  RETURN v_new_bet_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get user bets with filters
+CREATE OR REPLACE FUNCTION get_user_bets(
+  p_profile_id UUID,
+  p_game_round_id UUID DEFAULT NULL,
+  p_status TEXT DEFAULT NULL,
+  p_page_number INTEGER DEFAULT 1,
+  p_page_size INTEGER DEFAULT 10
+)
+RETURNS TABLE (
+  id UUID,
+  profile_id UUID,
+  game_round_id UUID,
+  chosen_number TEXT,
+  amount DECIMAL(15, 2),
+  potential_win DECIMAL(15, 2),
+  status TEXT,
+  created_at TIMESTAMP WITH TIME ZONE,
+  updated_at TIMESTAMP WITH TIME ZONE,
+  game_status TEXT,
+  game_result TEXT,
+  total_count BIGINT
+) AS $$
+DECLARE
+  offset_val INTEGER;
+BEGIN
+  offset_val := (p_page_number - 1) * p_page_size;
+
+  RETURN QUERY
+  SELECT 
+    b.id,
+    b.profile_id,
+    b.game_round_id,
+    b.chosen_number,
+    b.amount,
+    b.potential_win,
+    b.status,
+    b.created_at,
+    b.updated_at,
+    gr.status AS game_status,
+    gr.result AS game_result,
+    COUNT(*) OVER() AS total_count
+  FROM 
+    bets b
+    JOIN game_rounds gr ON b.game_round_id = gr.id
+  WHERE
+    b.profile_id = p_profile_id
+    AND (p_game_round_id IS NULL OR b.game_round_id = p_game_round_id)
+    AND (p_status IS NULL OR b.status = p_status)
+  ORDER BY
+    b.created_at DESC
+  LIMIT
+    p_page_size
+  OFFSET
+    offset_val;
+END;
+$$ LANGUAGE plpgsql;

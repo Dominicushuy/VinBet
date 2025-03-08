@@ -365,7 +365,59 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_game_round: {
+        Args: {
+          start_time: string
+          end_time: string
+          created_by: string
+        }
+        Returns: string
+      }
+      get_game_rounds: {
+        Args: {
+          status_filter?: string
+          from_date?: string
+          to_date?: string
+          page_number?: number
+          page_size?: number
+        }
+        Returns: {
+          id: string
+          start_time: string
+          end_time: string
+          result: string
+          status: string
+          created_by: string
+          created_at: string
+          updated_at: string
+          total_count: number
+        }[]
+      }
+      register_new_user: {
+        Args: {
+          email: string
+          password: string
+          referral_code?: string
+        }
+        Returns: string
+      }
+      update_game_round_status: {
+        Args: {
+          game_round_id: string
+          new_status: string
+          game_result?: string
+        }
+        Returns: {
+          created_at: string | null
+          created_by: string
+          end_time: string
+          id: string
+          result: string | null
+          start_time: string
+          status: string
+          updated_at: string | null
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

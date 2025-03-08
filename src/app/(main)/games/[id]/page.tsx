@@ -8,11 +8,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Clock, User, Trophy, Calendar } from "lucide-react";
+import { BetForm } from "@/components/bet/BetForm";
+import { BetList } from "@/components/bet/BetList";
+import { GameRound, Bet, Profile } from "@/types/database";
 
 interface GamePageProps {
   params: {
     id: string;
   };
+}
+
+// Định nghĩa kiểu dữ liệu cho game với relationships
+interface GameWithRelations extends GameRound {
+  creator: Profile | null;
+  bets: { count: number } | null;
 }
 
 export async function generateMetadata({
@@ -44,7 +53,8 @@ export async function generateMetadata({
 export default async function GamePage({ params }: GamePageProps) {
   const supabase = createServerClient();
 
-  const { data: game, error } = await supabase
+  // Sử dụng kiểu dữ liệu rõ ràng cho kết quả trả về
+  const { data, error } = await supabase
     .from("game_rounds")
     .select(
       `
@@ -56,10 +66,20 @@ export default async function GamePage({ params }: GamePageProps) {
     .eq("id", params.id)
     .single();
 
+  // Sử dụng type assertion
+  const game = data as unknown as GameWithRelations;
+
   if (error || !game) {
     console.error("Game fetch error:", error);
     notFound();
   }
+
+  // Lấy danh sách cược của người dùng hiện tại cho lượt chơi này
+  const { data: userBets } = await supabase
+    .from("bets")
+    .select("*")
+    .eq("game_round_id", params.id)
+    .order("created_at", { ascending: false });
 
   // Format dates
   const formattedStartTime = format(
@@ -72,11 +92,14 @@ export default async function GamePage({ params }: GamePageProps) {
     "HH:mm, dd/MM/yyyy",
     { locale: vi }
   );
-  const formattedCreatedAt = format(new Date(game.created_at), "dd/MM/yyyy", {
-    locale: vi,
-  });
+  const formattedCreatedAt = format(
+    new Date(game.created_at || ""),
+    "dd/MM/yyyy",
+    {
+      locale: vi,
+    }
+  );
 
-  // src/app/(main)/games/[id]/page.tsx (phần tiếp theo)
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
@@ -173,35 +196,13 @@ export default async function GamePage({ params }: GamePageProps) {
             </CardContent>
           </Card>
 
-          {/* Placeholder for BettingForm component - will be implemented later */}
-          {game.status === "active" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Đặt cược</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-center py-4 text-muted-foreground">
-                  Đang tải form đặt cược...
-                </p>
-              </CardContent>
-            </Card>
-          )}
+          {/* Thêm form đặt cược cho lượt chơi đang active */}
+          {game.status === "active" && <BetForm gameRound={game} />}
         </div>
 
         {/* Sidebar - Your bets / Leaderboard */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Cược của bạn</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-center py-6 text-muted-foreground">
-                {game.status === "scheduled" || game.status === "active"
-                  ? "Bạn chưa đặt cược nào trong lượt này."
-                  : "Không có cược nào trong lượt này."}
-              </p>
-            </CardContent>
-          </Card>
+          <BetList gameRoundId={params.id} initialBets={userBets as Bet[]} />
 
           {game.status === "completed" && (
             <Card>
