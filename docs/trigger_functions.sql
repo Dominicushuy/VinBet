@@ -713,3 +713,27 @@ BEGIN
     offset_val;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Function để lấy thống kê cược cho một lượt chơi
+CREATE OR REPLACE FUNCTION get_bet_statistics_for_game(
+  p_game_round_id UUID
+)
+RETURNS TABLE (
+  total_bets BIGINT,
+  winning_bets BIGINT,
+  total_bet_amount DECIMAL(15, 2),
+  total_win_amount DECIMAL(15, 2)
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    COUNT(*)::BIGINT as total_bets,
+    COUNT(CASE WHEN status = 'won' THEN 1 END)::BIGINT as winning_bets,
+    COALESCE(SUM(amount), 0) as total_bet_amount,
+    COALESCE(SUM(CASE WHEN status = 'won' THEN potential_win ELSE 0 END), 0) as total_win_amount
+  FROM 
+    bets
+  WHERE
+    game_round_id = p_game_round_id;
+END;
+$$ LANGUAGE plpgsql;

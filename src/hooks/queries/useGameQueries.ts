@@ -8,6 +8,8 @@ export const GAME_QUERY_KEYS = {
   activeGames: ["games", "active"],
   gamesList: (filters?: any) => ["games", "list", { ...filters }],
   gameDetail: (id: string) => ["games", "detail", id],
+  gameRoundResults: (id: string) => ["games", "results", id],
+  gameRoundWinners: (id: string) => ["games", "winners", id],
 };
 
 // Queries
@@ -24,6 +26,22 @@ export function useGameRoundsQuery(params?: any) {
     queryKey: GAME_QUERY_KEYS.gamesList(params),
     queryFn: () => apiService.games.getGameRounds(params),
     keepPreviousData: true,
+  });
+}
+
+export function useGameRoundResults(id: string) {
+  return useQuery({
+    queryKey: GAME_QUERY_KEYS.gameRoundResults(id),
+    queryFn: () => apiService.games.getGameRoundResults(id),
+    enabled: !!id,
+  });
+}
+
+export function useGameRoundWinners(id: string) {
+  return useQuery({
+    queryKey: GAME_QUERY_KEYS.gameRoundWinners(id),
+    queryFn: () => apiService.games.getGameRoundWinners(id),
+    enabled: !!id,
   });
 }
 

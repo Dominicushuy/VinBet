@@ -62,6 +62,28 @@ export const apiService = {
         method: "PATCH",
         body: JSON.stringify(data),
       }),
+
+    // Lấy kết quả của một lượt chơi
+    getGameRoundResults: async (id: string) => {
+      const response = await fetch(`/api/game-rounds/${id}/results`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Không thể lấy kết quả lượt chơi");
+      }
+      return response.json();
+    },
+
+    // Lấy danh sách người thắng của một lượt chơi
+    getGameRoundWinners: async (id: string) => {
+      const response = await fetch(`/api/game-rounds/${id}/winners`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error || "Không thể lấy danh sách người thắng"
+        );
+      }
+      return response.json();
+    },
   },
 
   // Profile services

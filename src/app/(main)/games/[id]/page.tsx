@@ -8,9 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Clock, User, Trophy, Calendar } from "lucide-react";
+import { GameRound, Bet, Profile } from "@/types/database";
 import { BetForm } from "@/components/bet/BetForm";
 import { BetList } from "@/components/bet/BetList";
-import { GameRound, Bet, Profile } from "@/types/database";
+import { GameResult } from "@/components/game/GameResult";
+import { WinnerList } from "@/components/game/WinnerList";
 
 interface GamePageProps {
   params: {
@@ -203,6 +205,8 @@ export default async function GamePage({ params }: GamePageProps) {
         {/* Sidebar - Your bets / Leaderboard */}
         <div className="space-y-6">
           <BetList gameRoundId={params.id} initialBets={userBets as Bet[]} />
+          <GameResult gameRound={game} />
+          <WinnerList gameRound={game} />
 
           {game.status === "completed" && (
             <Card>

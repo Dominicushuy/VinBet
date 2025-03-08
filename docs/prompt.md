@@ -1,39 +1,33 @@
 Theo file `plan.md`, hãy giúp tôi tiếp tục phát triển dự án, hãy bắt đầu với các công việc sau:
 
-## 3. Hệ thống Game và Cá cược (10 ngày)
-
-### 3.1 Quản lý lượt chơi (3 ngày)
+### 3.3 Xử lý kết quả (3 ngày)
 
 #### Backend - 1 ngày
 
-- [ ] Tạo function create_game_round
-  - [ ] Thiết lập thông tin lượt chơi
-- [ ] Tạo function update_game_round_status
-  - [ ] Cập nhật trạng thái lượt chơi
-- [ ] Tạo function get_game_rounds
-  - [ ] Lấy danh sách lượt chơi với filters
+- [ ] Tạo function complete_game_round
+  - [ ] Xử lý kết quả lượt chơi
+  - [ ] Cập nhật trạng thái cược
+- [ ] Tạo function distribute_rewards
+  - [ ] Phân phối tiền thưởng cho người thắng
+- [ ] Tạo function notify_winners
+  - [ ] Tạo thông báo cho người thắng
 
 #### Frontend Components - 1.5 ngày
 
-- [ ] Tạo GameList component
-  - [ ] Hiển thị danh sách lượt chơi
-  - [ ] Pagination và filters
-- [ ] Tạo GameCard component
-  - [ ] Hiển thị thông tin lượt chơi
-  - [ ] Countdown timer
-- [ ] Tạo GameFilters component
-  - [ ] Bộ lọc theo trạng thái
-  - [ ] Lọc theo thời gian
-- [ ] Tạo GameListSkeleton component
-  - [ ] Loading state cho danh sách game
+- [ ] Tạo GameResult component
+  - [ ] Hiển thị kết quả lượt chơi
+  - [ ] Animation hiển thị số trúng
+- [ ] Tạo WinnerList component
+  - [ ] Hiển thị danh sách người thắng
+- [ ] Tạo GameResultNotification component
+  - [ ] Thông báo kết quả
 
 #### API Routes - 0.5 ngày
 
-- [ ] Tạo route /api/game-rounds
-  - [ ] GET danh sách với filters
-- [ ] Tạo route /api/game-rounds/[id]
-  - [ ] GET thông tin chi tiết lượt chơi
-- [ ] Tạo route /api/game-rounds/active
+- [ ] Tạo route /api/game-rounds/[id]/results
+  - [ ] GET kết quả lượt chơi
+- [ ] Tạo route /api/game-rounds/[id]/winners
+  - [ ] GET danh sách người thắng
   - [ ] GET các lượt đang diễn ra
 
 \*Lưu ý:
