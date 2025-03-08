@@ -877,3 +877,198 @@ BEGIN
   RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get transaction history with filters
+CREATE OR REPLACE FUNCTION get_transaction_history(
+  p_profile_id UUID,
+  p_type TEXT DEFAULT NULL,
+  p_start_date TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+  p_end_date TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+  p_status TEXT DEFAULT NULL,
+  p_page_number INTEGER DEFAULT 1,
+  p_page_size INTEGER DEFAULT 10
+)
+RETURNS TABLE (
+  id UUID,
+  profile_id UUID,
+  amount DECIMAL(15, 2),
+  type TEXT,
+  status TEXT,
+  reference_id UUID,
+  payment_request_id UUID,
+  description TEXT,
+  created_at TIMESTAMP WITH TIME ZONE,
+  updated_at TIMESTAMP WITH TIME ZONE,
+  total_count BIGINT
+) AS $$
+DECLARE
+  offset_val INTEGER;
+BEGIN
+  offset_val := (p_page_number - 1) * p_page_size;
+
+  RETURN QUERY
+  SELECT 
+    t.id,
+    t.profile_id,
+    t.amount,
+    t.type,
+    t.status,
+    t.reference_id,
+    t.payment_request_id,
+    t.description,
+    t.created_at,
+    t.updated_at,
+    COUNT(*) OVER() AS total_count
+  FROM 
+    transactions t
+  WHERE
+    t.profile_id = p_profile_id
+    AND (p_type IS NULL OR t.type = p_type)
+    AND (p_status IS NULL OR t.status = p_status)
+    AND (p_start_date IS NULL OR t.created_at >= p_start_date)
+    AND (p_end_date IS NULL OR t.created_at <= p_end_date)
+  ORDER BY
+    t.created_at DESC
+  LIMIT
+    p_page_size
+  OFFSET
+    offset_val;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get transaction summary
+CREATE OR REPLACE FUNCTION get_transaction_summary(
+  p_profile_id UUID,
+  p_start_date TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+  p_end_date TIMESTAMP WITH TIME ZONE DEFAULT NULL
+)
+RETURNS TABLE (
+  total_deposit DECIMAL(15, 2),
+  total_withdrawal DECIMAL(15, 2),
+  total_bet DECIMAL(15, 2),
+  total_win DECIMAL(15, 2),
+  total_referral_reward DECIMAL(15, 2),
+  net_balance DECIMAL(15, 2)
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    COALESCE(SUM(CASE WHEN type = 'deposit' AND status = 'completed' THEN amount ELSE 0 END), 0) AS total_deposit,
+    COALESCE(SUM(CASE WHEN type = 'withdrawal' AND status = 'completed' THEN amount ELSE 0 END), 0) AS total_withdrawal,
+    COALESCE(SUM(CASE WHEN type = 'bet' AND status = 'completed' THEN amount ELSE 0 END), 0) AS total_bet,
+    COALESCE(SUM(CASE WHEN type = 'win' AND status = 'completed' THEN amount ELSE 0 END), 0) AS total_win,
+    COALESCE(SUM(CASE WHEN type = 'referral_reward' AND status = 'completed' THEN amount ELSE 0 END), 0) AS total_referral_reward,
+    COALESCE(SUM(CASE 
+      WHEN status = 'completed' THEN
+        CASE 
+          WHEN type IN ('deposit', 'win', 'referral_reward') THEN amount
+          WHEN type IN ('withdrawal', 'bet') THEN -amount
+          ELSE 0
+        END
+      ELSE 0
+    END), 0) AS net_balance
+  FROM 
+    transactions
+  WHERE
+    profile_id = p_profile_id
+    AND (p_start_date IS NULL OR created_at >= p_start_date)
+    AND (p_end_date IS NULL OR created_at <= p_end_date);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function for admin to get all transaction history with filters
+CREATE OR REPLACE FUNCTION get_admin_transaction_history(
+  p_type TEXT DEFAULT NULL,
+  p_start_date TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+  p_end_date TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+  p_status TEXT DEFAULT NULL,
+  p_page_number INTEGER DEFAULT 1,
+  p_page_size INTEGER DEFAULT 10
+)
+RETURNS TABLE (
+  id UUID,
+  profile_id UUID,
+  amount DECIMAL(15, 2),
+  type TEXT,
+  status TEXT,
+  reference_id UUID,
+  payment_request_id UUID,
+  description TEXT,
+  created_at TIMESTAMP WITH TIME ZONE,
+  updated_at TIMESTAMP WITH TIME ZONE,
+  username TEXT,
+  display_name TEXT,
+  total_count BIGINT
+) AS $$
+DECLARE
+  offset_val INTEGER;
+BEGIN
+  offset_val := (p_page_number - 1) * p_page_size;
+
+  RETURN QUERY
+  SELECT 
+    t.id,
+    t.profile_id,
+    t.amount,
+    t.type,
+    t.status,
+    t.reference_id, 
+    t.payment_request_id,
+    t.description,
+    t.created_at,
+    t.updated_at,
+    p.username,
+    p.display_name,
+    COUNT(*) OVER() AS total_count
+  FROM 
+    transactions t
+    JOIN profiles p ON t.profile_id = p.id
+  WHERE
+    (p_type IS NULL OR t.type = p_type)
+    AND (p_status IS NULL OR t.status = p_status)
+    AND (p_start_date IS NULL OR t.created_at >= p_start_date)
+    AND (p_end_date IS NULL OR t.created_at <= p_end_date)
+  ORDER BY
+    t.created_at DESC
+  LIMIT
+    p_page_size
+  OFFSET
+    offset_val;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get system-wide transaction summary for admin
+CREATE OR REPLACE FUNCTION get_admin_transaction_summary(
+  p_start_date TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+  p_end_date TIMESTAMP WITH TIME ZONE DEFAULT NULL
+)
+RETURNS TABLE (
+  total_deposit DECIMAL(15, 2),
+  total_withdrawal DECIMAL(15, 2),
+  total_bet DECIMAL(15, 2),
+  total_win DECIMAL(15, 2),
+  total_referral_reward DECIMAL(15, 2),
+  system_profit DECIMAL(15, 2),
+  total_users_count BIGINT,
+  active_users_count BIGINT
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    COALESCE(SUM(CASE WHEN type = 'deposit' AND status = 'completed' THEN amount ELSE 0 END), 0) AS total_deposit,
+    COALESCE(SUM(CASE WHEN type = 'withdrawal' AND status = 'completed' THEN amount ELSE 0 END), 0) AS total_withdrawal,
+    COALESCE(SUM(CASE WHEN type = 'bet' AND status = 'completed' THEN amount ELSE 0 END), 0) AS total_bet,
+    COALESCE(SUM(CASE WHEN type = 'win' AND status = 'completed' THEN amount ELSE 0 END), 0) AS total_win,
+    COALESCE(SUM(CASE WHEN type = 'referral_reward' AND status = 'completed' THEN amount ELSE 0 END), 0) AS total_referral_reward,
+    (COALESCE(SUM(CASE WHEN type = 'bet' AND status = 'completed' THEN amount ELSE 0 END), 0) - 
+     COALESCE(SUM(CASE WHEN type = 'win' AND status = 'completed' THEN amount ELSE 0 END), 0)) AS system_profit,
+    (SELECT COUNT(DISTINCT profile_id) FROM transactions) AS total_users_count,
+    (SELECT COUNT(DISTINCT profile_id) FROM transactions 
+     WHERE created_at >= COALESCE(p_start_date, NOW() - INTERVAL '30 days')) AS active_users_count
+  FROM 
+    transactions
+  WHERE
+    (p_start_date IS NULL OR created_at >= p_start_date)
+    AND (p_end_date IS NULL OR created_at <= p_end_date);
+END;
+$$ LANGUAGE plpgsql;

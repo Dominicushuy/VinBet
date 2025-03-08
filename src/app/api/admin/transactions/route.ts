@@ -1,4 +1,4 @@
-// src/app/api/transactions/route.ts
+// src/app/api/admin/transactions/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
@@ -23,7 +23,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = sessionData.session.user.id;
+    // Check admin permission
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", sessionData.session.user.id)
+      .single();
+
+    if (!profileData?.is_admin) {
+      return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+    }
 
     // Parse query parameters
     const url = new URL(request.url);
@@ -42,11 +51,10 @@ export async function GET(request: NextRequest) {
       ? new Date(validatedParams.endDate).toISOString()
       : null;
 
-    // Call the RPC function to get transaction history
+    // Call the RPC function to get admin transaction history
     const { data: transactions, error } = await supabase.rpc(
-      "get_transaction_history",
+      "get_admin_transaction_history",
       {
-        p_profile_id: userId,
         p_type: type,
         p_status: status,
         p_start_date: startDate,
@@ -57,7 +65,7 @@ export async function GET(request: NextRequest) {
     );
 
     if (error) {
-      console.error("Error fetching transactions:", error);
+      console.error("Error fetching admin transactions:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -75,7 +83,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Transaction request error:", error);
+    console.error("Admin transaction request error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 });

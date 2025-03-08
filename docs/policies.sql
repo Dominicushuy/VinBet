@@ -102,6 +102,14 @@ USING (
   )
 );
 
+CREATE POLICY "System can insert transactions"
+ON transactions FOR INSERT
+WITH CHECK (true);
+
+CREATE POLICY "System can update transactions"
+ON transactions FOR UPDATE
+USING (true);
+
 -- Policies for payment_requests table
 CREATE POLICY "Users can read their own payment requests"
 ON payment_requests FOR SELECT

@@ -86,6 +86,40 @@ export const apiService = {
     },
   },
 
+  // Thêm transactions service
+  transactions: {
+    getTransactions: async (params?: {
+      type?: string;
+      status?: string;
+      startDate?: string;
+      endDate?: string;
+      page?: number;
+      pageSize?: number;
+    }) => {
+      const queryString = new URLSearchParams();
+      if (params?.type) queryString.append("type", params.type);
+      if (params?.status) queryString.append("status", params.status);
+      if (params?.startDate) queryString.append("startDate", params.startDate);
+      if (params?.endDate) queryString.append("endDate", params.endDate);
+      if (params?.page) queryString.append("page", params.page.toString());
+      if (params?.pageSize)
+        queryString.append("pageSize", params.pageSize.toString());
+
+      return fetcher(`/api/transactions?${queryString}`);
+    },
+
+    getTransactionSummary: async (params?: {
+      startDate?: string;
+      endDate?: string;
+    }) => {
+      const queryString = new URLSearchParams();
+      if (params?.startDate) queryString.append("startDate", params.startDate);
+      if (params?.endDate) queryString.append("endDate", params.endDate);
+
+      return fetcher(`/api/transactions/summary?${queryString}`);
+    },
+  },
+
   // Profile services
   profile: {
     getUserStats: () => fetcher("/api/profile/stats"),
