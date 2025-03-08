@@ -737,3 +737,143 @@ BEGIN
     game_round_id = p_game_round_id;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Function để tạo payment request
+CREATE OR REPLACE FUNCTION create_payment_request(
+  p_profile_id UUID,
+  p_amount DECIMAL(15, 2),
+  p_type TEXT,
+  p_payment_method TEXT,
+  p_payment_details JSONB DEFAULT NULL
+) RETURNS UUID AS $$
+DECLARE
+  new_request_id UUID;
+BEGIN
+  -- Validate input
+  IF p_amount <= 0 THEN
+    RAISE EXCEPTION 'Amount must be greater than 0';
+  END IF;
+  
+  IF p_type NOT IN ('deposit', 'withdrawal') THEN
+    RAISE EXCEPTION 'Type must be either deposit or withdrawal';
+  END IF;
+  
+  -- Validate balance for withdrawal
+  IF p_type = 'withdrawal' THEN
+    IF (SELECT balance FROM profiles WHERE id = p_profile_id) < p_amount THEN
+      RAISE EXCEPTION 'Insufficient balance for withdrawal';
+    END IF;
+  END IF;
+  
+  -- Insert new payment request
+  INSERT INTO payment_requests (
+    profile_id,
+    amount,
+    type,
+    status,
+    payment_method,
+    payment_details,
+    created_at,
+    updated_at
+  ) VALUES (
+    p_profile_id,
+    p_amount,
+    p_type,
+    'pending',
+    p_payment_method,
+    p_payment_details,
+    NOW(),
+    NOW()
+  ) RETURNING id INTO new_request_id;
+  
+  -- Create notification
+  INSERT INTO notifications (
+    profile_id,
+    title,
+    content,
+    type,
+    reference_id
+  ) VALUES (
+    p_profile_id,
+    CASE WHEN p_type = 'deposit' THEN 'Yêu cầu nạp tiền đã được tạo' ELSE 'Yêu cầu rút tiền đã được tạo' END,
+    CASE WHEN p_type = 'deposit' 
+      THEN 'Yêu cầu nạp ' || p_amount || ' đang chờ xác nhận.' 
+      ELSE 'Yêu cầu rút ' || p_amount || ' đang chờ xác nhận.' 
+    END,
+    'transaction',
+    new_request_id
+  );
+  
+  RETURN new_request_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function để phê duyệt payment request
+CREATE OR REPLACE FUNCTION approve_payment_request(
+  p_request_id UUID,
+  p_admin_id UUID,
+  p_notes TEXT DEFAULT NULL
+) RETURNS BOOLEAN AS $$
+DECLARE
+  v_request_type TEXT;
+  v_profile_id UUID;
+BEGIN
+  -- Check if request exists and is pending
+  SELECT type, profile_id INTO v_request_type, v_profile_id
+  FROM payment_requests
+  WHERE id = p_request_id AND status = 'pending';
+  
+  IF v_request_type IS NULL THEN
+    RAISE EXCEPTION 'Payment request not found or not in pending status';
+  END IF;
+  
+  -- Update payment request status
+  UPDATE payment_requests
+  SET 
+    status = 'approved',
+    approved_by = p_admin_id,
+    approved_at = NOW(),
+    notes = p_notes,
+    updated_at = NOW()
+  WHERE id = p_request_id;
+  
+  -- The handle_payment_request_approval trigger will handle the rest
+  
+  RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function để từ chối payment request
+CREATE OR REPLACE FUNCTION reject_payment_request(
+  p_request_id UUID,
+  p_admin_id UUID,
+  p_notes TEXT DEFAULT NULL
+) RETURNS BOOLEAN AS $$
+DECLARE
+  v_request_type TEXT;
+  v_profile_id UUID;
+BEGIN
+  -- Check if request exists and is pending
+  SELECT type, profile_id INTO v_request_type, v_profile_id
+  FROM payment_requests
+  WHERE id = p_request_id AND status = 'pending';
+  
+  IF v_request_type IS NULL THEN
+    RAISE EXCEPTION 'Payment request not found or not in pending status';
+  END IF;
+  
+  -- Update payment request status
+  UPDATE payment_requests
+  SET 
+    status = 'rejected',
+    approved_by = p_admin_id,
+    approved_at = NOW(),
+    notes = p_notes,
+    updated_at = NOW()
+  WHERE id = p_request_id;
+  
+  -- The handle_payment_request_approval trigger will handle the rest
+  
+  RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

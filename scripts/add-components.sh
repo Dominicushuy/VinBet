@@ -16,6 +16,8 @@ components=(
   separator
   alert
   select
+  alert-dialog
+  textarea
 )
 
 for comp in "${components[@]}"; do
