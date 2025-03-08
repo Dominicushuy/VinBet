@@ -38,6 +38,5 @@ Theo file `plan.md`, hãy giúp tôi tiếp tục phát triển dự án, hãy b
 
 \*Lưu ý:
 
-- Kết quả trả về chỉ bao gồm những mục tôi liệt kê ở trên, tôi sẽ hỏi bạn thêm sau đó.
 - Kiểm tra các files code trong Github. Những phần nào hiện đã phát triển nếu cần thì có thể cập nhật thêm. Nếu đã hoàn thiện thì bỏ qua, nếu thiếu thì tạo thêm và liên kết vào các Page, Layout có sẵn.
 - Đặc biệt hãy kiểm tra tất cả các functions, triggers đã tồn tại trong file `trigger_functions.sql`​ trước xem đã tồn tại chưa, nếu chưa thì hãy tạo mới, nếu có rồi thì giữ nguyên tên và cập nhật logic (nếu cần).
