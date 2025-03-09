@@ -1,4 +1,3 @@
-// src/components/notifications/TelegramConnect.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -24,6 +23,11 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  useTelegramStatusQuery,
+  useConnectTelegramMutation,
+  useDisconnectTelegramMutation,
+} from "@/hooks/queries/useNotificationQueries";
 
 const telegramFormSchema = z.object({
   telegram_id: z.string().min(1, "Telegram ID không được để trống"),
@@ -45,56 +49,32 @@ export function TelegramConnect() {
   });
 
   // Lấy thông tin kết nối Telegram
+  const { data, isFetching } = useTelegramStatusQuery();
+  const connectMutation = useConnectTelegramMutation();
+  const disconnectMutation = useDisconnectTelegramMutation();
+
+  // Update state when data is loaded
   useEffect(() => {
-    const fetchTelegramStatus = async () => {
-      try {
-        const response = await fetch("/api/notifications/telegram");
-        if (!response.ok) {
-          throw new Error("Failed to fetch Telegram status");
-        }
-        const data = await response.json();
-        setIsConnected(data.connected);
-        setTelegramId(data.telegram_id);
+    if (data) {
+      setIsConnected(data.connected);
+      setTelegramId(data.telegram_id);
+      setIsLoading(false);
 
-        if (data.telegram_id) {
-          form.setValue("telegram_id", data.telegram_id);
-        }
-      } catch (error) {
-        console.error("Error fetching Telegram status:", error);
-        toast.error("Không thể kiểm tra trạng thái Telegram");
-      } finally {
-        setIsLoading(false);
+      if (data.telegram_id) {
+        form.setValue("telegram_id", data.telegram_id);
       }
-    };
-
-    fetchTelegramStatus();
-  }, [form]);
+    }
+  }, [data, form]);
 
   // Kết nối Telegram
   const handleConnect = async (data: TelegramFormValues) => {
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/notifications/telegram", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          telegram_id: data.telegram_id,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to connect Telegram");
-      }
-
-      const result = await response.json();
+      await connectMutation.mutateAsync(data.telegram_id);
       setIsConnected(true);
-      setTelegramId(result.telegram_id);
-      toast.success("Kết nối Telegram thành công");
+      setTelegramId(data.telegram_id);
     } catch (error) {
       console.error("Error connecting Telegram:", error);
-      toast.error("Không thể kết nối với Telegram");
     } finally {
       setIsSubmitting(false);
     }
@@ -104,27 +84,18 @@ export function TelegramConnect() {
   const handleDisconnect = async () => {
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/notifications/telegram", {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to disconnect Telegram");
-      }
-
+      await disconnectMutation.mutateAsync();
       setIsConnected(false);
       setTelegramId(null);
       form.setValue("telegram_id", "");
-      toast.success("Đã ngắt kết nối Telegram");
     } catch (error) {
       console.error("Error disconnecting Telegram:", error);
-      toast.error("Không thể ngắt kết nối Telegram");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isFetching) {
     return (
       <Card>
         <CardHeader>

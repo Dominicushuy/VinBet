@@ -1,8 +1,8 @@
-// src/app/api/admin/notifications/send/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import { z } from "zod";
+import { sendTelegramMessage } from "@/utils/telegram";
 
 const sendNotificationSchema = z.object({
   title: z.string().min(1, "Tiêu đề không được để trống"),
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       // Gửi thông báo tới tất cả người dùng
       const { data: users, error: usersError } = await supabase
         .from("profiles")
-        .select("id");
+        .select("id, telegram_id, notification_settings");
 
       if (usersError) {
         console.error("Error fetching users:", usersError);
@@ -60,7 +60,33 @@ export async function POST(request: NextRequest) {
           p_title: validatedData.title,
           p_content: validatedData.content,
           p_type: validatedData.type,
+          p_reference_id: null,
         });
+
+        // Gửi thông báo Telegram nếu người dùng có kết nối
+        if (
+          user.telegram_id &&
+          user.notification_settings?.telegram_notifications !== false
+        ) {
+          // Kiểm tra loại thông báo
+          const typeToSetting = {
+            system: "system_notifications",
+            game: "game_notifications",
+            transaction: "transaction_notifications",
+            admin: "security_alerts",
+          };
+
+          const settingKey = typeToSetting[validatedData.type];
+
+          if (user.notification_settings?.[settingKey] !== false) {
+            const messageText = `<b>${validatedData.title}</b>\n\n${validatedData.content}`;
+            await sendTelegramMessage({
+              chat_id: user.telegram_id,
+              text: messageText,
+              parse_mode: "HTML",
+            });
+          }
+        }
         count++;
       }
     } else if (
@@ -70,7 +96,7 @@ export async function POST(request: NextRequest) {
       // Kiểm tra xem người dùng có tồn tại không
       const { data: user, error: userError } = await supabase
         .from("profiles")
-        .select("id")
+        .select("id, telegram_id, notification_settings")
         .eq("id", validatedData.user_id)
         .single();
 
@@ -88,7 +114,33 @@ export async function POST(request: NextRequest) {
         p_title: validatedData.title,
         p_content: validatedData.content,
         p_type: validatedData.type,
+        p_reference_id: null,
       });
+
+      // Gửi thông báo Telegram nếu người dùng có kết nối
+      if (
+        user.telegram_id &&
+        user.notification_settings?.telegram_notifications !== false
+      ) {
+        // Kiểm tra loại thông báo
+        const typeToSetting = {
+          system: "system_notifications",
+          game: "game_notifications",
+          transaction: "transaction_notifications",
+          admin: "security_alerts",
+        };
+
+        const settingKey = typeToSetting[validatedData.type];
+
+        if (user.notification_settings?.[settingKey] !== false) {
+          const messageText = `<b>${validatedData.title}</b>\n\n${validatedData.content}`;
+          await sendTelegramMessage({
+            chat_id: user.telegram_id,
+            text: messageText,
+            parse_mode: "HTML",
+          });
+        }
+      }
       count = 1;
     }
 

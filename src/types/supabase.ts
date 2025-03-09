@@ -214,6 +214,7 @@ export type Database = {
           email: string | null
           id: string
           is_admin: boolean | null
+          notification_settings: Json | null
           phone_number: string | null
           referral_code: string | null
           referred_by: string | null
@@ -229,6 +230,7 @@ export type Database = {
           email?: string | null
           id: string
           is_admin?: boolean | null
+          notification_settings?: Json | null
           phone_number?: string | null
           referral_code?: string | null
           referred_by?: string | null
@@ -244,6 +246,7 @@ export type Database = {
           email?: string | null
           id?: string
           is_admin?: boolean | null
+          notification_settings?: Json | null
           phone_number?: string | null
           referral_code?: string | null
           referred_by?: string | null
@@ -365,6 +368,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_payment_request: {
+        Args: {
+          p_request_id: string
+          p_admin_id: string
+          p_notes?: string
+        }
+        Returns: boolean
+      }
       create_game_round: {
         Args: {
           start_time: string
@@ -372,6 +383,78 @@ export type Database = {
           created_by: string
         }
         Returns: string
+      }
+      create_notification: {
+        Args: {
+          p_profile_id: string
+          p_title: string
+          p_content: string
+          p_type: string
+          p_reference_id?: string
+        }
+        Returns: string
+      }
+      create_payment_request: {
+        Args: {
+          p_profile_id: string
+          p_amount: number
+          p_type: string
+          p_payment_method: string
+          p_payment_details?: Json
+        }
+        Returns: string
+      }
+      get_admin_transaction_history: {
+        Args: {
+          p_type?: string
+          p_start_date?: string
+          p_end_date?: string
+          p_status?: string
+          p_page_number?: number
+          p_page_size?: number
+        }
+        Returns: {
+          id: string
+          profile_id: string
+          amount: number
+          type: string
+          status: string
+          reference_id: string
+          payment_request_id: string
+          description: string
+          created_at: string
+          updated_at: string
+          username: string
+          display_name: string
+          total_count: number
+        }[]
+      }
+      get_admin_transaction_summary: {
+        Args: {
+          p_start_date?: string
+          p_end_date?: string
+        }
+        Returns: {
+          total_deposit: number
+          total_withdrawal: number
+          total_bet: number
+          total_win: number
+          total_referral_reward: number
+          system_profit: number
+          total_users_count: number
+          active_users_count: number
+        }[]
+      }
+      get_bet_statistics_for_game: {
+        Args: {
+          p_game_round_id: string
+        }
+        Returns: {
+          total_bets: number
+          winning_bets: number
+          total_bet_amount: number
+          total_win_amount: number
+        }[]
       }
       get_game_rounds: {
         Args: {
@@ -393,6 +476,116 @@ export type Database = {
           total_count: number
         }[]
       }
+      get_transaction_history: {
+        Args: {
+          p_profile_id: string
+          p_type?: string
+          p_start_date?: string
+          p_end_date?: string
+          p_status?: string
+          p_page_number?: number
+          p_page_size?: number
+        }
+        Returns: {
+          id: string
+          profile_id: string
+          amount: number
+          type: string
+          status: string
+          reference_id: string
+          payment_request_id: string
+          description: string
+          created_at: string
+          updated_at: string
+          total_count: number
+        }[]
+      }
+      get_transaction_summary: {
+        Args: {
+          p_profile_id: string
+          p_start_date?: string
+          p_end_date?: string
+        }
+        Returns: {
+          total_deposit: number
+          total_withdrawal: number
+          total_bet: number
+          total_win: number
+          total_referral_reward: number
+          net_balance: number
+        }[]
+      }
+      get_unread_notification_count: {
+        Args: {
+          p_profile_id: string
+        }
+        Returns: number
+      }
+      get_user_bets: {
+        Args: {
+          p_profile_id: string
+          p_game_round_id?: string
+          p_status?: string
+          p_page_number?: number
+          p_page_size?: number
+        }
+        Returns: {
+          id: string
+          profile_id: string
+          game_round_id: string
+          chosen_number: string
+          amount: number
+          potential_win: number
+          status: string
+          created_at: string
+          updated_at: string
+          game_status: string
+          game_result: string
+          total_count: number
+        }[]
+      }
+      get_user_notifications: {
+        Args: {
+          p_profile_id: string
+          p_page_number?: number
+          p_page_size?: number
+          p_type?: string
+          p_is_read?: boolean
+        }
+        Returns: {
+          id: string
+          profile_id: string
+          title: string
+          content: string
+          type: string
+          is_read: boolean
+          reference_id: string
+          created_at: string
+          total_count: number
+        }[]
+      }
+      mark_all_notifications_read: {
+        Args: {
+          p_profile_id: string
+        }
+        Returns: boolean
+      }
+      mark_notification_read: {
+        Args: {
+          p_notification_id: string
+          p_profile_id: string
+        }
+        Returns: boolean
+      }
+      place_bet: {
+        Args: {
+          p_profile_id: string
+          p_game_round_id: string
+          p_chosen_number: string
+          p_amount: number
+        }
+        Returns: string
+      }
       register_new_user: {
         Args: {
           email: string
@@ -400,6 +593,14 @@ export type Database = {
           referral_code?: string
         }
         Returns: string
+      }
+      reject_payment_request: {
+        Args: {
+          p_request_id: string
+          p_admin_id: string
+          p_notes?: string
+        }
+        Returns: boolean
       }
       update_game_round_status: {
         Args: {

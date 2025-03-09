@@ -1,4 +1,3 @@
-// src/hooks/queries/useNotificationQueries.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 
@@ -7,6 +6,7 @@ export const NOTIFICATION_QUERY_KEYS = {
   notifications: (params?: any) => ["notifications", "list", { ...params }],
   notificationCount: ["notifications", "count"],
   settings: ["notifications", "settings"],
+  telegramStatus: ["notifications", "telegram"],
 };
 
 // API functions
@@ -95,6 +95,11 @@ const notificationApi = {
     game_notifications?: boolean;
     transaction_notifications?: boolean;
     system_notifications?: boolean;
+    telegram_notifications?: boolean;
+    security_alerts?: boolean;
+    deposit_notifications?: boolean;
+    withdrawal_notifications?: boolean;
+    large_bet_notifications?: boolean;
   }) => {
     const response = await fetch(`/api/notifications/settings`, {
       method: "PUT",
@@ -109,6 +114,52 @@ const notificationApi = {
       throw new Error(
         errorData.error || "Không thể cập nhật cài đặt thông báo"
       );
+    }
+
+    return response.json();
+  },
+
+  // Get Telegram status
+  getTelegramStatus: async () => {
+    const response = await fetch(`/api/notifications/telegram`);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        errorData.error || "Không thể kiểm tra trạng thái Telegram"
+      );
+    }
+
+    return response.json();
+  },
+
+  // Connect Telegram
+  connectTelegram: async (telegramId: string) => {
+    const response = await fetch(`/api/notifications/telegram`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ telegram_id: telegramId }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Không thể kết nối Telegram");
+    }
+
+    return response.json();
+  },
+
+  // Disconnect Telegram
+  disconnectTelegram: async () => {
+    const response = await fetch(`/api/notifications/telegram`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Không thể ngắt kết nối Telegram");
     }
 
     return response.json();
@@ -140,6 +191,13 @@ export function useNotificationSettingsQuery() {
   return useQuery({
     queryKey: NOTIFICATION_QUERY_KEYS.settings,
     queryFn: notificationApi.getNotificationSettings,
+  });
+}
+
+export function useTelegramStatusQuery() {
+  return useQuery({
+    queryKey: NOTIFICATION_QUERY_KEYS.telegramStatus,
+    queryFn: notificationApi.getTelegramStatus,
   });
 }
 
@@ -198,6 +256,40 @@ export function useUpdateNotificationSettingsMutation() {
     },
     onError: (error: Error) => {
       toast.error(error.message || "Không thể cập nhật cài đặt thông báo");
+    },
+  });
+}
+
+export function useConnectTelegramMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: notificationApi.connectTelegram,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: NOTIFICATION_QUERY_KEYS.telegramStatus,
+      });
+      toast.success("Kết nối Telegram thành công");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Không thể kết nối Telegram");
+    },
+  });
+}
+
+export function useDisconnectTelegramMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: notificationApi.disconnectTelegram,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: NOTIFICATION_QUERY_KEYS.telegramStatus,
+      });
+      toast.success("Đã ngắt kết nối Telegram");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Không thể ngắt kết nối Telegram");
     },
   });
 }
