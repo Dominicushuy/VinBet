@@ -18,6 +18,8 @@ components=(
   select
   alert-dialog
   textarea
+  popover
+  switch
 )
 
 for comp in "${components[@]}"; do

@@ -138,3 +138,6 @@ CREATE INDEX IF NOT EXISTS idx_game_rounds_start_time ON game_rounds(start_time)
 -- Referrals indexes
 CREATE INDEX IF NOT EXISTS idx_referrals_referrer_id ON referrals(referrer_id);
 CREATE INDEX IF NOT EXISTS idx_referrals_status ON referrals(status);
+
+-- Cập nhật bảng profiles để thêm trường notification_settings
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS notification_settings JSONB DEFAULT '{"email_notifications": true, "push_notifications": true, "game_notifications": true, "transaction_notifications": true, "system_notifications": true}';

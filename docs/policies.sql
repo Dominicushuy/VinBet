@@ -155,6 +155,23 @@ WITH CHECK (
   )
 );
 
+CREATE POLICY "Allow system to create notifications"
+ON notifications FOR INSERT
+WITH CHECK (true);
+
+CREATE POLICY "Users can update only their own notifications"
+ON notifications FOR UPDATE
+USING (auth.uid() = profile_id);
+
+CREATE POLICY "Admins can create notifications for all users"
+ON notifications FOR INSERT
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE id = auth.uid() AND is_admin = TRUE
+  )
+);
+
 -- Policies for referrals table
 CREATE POLICY "Users can read their referrals"
 ON referrals FOR SELECT

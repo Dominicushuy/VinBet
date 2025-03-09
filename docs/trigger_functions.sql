@@ -1072,3 +1072,150 @@ BEGIN
     AND (p_end_date IS NULL OR created_at <= p_end_date);
 END;
 $$ LANGUAGE plpgsql;
+
+-- Function to create a new notification
+CREATE OR REPLACE FUNCTION create_notification(
+  p_profile_id UUID,
+  p_title TEXT,
+  p_content TEXT,
+  p_type TEXT,
+  p_reference_id UUID DEFAULT NULL
+) RETURNS UUID AS $$
+DECLARE
+  new_notification_id UUID;
+BEGIN
+  -- Validate input
+  IF p_type NOT IN ('system', 'transaction', 'game', 'admin') THEN
+    RAISE EXCEPTION 'Invalid notification type';
+  END IF;
+
+  -- Insert new notification
+  INSERT INTO notifications (
+    profile_id,
+    title,
+    content,
+    type,
+    reference_id,
+    is_read,
+    created_at
+  ) VALUES (
+    p_profile_id,
+    p_title,
+    p_content,
+    p_type,
+    p_reference_id,
+    FALSE,
+    NOW()
+  ) RETURNING id INTO new_notification_id;
+
+  RETURN new_notification_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to mark a notification as read
+CREATE OR REPLACE FUNCTION mark_notification_read(
+  p_notification_id UUID,
+  p_profile_id UUID
+) RETURNS BOOLEAN AS $$
+DECLARE
+  v_notification_exists BOOLEAN;
+BEGIN
+  -- Check if the notification exists and belongs to the user
+  SELECT EXISTS (
+    SELECT 1 
+    FROM notifications 
+    WHERE id = p_notification_id AND profile_id = p_profile_id
+  ) INTO v_notification_exists;
+
+  IF NOT v_notification_exists THEN
+    RETURN FALSE;
+  END IF;
+
+  -- Update the notification
+  UPDATE notifications
+  SET is_read = TRUE
+  WHERE id = p_notification_id AND profile_id = p_profile_id;
+
+  RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get user notifications with pagination
+CREATE OR REPLACE FUNCTION get_user_notifications(
+  p_profile_id UUID,
+  p_page_number INTEGER DEFAULT 1,
+  p_page_size INTEGER DEFAULT 10,
+  p_type TEXT DEFAULT NULL,
+  p_is_read BOOLEAN DEFAULT NULL
+)
+RETURNS TABLE (
+  id UUID,
+  profile_id UUID,
+  title TEXT,
+  content TEXT,
+  type TEXT,
+  is_read BOOLEAN,
+  reference_id UUID,
+  created_at TIMESTAMP WITH TIME ZONE,
+  total_count BIGINT
+) AS $$
+DECLARE
+  offset_val INTEGER;
+BEGIN
+  offset_val := (p_page_number - 1) * p_page_size;
+
+  RETURN QUERY
+  SELECT 
+    n.id,
+    n.profile_id,
+    n.title,
+    n.content,
+    n.type,
+    n.is_read,
+    n.reference_id,
+    n.created_at,
+    COUNT(*) OVER() AS total_count
+  FROM 
+    notifications n
+  WHERE
+    n.profile_id = p_profile_id
+    AND (p_type IS NULL OR n.type = p_type)
+    AND (p_is_read IS NULL OR n.is_read = p_is_read)
+  ORDER BY
+    n.created_at DESC
+  LIMIT
+    p_page_size
+  OFFSET
+    offset_val;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get unread notification count for a user
+CREATE OR REPLACE FUNCTION get_unread_notification_count(
+  p_profile_id UUID
+)
+RETURNS INTEGER AS $$
+DECLARE
+  v_count INTEGER;
+BEGIN
+  SELECT COUNT(*)
+  INTO v_count
+  FROM notifications
+  WHERE profile_id = p_profile_id AND is_read = FALSE;
+
+  RETURN v_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to mark all notifications as read for a user
+CREATE OR REPLACE FUNCTION mark_all_notifications_read(
+  p_profile_id UUID
+) RETURNS BOOLEAN AS $$
+BEGIN
+  UPDATE notifications
+  SET is_read = TRUE
+  WHERE profile_id = p_profile_id AND is_read = FALSE;
+
+  RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

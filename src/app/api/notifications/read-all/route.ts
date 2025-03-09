@@ -1,12 +1,9 @@
-// src/app/api/notifications/[id]/read/route.ts
+// src/app/api/notifications/read-all/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
 
@@ -17,32 +14,23 @@ export async function POST(
     }
 
     const userId = sessionData.session.user.id;
-    const notificationId = params.id;
 
-    // Call the function to mark notification as read
+    // Call the function to mark all notifications as read
     const { data: success, error } = await supabase.rpc(
-      "mark_notification_read",
+      "mark_all_notifications_read",
       {
-        p_notification_id: notificationId,
         p_profile_id: userId,
       }
     );
 
     if (error) {
-      console.error("Error marking notification as read:", error);
+      console.error("Error marking all notifications as read:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    if (!success) {
-      return NextResponse.json(
-        { error: "Notification not found or not yours" },
-        { status: 404 }
-      );
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Mark notification read error:", error);
+    console.error("Mark all notifications read error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
