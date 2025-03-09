@@ -14,8 +14,10 @@ import {
   Award,
   Gamepad as GameController,
   Menu as MenuIcon,
+  LogOut,
 } from "lucide-react";
 import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
+import { useAuth } from "@/hooks/useAuth";
 
 interface NavItemProps {
   href: string;
@@ -45,6 +47,7 @@ function NavItem({ href, icon, label, isActive, onClick }: NavItemProps) {
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
+  const { profile, signOut } = useAuth();
 
   const closeSheet = () => setIsOpen(false);
 
@@ -56,11 +59,18 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     { href: "/referrals", label: "Giới thiệu", icon: <Award size={20} /> },
   ];
 
+  const getUserInitial = () => {
+    if (profile?.display_name) return profile.display_name[0].toUpperCase();
+    if (profile?.username) return profile.username[0].toUpperCase();
+    return "U";
+  };
+
   return (
     <div className="flex min-h-screen flex-col">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background">
         <div className="container flex h-16 items-center justify-between">
+          {/* Left side - logo and mobile menu */}
           <div className="flex items-center gap-2">
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
@@ -88,6 +98,17 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                         onClick={closeSheet}
                       />
                     ))}
+                    <Button
+                      variant="ghost"
+                      className="flex items-center justify-start gap-3 px-3 py-2 text-destructive"
+                      onClick={() => {
+                        closeSheet();
+                        signOut();
+                      }}
+                    >
+                      <LogOut size={20} />
+                      <span>Đăng xuất</span>
+                    </Button>
                   </nav>
                 </div>
               </SheetContent>
@@ -100,15 +121,27 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               <span className="hidden font-bold sm:inline-block">VinBet</span>
             </Link>
           </div>
+
+          {/* Right side - balance, notifications, avatar */}
           <div className="flex items-center gap-4">
             <NotificationDropdown />
-            <Button variant="outline" size="sm">
-              <DollarSign size={16} className="mr-2" />
-              <span>Nạp tiền</span>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/finance/deposit">
+                <DollarSign size={16} className="mr-2" />
+                <span>
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(profile?.balance || 0)}
+                </span>
+              </Link>
             </Button>
             <Avatar className="h-9 w-9">
-              <AvatarImage src="" alt="User" />
-              <AvatarFallback>U</AvatarFallback>
+              <AvatarImage
+                src={profile?.avatar_url || ""}
+                alt={profile?.display_name || "User"}
+              />
+              <AvatarFallback>{getUserInitial()}</AvatarFallback>
             </Avatar>
           </div>
         </div>
@@ -128,6 +161,14 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                   isActive={pathname === item.href}
                 />
               ))}
+              <Button
+                variant="ghost"
+                className="flex items-center justify-start gap-3 px-3 py-2 text-destructive"
+                onClick={signOut}
+              >
+                <LogOut size={20} />
+                <span>Đăng xuất</span>
+              </Button>
             </nav>
           </aside>
           <main>{children}</main>
