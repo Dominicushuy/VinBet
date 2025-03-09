@@ -42,20 +42,20 @@ export async function GET(request: NextRequest) {
     }
 
     // Lấy tổng tiền thưởng
-    const { data: rewardData, error: rewardError } = await supabase
+    const { data: rewardTransactions, error: rewardError } = await supabase
       .from("transactions")
-      .select("SUM(amount) as total_rewards")
+      .select("amount")
       .eq("profile_id", userId)
       .eq("type", "referral_reward")
-      .eq("status", "completed")
-      .single();
+      .eq("status", "completed");
 
     if (rewardError) {
       console.error("Error calculating total rewards:", rewardError);
       return NextResponse.json({ error: rewardError.message }, { status: 500 });
     }
 
-    const totalRewards = rewardData?.total_rewards || 0;
+    const totalRewards =
+      rewardTransactions?.reduce((sum, tx) => sum + tx.amount, 0) || 0;
 
     // Lấy thống kê gần đây
     const { data: recentRewards, error: recentError } = await supabase
