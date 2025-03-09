@@ -173,13 +173,9 @@ export function RegisterForm() {
           name="referralCode"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Mã giới thiệu (nếu có)</FormLabel>
+              <FormLabel>Mã giới thiệu (không bắt buộc)</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="Nhập mã giới thiệu"
-                  {...field}
-                  disabled={isLoading}
-                />
+                <Input placeholder="Nhập mã giới thiệu nếu có" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
