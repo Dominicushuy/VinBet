@@ -1,3 +1,4 @@
+// src/components/notifications/TelegramConnect.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,11 +8,11 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Link as LinkIcon, Check, X } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { Loader2, Link as LinkIcon, Check, X, AlertCircle } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,7 +23,9 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import {
   useTelegramStatusQuery,
   useConnectTelegramMutation,
@@ -36,10 +39,9 @@ const telegramFormSchema = z.object({
 type TelegramFormValues = z.infer<typeof telegramFormSchema>;
 
 export function TelegramConnect() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isConnected, setIsConnected] = useState(false);
-  const [telegramId, setTelegramId] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { data, isLoading } = useTelegramStatusQuery();
+  const connectMutation = useConnectTelegramMutation();
+  const disconnectMutation = useDisconnectTelegramMutation();
 
   const form = useForm<TelegramFormValues>({
     resolver: zodResolver(telegramFormSchema),
@@ -48,54 +50,25 @@ export function TelegramConnect() {
     },
   });
 
-  // Lấy thông tin kết nối Telegram
-  const { data, isFetching } = useTelegramStatusQuery();
-  const connectMutation = useConnectTelegramMutation();
-  const disconnectMutation = useDisconnectTelegramMutation();
-
-  // Update state when data is loaded
+  // Cập nhật form khi có dữ liệu
   useEffect(() => {
-    if (data) {
-      setIsConnected(data.connected);
-      setTelegramId(data.telegram_id);
-      setIsLoading(false);
-
-      if (data.telegram_id) {
-        form.setValue("telegram_id", data.telegram_id);
-      }
+    if (data?.telegram_id) {
+      form.setValue("telegram_id", data.telegram_id);
     }
   }, [data, form]);
 
-  // Kết nối Telegram
-  const handleConnect = async (data: TelegramFormValues) => {
-    setIsSubmitting(true);
-    try {
-      await connectMutation.mutateAsync(data.telegram_id);
-      setIsConnected(true);
-      setTelegramId(data.telegram_id);
-    } catch (error) {
-      console.error("Error connecting Telegram:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
+  // Kết nối với Telegram
+  const handleConnect = async (formData: TelegramFormValues) => {
+    await connectMutation.mutateAsync(formData.telegram_id);
   };
 
   // Ngắt kết nối Telegram
   const handleDisconnect = async () => {
-    setIsSubmitting(true);
-    try {
-      await disconnectMutation.mutateAsync();
-      setIsConnected(false);
-      setTelegramId(null);
-      form.setValue("telegram_id", "");
-    } catch (error) {
-      console.error("Error disconnecting Telegram:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
+    await disconnectMutation.mutateAsync();
+    form.reset();
   };
 
-  if (isLoading || isFetching) {
+  if (isLoading) {
     return (
       <Card>
         <CardHeader>
@@ -108,51 +81,73 @@ export function TelegramConnect() {
     );
   }
 
+  const isConnected = data?.connected;
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Kết nối Telegram</CardTitle>
         <CardDescription>
-          Kết nối tài khoản Telegram của bạn để nhận thông báo quan trọng
+          Kết nối tài khoản Telegram để nhận thông báo quan trọng từ VinBet
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         {isConnected ? (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-md">
-              <Check size={16} />
-              <span>Đã kết nối với Telegram</span>
-            </div>
+            <Alert variant="success" className="bg-green-50 border-green-200">
+              <Check className="h-5 w-5 text-green-600" />
+              <AlertTitle>Đã kết nối thành công</AlertTitle>
+              <AlertDescription>
+                Tài khoản của bạn đã được kết nối với Telegram. Bạn sẽ nhận được
+                thông báo quan trọng qua Telegram.
+              </AlertDescription>
+            </Alert>
 
-            <div className="p-3 border rounded-md">
-              <div className="flex justify-between items-center">
+            <div className="rounded-md border p-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium">Telegram ID</p>
-                  <p className="text-sm text-muted-foreground">{telegramId}</p>
+                  <h3 className="font-medium">Telegram ID</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {data?.telegram_id}
+                  </p>
                 </div>
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={handleDisconnect}
-                  disabled={isSubmitting}
+                  disabled={disconnectMutation.isLoading}
                 >
-                  {isSubmitting ? (
+                  {disconnectMutation.isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <X className="h-4 w-4 mr-1" />
+                    <>
+                      <X className="h-4 w-4 mr-2" />
+                      Ngắt kết nối
+                    </>
                   )}
-                  Ngắt kết nối
                 </Button>
               </div>
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="p-3 bg-muted rounded-md">
-              <p className="text-sm">
-                Kết nối với Telegram để nhận thông báo tức thì về các sự kiện
-                quan trọng như kết quả trò chơi, giao dịch và cập nhật hệ thống.
-              </p>
-            </div>
+          <div className="space-y-6">
+            <Alert>
+              <AlertCircle className="h-5 w-5" />
+              <AlertTitle>Cách kết nối Telegram</AlertTitle>
+              <AlertDescription className="space-y-2">
+                <p>
+                  1. Tìm bot VinBet tại <code>@VinBet_notification_bot</code>{" "}
+                  trên Telegram
+                </p>
+                <p>
+                  2. Bắt đầu cuộc trò chuyện và gửi lệnh <code>/start</code>
+                </p>
+                <p>3. Bot sẽ cung cấp Telegram ID của bạn</p>
+                <p>
+                  4. Nhập Telegram ID vào trường bên dưới để hoàn tất kết nối
+                </p>
+              </AlertDescription>
+            </Alert>
 
             <Form {...form}>
               <form
@@ -166,42 +161,65 @@ export function TelegramConnect() {
                     <FormItem>
                       <FormLabel>Telegram ID</FormLabel>
                       <FormControl>
-                        <Input placeholder="Nhập Telegram ID" {...field} />
+                        <Input
+                          placeholder="Nhập Telegram ID của bạn"
+                          {...field}
+                        />
                       </FormControl>
+                      <FormDescription>
+                        ID này được cung cấp bởi bot sau khi bạn gửi lệnh{" "}
+                        <code>/start</code>
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <div className="flex flex-col gap-4">
-                  <div className="flex justify-between items-center">
-                    <a
-                      href="https://telegram.org/dl"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-primary flex items-center gap-1 hover:underline"
-                    >
-                      <LinkIcon size={14} />
-                      Tải ứng dụng Telegram
-                    </a>
-
-                    <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Đang kết nối...
-                        </>
-                      ) : (
-                        "Kết nối"
-                      )}
-                    </Button>
-                  </div>
-                </div>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={connectMutation.isLoading}
+                >
+                  {connectMutation.isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Đang kết nối...
+                    </>
+                  ) : (
+                    "Kết nối Telegram"
+                  )}
+                </Button>
               </form>
             </Form>
+
+            <div className="flex justify-center">
+              <a
+                href="https://t.me/VinBet_notification_bot"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-primary hover:underline"
+              >
+                <LinkIcon className="h-4 w-4" />
+                Mở bot VinBet trên Telegram
+              </a>
+            </div>
           </div>
         )}
       </CardContent>
+      <CardFooter className="bg-muted/50 border-t">
+        <div className="text-sm text-muted-foreground">
+          <p>
+            Cập nhật loại thông báo bạn muốn nhận qua Telegram tại trang{" "}
+            <a
+              href="/notifications/settings"
+              className="text-primary hover:underline"
+            >
+              Cài đặt thông báo
+            </a>
+            .
+          </p>
+        </div>
+      </CardFooter>
     </Card>
   );
 }
