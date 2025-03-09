@@ -1,40 +1,44 @@
-# Yêu cầu Phát triển VinBet: Quản lý Giao dịch
+# Yêu cầu Phát triển VinBet: Quản lý Rút tiền
 
 ## Nhiệm vụ Hiện tại
 
-Theo file `plan.md`, cần phát triển hệ thống quản lý giao dịch với các công việc cụ thể:
+Theo file `plan.md`, cần phát triển hệ thống quản lý rút tiền với các công việc cụ thể:
 
-### 4.2 Quản lý giao dịch (2 ngày)
+### 4.3 Quản lý rút tiền (2 ngày)
 
 #### Backend - 0.5 ngày
 
-- [ ] Tạo function get_transaction_history
-  - [ ] Lấy lịch sử giao dịch với filters
-- [ ] Tạo function get_transaction_summary
-  - [ ] Tính toán tổng hợp giao dịch
+- [ ] Tạo function create_withdrawal_request
+  - [ ] Validation thông tin rút tiền
+  - [ ] Kiểm tra đủ số dư
+- [ ] Tạo function approve_withdrawal_request
+  - [ ] Xử lý phê duyệt rút tiền
+- [ ] Tạo function reject_withdrawal_request
+  - [ ] Xử lý từ chối rút tiền
 
 #### Frontend Components - 1.5 ngày
 
-- [ ] Tạo TransactionHistory component
-  - [ ] Hiển thị lịch sử giao dịch
-  - [ ] Pagination và filters
-- [ ] Tạo TransactionFilters component
-  - [ ] Bộ lọc theo loại và thời gian
-- [ ] Tạo TransactionDetail component
-  - [ ] Hiển thị chi tiết giao dịch
-- [ ] Tạo FinancialSummary component
-  - [ ] Hiển thị tổng hợp tài chính
+- [ ] Tạo WithdrawalForm component
+  - [ ] Form nhập số tiền và thông tin
+  - [ ] Validation số dư
+- [ ] Tạo WithdrawalMethodSelect component
+  - [ ] Chọn phương thức rút tiền
+- [ ] Tạo WithdrawalHistory component
+  - [ ] Hiển thị lịch sử rút tiền
+- [ ] Tạo WithdrawalStatus component
+  - [ ] Hiển thị trạng thái yêu cầu
 
 #### API Routes - 0.5 ngày
 
-- [ ] Tạo route /api/transactions
-  - [ ] GET lịch sử giao dịch với filters
-- [ ] Tạo route /api/transactions/summary
-  - [ ] GET tổng hợp giao dịch
+- [ ] Tạo route /api/payment-requests/withdraw
+  - [ ] POST tạo yêu cầu rút tiền
+  - [ ] GET lấy danh sách
+- [ ] Tạo route /api/payment-requests/withdraw/[id]
+  - [ ] GET chi tiết yêu cầu
 
 ## Cấu trúc dự án hiện tại
 
-- Database Schema: Xem file `schema.sql` để hiểu cấu trúc dữ liệu, đặc biệt là các bảng liên quan đến transactions
+- Database Schema: Xem file `schema.sql` để hiểu cấu trúc dữ liệu, đặc biệt là các bảng liên quan đến user balance và payment requests
 - API Services: Sử dụng @tanstack/react-query cho client-side data fetching
 - UI: TailwindCSS + Shadcn/UI components
 - Authentication: Supabase Auth
@@ -42,18 +46,19 @@ Theo file `plan.md`, cần phát triển hệ thống quản lý giao dịch v�
 
 ## Mô tả cụ thể yêu cầu
 
-1. **Luồng quản lý giao dịch**:
+1. **Luồng rút tiền**:
 
-   - Hệ thống ghi nhận các loại giao dịch: nạp tiền, rút tiền, đặt cược, thắng cược
-   - Người dùng xem lịch sử giao dịch cá nhân với các bộ lọc
-   - Admin xem tất cả giao dịch hệ thống và báo cáo tổng hợp
-   - Báo cáo tài chính đơn giản với thống kê theo loại giao dịch và thời gian
+   - Người dùng tạo yêu cầu rút tiền (số tiền, phương thức, thông tin tài khoản nhận)
+   - Hệ thống kiểm tra số dư và trừ tạm thời
+   - Admin xem xét và phê duyệt/từ chối
+   - Nếu phê duyệt, ghi nhận giao dịch hoàn tất
+   - Nếu từ chối, hoàn lại số tiền đã trừ tạm thời
 
 2. **Quy định code**:
    - Frontend: Tạo hooks riêng cho mỗi API call, sử dụng react-query
-   - Backend: Viết Supabase functions tối ưu cho việc query dữ liệu lớn
-   - Phân quyền: User chỉ xem được giao dịch của mình, Admin xem được tất cả
-   - UI: Sử dụng Data Table của Shadcn/UI cho hiển thị giao dịch
+   - Backend: Xử lý transaction để đảm bảo tính nhất quán dữ liệu
+   - Validation: Kiểm tra số dư, hạn mức rút tiền, thông tin người dùng đầy đủ
+   - Phân quyền: Người dùng chỉ thao tác với yêu cầu của mình, Admin quản lý tất cả
 
 ## Yêu cầu trả lời
 
@@ -61,7 +66,7 @@ Theo file `plan.md`, cần phát triển hệ thống quản lý giao dịch v�
 - Phân chia rõ ràng theo cấu trúc file
 - Ưu tiên tích hợp với code hiện có (kiểm tra file `trigger_functions.sql`)
 - Bao gồm RLS policies cần thiết cho bảo mật giao dịch
-- Implement pagination server-side cho hiệu suất tốt với dữ liệu lớn
-- Đảm bảo độ chính xác của các tính toán tài chính
+- Đảm bảo xử lý đồng bộ giữa yêu cầu rút tiền và số dư người dùng
+- Implement các trạng thái rút tiền: pending, approved, rejected
 
 ## Tham khảo Code Pattern hiện tại hiện có trong Github
