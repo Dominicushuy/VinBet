@@ -185,3 +185,35 @@ USING (
     WHERE id = auth.uid() AND is_admin = TRUE
   )
 );
+
+-- Kiểm tra admin policy helper function
+CREATE OR REPLACE FUNCTION is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM profiles
+    WHERE id = auth.uid() AND is_admin = TRUE
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Policies cho admin dashboard
+CREATE POLICY "Only admins can access dashboard functions"
+ON profiles
+FOR ALL
+USING (is_admin());
+
+CREATE POLICY "Admin can view all transactions"
+ON transactions
+FOR SELECT
+USING (is_admin());
+
+CREATE POLICY "Admin can view all bets"
+ON bets
+FOR SELECT
+USING (is_admin());
+
+CREATE POLICY "Admin can view all game rounds"
+ON game_rounds
+FOR SELECT
+USING (is_admin());

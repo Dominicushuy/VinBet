@@ -1,44 +1,38 @@
-# Yêu cầu Phát triển VinBet: Hệ thống Referral
+# Yêu cầu Phát triển VinBet: Quản trị hệ thống (Admin)
 
 ## Nhiệm vụ Hiện tại
 
-Theo file `plan.md`, cần phát triển hệ thống referral (giới thiệu) với các công việc cụ thể:
+Theo file `plan.md`, cần phát triển hệ thống quản trị (admin) với các công việc cụ thể:
 
-### 6. Hệ thống Referral (3 ngày)
+### 7. Quản trị hệ thống (Admin) (6 ngày)
 
-#### Backend - 1 ngày
+#### 7.1 Dashboard Admin (2 ngày)
 
-- [ ] Tạo function generate_referral_code
-  - [ ] Tạo mã giới thiệu unique
-- [ ] Tạo function track_referral_signup
-  - [ ] Theo dõi đăng ký qua giới thiệu
-- [ ] Tạo function calculate_referral_reward
-  - [ ] Tính toán thưởng giới thiệu
+##### Backend - 0.5 ngày
+- [ ] Tạo function get_dashboard_summary
+  - [ ] Lấy thống kê tổng quan
+- [ ] Tạo function get_key_metrics
+  - [ ] Lấy các chỉ số quan trọng
 
-#### Frontend Components - 1.5 ngày
+##### Frontend Components - 1.5 ngày
+- [ ] Tạo AdminLayout component
+  - [ ] Layout chung cho admin
+- [ ] Tạo AdminDashboard component
+  - [ ] Dashboard tổng quan
+- [ ] Tạo AdminStats component
+  - [ ] Cards hiển thị thống kê
+- [ ] Tạo AdminCharts component
+  - [ ] Biểu đồ thống kê cơ bản
 
-- [ ] Tạo ReferralCodeCard component
-  - [ ] Hiển thị mã giới thiệu
-  - [ ] Copy và share
-- [ ] Tạo ReferralShareLinks component
-  - [ ] Các nút chia sẻ mạng xã hội
-- [ ] Tạo ReferralStatistics component
-  - [ ] Thống kê giới thiệu
-- [ ] Tạo ReferralsList component
-  - [ ] Danh sách người được giới thiệu
-
-#### API Routes - 0.5 ngày
-
-- [ ] Tạo route /api/referrals/code
-  - [ ] GET lấy/tạo mã giới thiệu
-- [ ] Tạo route /api/referrals/stats
-  - [ ] GET thống kê giới thiệu
-- [ ] Tạo route /api/referrals/list
-  - [ ] GET danh sách đã giới thiệu
+##### API Routes - 0.5 ngày
+- [ ] Tạo route /api/admin/dashboard-summary
+  - [ ] GET dữ liệu tổng quan
+- [ ] Tạo route /api/admin/metrics
+  - [ ] GET các chỉ số quan trọng
 
 ## Cấu trúc dự án hiện tại
 
-- Database Schema: Xem file `schema.sql` để hiểu cấu trúc dữ liệu, đặc biệt là các bảng liên quan đến users và referrals
+- Database Schema: Xem file `schema.sql` để hiểu cấu trúc dữ liệu, đặc biệt là các bảng liên quan đến users và admin
 - API Services: Sử dụng @tanstack/react-query cho client-side data fetching
 - UI: TailwindCSS + Shadcn/UI components
 - Authentication: Supabase Auth
@@ -46,29 +40,28 @@ Theo file `plan.md`, cần phát triển hệ thống referral (giới thiệu) 
 
 ## Mô tả cụ thể yêu cầu
 
-1. **Luồng hệ thống referral**:
+1. **Luồng hệ thống quản trị**:
 
-   - Mỗi người dùng có một mã giới thiệu unique
-   - Người dùng mới đăng ký bằng mã giới thiệu
-   - Hệ thống theo dõi liên kết giữa người giới thiệu và người được giới thiệu
-   - Người giới thiệu nhận thưởng khi người được giới thiệu hoàn thành điều kiện (deposit, bet)
-   - Hiển thị thống kê và danh sách người được giới thiệu
+   - Chỉ admin có quyền truy cập vào dashboard quản trị
+   - Dashboard hiển thị thống kê tổng quan về người dùng, giao dịch, cược
+   - Các chỉ số quan trọng được hiển thị dưới dạng cards, biểu đồ
+   - Admin có thể xem thông tin chi tiết về hoạt động hệ thống
 
 2. **Quy định code**:
-   - Frontend: Tạo hooks riêng cho các tính năng referral
-   - Backend: Đảm bảo tính độc nhất của mã giới thiệu, xác thực chính xác
-   - Validation: Kiểm tra mã giới thiệu hợp lệ khi đăng ký
-   - Phân quyền: Người dùng chỉ thấy thông tin referral của mình
-   - Rewards: Tính toán chính xác thưởng theo quy định (% of deposits/bets)
+   - Frontend: Tạo hooks riêng cho các tính năng admin
+   - Backend: Đảm bảo kiểm tra quyền admin trước khi trả về dữ liệu nhạy cảm
+   - Validation: Xác thực quyền truy cập tại cả frontend và backend
+   - Phân quyền: Sử dụng RLS policies để giới hạn quyền truy cập
+   - Metrics: Tính toán chính xác các chỉ số quan trọng (số lượng users, tổng deposit, revenue...)
 
 ## Yêu cầu trả lời
 
 - Tập trung vào code trực tiếp, hạn chế giải thích dài dòng
 - Phân chia rõ ràng theo cấu trúc file
 - Ưu tiên tích hợp với hệ thống user và payment đã có
-- Bao gồm RLS policies cần thiết cho bảo mật thông tin referral
-- Đảm bảo tracking chính xác các referrals và rewards
-- Implement các tính năng copy mã giới thiệu và chia sẻ qua mạng xã hội
-- Thiết kế UI thân thiện cho việc theo dõi thống kê referral
+- Bao gồm RLS policies cần thiết cho bảo mật thông tin admin
+- Đảm bảo chỉ admin có quyền truy cập dashboard
+- Implement các biểu đồ thống kê dễ đọc và thông tin hữu ích
+- Thiết kế UI dashboard chuyên nghiệp và dễ sử dụng
 
 ## Tham khảo Code Pattern hiện tại hiện có trong Github

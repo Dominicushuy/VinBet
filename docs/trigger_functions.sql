@@ -1219,3 +1219,163 @@ BEGIN
   RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get admin dashboard summary
+CREATE OR REPLACE FUNCTION get_admin_dashboard_summary()
+RETURNS JSON AS $$
+DECLARE
+  user_stats JSON;
+  game_stats JSON;
+  transaction_stats JSON;
+  betting_stats JSON;
+BEGIN
+  -- Get user statistics
+  SELECT json_build_object(
+    'total_users', COUNT(*),
+    'new_users_today', COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE),
+    'new_users_week', COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'),
+    'new_users_month', COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'),
+    'active_users', COUNT(*) FILTER (WHERE updated_at >= CURRENT_DATE - INTERVAL '7 days')
+  ) INTO user_stats
+  FROM profiles;
+
+  -- Get game statistics
+  SELECT json_build_object(
+    'total_games', COUNT(*),
+    'active_games', COUNT(*) FILTER (WHERE status = 'active'),
+    'completed_games', COUNT(*) FILTER (WHERE status = 'completed'),
+    'games_today', COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE),
+    'games_week', COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days')
+  ) INTO game_stats
+  FROM game_rounds;
+
+  -- Get transaction statistics
+  SELECT json_build_object(
+    'total_deposits', SUM(amount) FILTER (WHERE type = 'deposit' AND status = 'completed'),
+    'total_withdrawals', SUM(amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed'),
+    'deposits_today', SUM(amount) FILTER (WHERE type = 'deposit' AND status = 'completed' AND created_at >= CURRENT_DATE),
+    'withdrawals_today', SUM(amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed' AND created_at >= CURRENT_DATE),
+    'pending_deposits', COUNT(*) FILTER (WHERE type = 'deposit' AND status = 'pending'),
+    'pending_withdrawals', COUNT(*) FILTER (WHERE type = 'withdrawal' AND status = 'pending')
+  ) INTO transaction_stats
+  FROM transactions;
+
+  -- Get betting statistics
+  SELECT json_build_object(
+    'total_bets', COUNT(*),
+    'total_bet_amount', SUM(amount),
+    'total_winnings', SUM(CASE WHEN status = 'won' THEN potential_win ELSE 0 END),
+    'win_rate', (COUNT(*) FILTER (WHERE status = 'won') * 100.0 / NULLIF(COUNT(*), 0)),
+    'bets_today', COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE),
+    'bets_amount_today', SUM(amount) FILTER (WHERE created_at >= CURRENT_DATE)
+  ) INTO betting_stats
+  FROM bets;
+
+  -- Return combined statistics
+  RETURN json_build_object(
+    'users', user_stats,
+    'games', game_stats,
+    'transactions', transaction_stats,
+    'betting', betting_stats,
+    'timestamp', NOW()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get key admin metrics over time
+CREATE OR REPLACE FUNCTION get_admin_metrics(
+  p_start_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_DATE - INTERVAL '30 days',
+  p_end_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_DATE,
+  p_interval TEXT DEFAULT 'day'
+)
+RETURNS TABLE (
+  time_period TIMESTAMP WITH TIME ZONE,
+  new_users BIGINT,
+  active_games BIGINT,
+  total_bets BIGINT,
+  total_bet_amount DECIMAL(15, 2),
+  total_deposits DECIMAL(15, 2),
+  total_withdrawals DECIMAL(15, 2),
+  revenue DECIMAL(15, 2)
+) AS $$
+DECLARE
+  interval_sql TEXT;
+BEGIN
+  -- Set the appropriate date_trunc function based on interval parameter
+  IF p_interval = 'day' THEN
+    interval_sql := 'day';
+  ELSIF p_interval = 'week' THEN
+    interval_sql := 'week';
+  ELSIF p_interval = 'month' THEN
+    interval_sql := 'month';
+  ELSE
+    interval_sql := 'day';
+  END IF;
+
+  RETURN QUERY
+  WITH time_series AS (
+    -- Generate a series of timestamps for the requested interval
+    SELECT generate_series(
+      date_trunc(interval_sql, p_start_date),
+      date_trunc(interval_sql, p_end_date),
+      ('1 ' || interval_sql)::interval
+    ) AS time_period
+  ),
+  -- User metrics per period
+  user_metrics AS (
+    SELECT
+      date_trunc(interval_sql, created_at) AS period,
+      COUNT(*) AS new_users
+    FROM profiles
+    WHERE created_at BETWEEN p_start_date AND p_end_date
+    GROUP BY period
+  ),
+  -- Game metrics per period
+  game_metrics AS (
+    SELECT
+      date_trunc(interval_sql, created_at) AS period,
+      COUNT(*) FILTER (WHERE status = 'active' OR status = 'completed') AS active_games
+    FROM game_rounds
+    WHERE created_at BETWEEN p_start_date AND p_end_date
+    GROUP BY period
+  ),
+  -- Bet metrics per period
+  bet_metrics AS (
+    SELECT
+      date_trunc(interval_sql, created_at) AS period,
+      COUNT(*) AS total_bets,
+      SUM(amount) AS total_bet_amount
+    FROM bets
+    WHERE created_at BETWEEN p_start_date AND p_end_date
+    GROUP BY period
+  ),
+  -- Transaction metrics per period
+  transaction_metrics AS (
+    SELECT
+      date_trunc(interval_sql, created_at) AS period,
+      SUM(amount) FILTER (WHERE type = 'deposit' AND status = 'completed') AS total_deposits,
+      SUM(amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed') AS total_withdrawals,
+      SUM(amount) FILTER (WHERE type = 'bet' AND status = 'completed') AS total_bets_amount,
+      SUM(amount) FILTER (WHERE type = 'win' AND status = 'completed') AS total_winnings
+    FROM transactions
+    WHERE created_at BETWEEN p_start_date AND p_end_date
+    GROUP BY period
+  )
+  -- Combine all metrics
+  SELECT
+    ts.time_period,
+    COALESCE(um.new_users, 0) AS new_users,
+    COALESCE(gm.active_games, 0) AS active_games,
+    COALESCE(bm.total_bets, 0) AS total_bets,
+    COALESCE(bm.total_bet_amount, 0) AS total_bet_amount,
+    COALESCE(tm.total_deposits, 0) AS total_deposits,
+    COALESCE(tm.total_withdrawals, 0) AS total_withdrawals,
+    COALESCE(COALESCE(bm.total_bet_amount, 0) - COALESCE(tm.total_winnings, 0), 0) AS revenue
+  FROM time_series ts
+  LEFT JOIN user_metrics um ON ts.time_period = um.period
+  LEFT JOIN game_metrics gm ON ts.time_period = gm.period
+  LEFT JOIN bet_metrics bm ON ts.time_period = bm.period
+  LEFT JOIN transaction_metrics tm ON ts.time_period = tm.period
+  ORDER BY ts.time_period;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
