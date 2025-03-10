@@ -1379,3 +1379,81 @@ BEGIN
   ORDER BY ts.time_period;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION get_user_admin_stats(p_user_id UUID)
+RETURNS JSON AS $$
+DECLARE
+  total_bets INTEGER;
+  won_bets INTEGER;
+  total_bet_amount DECIMAL(15, 2);
+  total_winnings DECIMAL(15, 2);
+  total_deposits DECIMAL(15, 2);
+  total_withdrawals DECIMAL(15, 2);
+  last_login TIMESTAMP WITH TIME ZONE;
+BEGIN
+  -- Count bets
+  SELECT 
+    COUNT(*),
+    COUNT(*) FILTER (WHERE status = 'won'),
+    COALESCE(SUM(amount), 0),
+    COALESCE(SUM(CASE WHEN status = 'won' THEN potential_win ELSE 0 END), 0)
+  INTO 
+    total_bets, 
+    won_bets, 
+    total_bet_amount, 
+    total_winnings
+  FROM bets
+  WHERE profile_id = p_user_id;
+
+  -- Sum deposits and withdrawals
+  SELECT 
+    COALESCE(SUM(amount) FILTER (WHERE type = 'deposit' AND status = 'completed'), 0),
+    COALESCE(SUM(amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed'), 0)
+  INTO 
+    total_deposits, 
+    total_withdrawals
+  FROM transactions
+  WHERE profile_id = p_user_id;
+
+  -- Get last login from auth.users (may require Supabase admin privileges)
+  -- This would require additional setup, so we'll return NULL for now
+
+  RETURN json_build_object(
+    'total_bets', total_bets,
+    'won_bets', won_bets,
+    'win_rate', CASE WHEN total_bets > 0 THEN (won_bets::FLOAT / total_bets) * 100 ELSE 0 END,
+    'total_bet_amount', total_bet_amount,
+    'total_winnings', total_winnings,
+    'net_gambling', total_winnings - total_bet_amount,
+    'total_deposits', total_deposits,
+    'total_withdrawals', total_withdrawals,
+    'last_login', last_login
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Cập nhật function validate_user_profile để kiểm tra is_blocked
+CREATE OR REPLACE FUNCTION validate_user_profile()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Validation cho username (không chứa ký tự đặc biệt)
+  IF NEW.username ~ '[^a-zA-Z0-9_]' THEN
+    RAISE EXCEPTION 'Username chỉ được chứa chữ cái, số và dấu gạch dưới';
+  END IF;
+  
+  -- Validation cho phone_number (chỉ chứa số)
+  IF NEW.phone_number IS NOT NULL AND NEW.phone_number ~ '[^0-9+]' THEN
+    RAISE EXCEPTION 'Số điện thoại chỉ được chứa số và dấu +';
+  END IF;
+  
+  -- Không cho phép un-admin chính mình
+  IF OLD.is_admin = TRUE AND NEW.is_admin = FALSE AND auth.uid() = NEW.id THEN
+    RAISE EXCEPTION 'Không thể tự bỏ quyền admin của chính mình';
+  END IF;
+  
+  -- Cập nhật updated_at
+  NEW.updated_at := NOW();
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

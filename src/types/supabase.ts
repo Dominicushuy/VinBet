@@ -9,6 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_logs: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string | null
+          details: Json | null
+          entity_id: string
+          entity_type: string
+          id: string
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string | null
+          details?: Json | null
+          entity_id: string
+          entity_type: string
+          id?: string
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_logs_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bets: {
         Row: {
           amount: number
@@ -214,6 +252,7 @@ export type Database = {
           email: string | null
           id: string
           is_admin: boolean | null
+          is_blocked: boolean | null
           notification_settings: Json | null
           phone_number: string | null
           referral_code: string | null
@@ -230,6 +269,7 @@ export type Database = {
           email?: string | null
           id: string
           is_admin?: boolean | null
+          is_blocked?: boolean | null
           notification_settings?: Json | null
           phone_number?: string | null
           referral_code?: string | null
@@ -246,6 +286,7 @@ export type Database = {
           email?: string | null
           id?: string
           is_admin?: boolean | null
+          is_blocked?: boolean | null
           notification_settings?: Json | null
           phone_number?: string | null
           referral_code?: string | null
@@ -404,6 +445,27 @@ export type Database = {
         }
         Returns: string
       }
+      get_admin_dashboard_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_admin_metrics: {
+        Args: {
+          p_start_date?: string
+          p_end_date?: string
+          p_interval?: string
+        }
+        Returns: {
+          time_period: string
+          new_users: number
+          active_games: number
+          total_bets: number
+          total_bet_amount: number
+          total_deposits: number
+          total_withdrawals: number
+          revenue: number
+        }[]
+      }
       get_admin_transaction_history: {
         Args: {
           p_type?: string
@@ -521,6 +583,12 @@ export type Database = {
         }
         Returns: number
       }
+      get_user_admin_stats: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: Json
+      }
       get_user_bets: {
         Args: {
           p_profile_id: string
@@ -563,6 +631,10 @@ export type Database = {
           created_at: string
           total_count: number
         }[]
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
       }
       mark_all_notifications_read: {
         Args: {

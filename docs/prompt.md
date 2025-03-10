@@ -1,38 +1,45 @@
-# Yêu cầu Phát triển VinBet: Quản trị hệ thống (Admin)
+# Yêu cầu Phát triển VinBet: Quản lý người dùng và game
 
 ## Nhiệm vụ Hiện tại
 
-Theo file `plan.md`, cần phát triển hệ thống quản trị (admin) với các công việc cụ thể:
+Theo file `plan.md`, cần phát triển hệ thống quản lý người dùng và game với các công việc cụ thể:
 
-### 7. Quản trị hệ thống (Admin) (6 ngày)
+### 7.2 Quản lý người dùng và game (2 ngày)
 
-#### 7.1 Dashboard Admin (2 ngày)
+#### Backend - 0.5 ngày
+- [ ] Tạo function get_users_list
+  - [ ] Lấy danh sách người dùng với filters
+- [ ] Tạo function get_user_details
+  - [ ] Lấy thông tin chi tiết người dùng
+- [ ] Tạo function manage_game_rounds
+  - [ ] Quản lý các lượt chơi
 
-##### Backend - 0.5 ngày
-- [ ] Tạo function get_dashboard_summary
-  - [ ] Lấy thống kê tổng quan
-- [ ] Tạo function get_key_metrics
-  - [ ] Lấy các chỉ số quan trọng
+#### Frontend Components - 1.5 ngày
+- [ ] Tạo UserManagement component
+  - [ ] Quản lý danh sách người dùng
+  - [ ] Search và filters
+- [ ] Tạo UserDetail component
+  - [ ] Chi tiết người dùng
+- [ ] Tạo GameManagement component
+  - [ ] Quản lý lượt chơi
+- [ ] Tạo GameRoundControl component
+  - [ ] Điều khiển lượt chơi
+- [ ] Tạo GameResultInput component
+  - [ ] Nhập kết quả lượt chơi
 
-##### Frontend Components - 1.5 ngày
-- [ ] Tạo AdminLayout component
-  - [ ] Layout chung cho admin
-- [ ] Tạo AdminDashboard component
-  - [ ] Dashboard tổng quan
-- [ ] Tạo AdminStats component
-  - [ ] Cards hiển thị thống kê
-- [ ] Tạo AdminCharts component
-  - [ ] Biểu đồ thống kê cơ bản
-
-##### API Routes - 0.5 ngày
-- [ ] Tạo route /api/admin/dashboard-summary
-  - [ ] GET dữ liệu tổng quan
-- [ ] Tạo route /api/admin/metrics
-  - [ ] GET các chỉ số quan trọng
+#### API Routes - 0.5 ngày
+- [ ] Tạo route /api/admin/users
+  - [ ] GET danh sách người dùng
+- [ ] Tạo route /api/admin/users/[id]
+  - [ ] GET/PUT thông tin người dùng
+- [ ] Tạo route /api/admin/games
+  - [ ] CRUD quản lý game
+- [ ] Tạo route /api/admin/games/[id]/results
+  - [ ] POST nhập kết quả
 
 ## Cấu trúc dự án hiện tại
 
-- Database Schema: Xem file `schema.sql` để hiểu cấu trúc dữ liệu, đặc biệt là các bảng liên quan đến users và admin
+- Database Schema: Xem file `schema.sql` để hiểu cấu trúc dữ liệu, đặc biệt là các bảng liên quan đến users và games
 - API Services: Sử dụng @tanstack/react-query cho client-side data fetching
 - UI: TailwindCSS + Shadcn/UI components
 - Authentication: Supabase Auth
@@ -40,28 +47,34 @@ Theo file `plan.md`, cần phát triển hệ thống quản trị (admin) với
 
 ## Mô tả cụ thể yêu cầu
 
-1. **Luồng hệ thống quản trị**:
+1. **Luồng quản lý người dùng**:
 
-   - Chỉ admin có quyền truy cập vào dashboard quản trị
-   - Dashboard hiển thị thống kê tổng quan về người dùng, giao dịch, cược
-   - Các chỉ số quan trọng được hiển thị dưới dạng cards, biểu đồ
-   - Admin có thể xem thông tin chi tiết về hoạt động hệ thống
+   - Admin có thể xem danh sách tất cả người dùng với khả năng lọc và tìm kiếm
+   - Xem chi tiết thông tin người dùng bao gồm lịch sử giao dịch, cược, và hoạt động
+   - Có thể chỉnh sửa trạng thái người dùng (khóa/mở khóa tài khoản)
+   - Theo dõi lượt cược và hoạt động của người dùng cụ thể
 
-2. **Quy định code**:
-   - Frontend: Tạo hooks riêng cho các tính năng admin
-   - Backend: Đảm bảo kiểm tra quyền admin trước khi trả về dữ liệu nhạy cảm
-   - Validation: Xác thực quyền truy cập tại cả frontend và backend
-   - Phân quyền: Sử dụng RLS policies để giới hạn quyền truy cập
-   - Metrics: Tính toán chính xác các chỉ số quan trọng (số lượng users, tổng deposit, revenue...)
+2. **Luồng quản lý game**:
+   - Admin có thể xem tất cả các lượt chơi (game rounds)
+   - Điều khiển trạng thái lượt chơi (mở cược, đóng cược, công bố kết quả)
+   - Nhập kết quả lượt chơi và xác nhận kết quả
+   - Xem lịch sử và thống kê các lượt chơi
+
+3. **Quy định code**:
+   - Frontend: Tạo hooks riêng cho quản lý user và game
+   - Backend: Đảm bảo kiểm tra quyền admin trước khi thực hiện các thao tác
+   - Validation: Xác thực đầy đủ dữ liệu đầu vào, đặc biệt khi nhập kết quả game
+   - Phân quyền: Chỉ admin có quyền truy cập và chỉnh sửa thông tin
+   - Performance: Tối ưu hoá query để xử lý lượng dữ liệu lớn, hỗ trợ phân trang
 
 ## Yêu cầu trả lời
 
 - Tập trung vào code trực tiếp, hạn chế giải thích dài dòng
 - Phân chia rõ ràng theo cấu trúc file
-- Ưu tiên tích hợp với hệ thống user và payment đã có
-- Bao gồm RLS policies cần thiết cho bảo mật thông tin admin
-- Đảm bảo chỉ admin có quyền truy cập dashboard
-- Implement các biểu đồ thống kê dễ đọc và thông tin hữu ích
-- Thiết kế UI dashboard chuyên nghiệp và dễ sử dụng
+- Ưu tiên tích hợp với hệ thống user và game đã có
+- Bao gồm RLS policies cần thiết cho bảo mật thông tin
+- Đảm bảo chỉ admin có quyền quản lý người dùng và game
+- Implement UI với khả năng lọc, tìm kiếm và điều khiển hiệu quả
+- Thiết kế luồng nhập và xác nhận kết quả game an toàn và có cơ chế kiểm tra
 
 ## Tham khảo Code Pattern hiện tại hiện có trong Github

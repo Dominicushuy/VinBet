@@ -141,3 +141,17 @@ CREATE INDEX IF NOT EXISTS idx_referrals_status ON referrals(status);
 
 -- Cập nhật bảng profiles để thêm trường notification_settings
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS notification_settings JSONB DEFAULT '{"email_notifications": true, "push_notifications": true, "game_notifications": true, "transaction_notifications": true, "system_notifications": true}';
+
+-- Bảng admin_logs cho việc ghi log các thao tác của admin
+CREATE TABLE IF NOT EXISTS admin_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  admin_id UUID REFERENCES profiles(id) NOT NULL,
+  action TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_id UUID NOT NULL,
+  details JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Thêm cột is_blocked vào bảng profiles
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_blocked BOOLEAN DEFAULT FALSE;

@@ -20,6 +20,7 @@ components=(
   textarea
   popover
   switch
+  checkbox
 )
 
 for comp in "${components[@]}"; do

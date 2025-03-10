@@ -1,6 +1,7 @@
 // src/hooks/queries/useAdminQueries.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'react-hot-toast'
+import { GAME_QUERY_KEYS } from './useGameQueries'
 
 // Query keys
 export const ADMIN_QUERY_KEYS = {
@@ -73,12 +74,16 @@ const adminApi = {
     query?: string
     page?: number
     pageSize?: number
+    sortBy?: string
+    sortOrder?: string
   }) => {
     const queryParams = new URLSearchParams()
     if (params?.query) queryParams.append('query', params.query)
     if (params?.page) queryParams.append('page', params.page.toString())
     if (params?.pageSize)
       queryParams.append('pageSize', params.pageSize.toString())
+    if (params?.sortBy) queryParams.append('sortBy', params.sortBy)
+    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder)
 
     const response = await fetch(`/api/admin/users?${queryParams}`)
 
@@ -134,6 +139,51 @@ const adminApi = {
 
     return response.json()
   },
+
+  getUserDetail: async (userId: string) => {
+    const response = await fetch(`/api/admin/users/${userId}`)
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Không thể lấy thông tin người dùng')
+    }
+
+    return response.json()
+  },
+
+  updateUser: async (userId: string, data: any) => {
+    const response = await fetch(`/api/admin/users/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Không thể cập nhật người dùng')
+    }
+
+    return response.json()
+  },
+
+  setGameResult: async (gameId: string, data: any) => {
+    const response = await fetch(`/api/admin/games/${gameId}/results`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Không thể cập nhật kết quả game')
+    }
+
+    return response.json()
+  },
 }
 
 // Queries
@@ -153,6 +203,8 @@ export function useAdminUsersQuery(params?: {
   query?: string
   page?: number
   pageSize?: number
+  sortBy?: string
+  sortOrder?: string
 }) {
   return useQuery({
     queryKey: ADMIN_QUERY_KEYS.usersList(params),
@@ -209,5 +261,52 @@ export function useAdminMetricsQuery(params?: {
     staleTime: 5 * 60 * 1000, // 5 phút
     refetchOnWindowFocus: false,
     refetchInterval: 5 * 60 * 1000, // Tự động refetch sau 5 phút
+  })
+}
+
+export function useUserDetailQuery(userId: string) {
+  return useQuery({
+    queryKey: ['admin', 'user', userId],
+    queryFn: () => adminApi.getUserDetail(userId),
+    enabled: !!userId,
+  })
+}
+
+export function useUpdateUserMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      adminApi.updateUser(id, data),
+    onSuccess: (_, variables) => {
+      toast.success('Thông tin người dùng đã được cập nhật')
+      queryClient.invalidateQueries({
+        queryKey: ['admin', 'user', variables.id],
+      })
+      queryClient.invalidateQueries({ queryKey: ADMIN_QUERY_KEYS.usersList() })
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Không thể cập nhật thông tin người dùng')
+    },
+  })
+}
+
+export function useSetGameResultMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ gameId, data }: { gameId: string; data: any }) =>
+      adminApi.setGameResult(gameId, data),
+    onSuccess: (_, variables) => {
+      toast.success('Kết quả đã được cập nhật thành công')
+      queryClient.invalidateQueries({
+        queryKey: GAME_QUERY_KEYS.gameDetail(variables.gameId),
+      })
+      queryClient.invalidateQueries({ queryKey: GAME_QUERY_KEYS.gamesList() })
+      queryClient.invalidateQueries({ queryKey: GAME_QUERY_KEYS.activeGames })
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Không thể cập nhật kết quả')
+    },
   })
 }
