@@ -21,6 +21,7 @@ components=(
   popover
   switch
   checkbox
+  tooltip
 )
 
 for comp in "${components[@]}"; do

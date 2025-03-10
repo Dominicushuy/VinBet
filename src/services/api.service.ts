@@ -59,6 +59,7 @@ export const apiService = {
 
       return fetcher(`/api/game-rounds?${queryString}`)
     },
+    getGameRound: (id: string) => fetcher(`/api/game-rounds/${id}`),
     createGameRound: (data: { startTime: string; endTime: string }) =>
       fetcher('/api/game-rounds', {
         method: 'POST',
