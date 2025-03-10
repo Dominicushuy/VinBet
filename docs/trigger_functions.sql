@@ -1584,3 +1584,41 @@ BEGIN
     );
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION get_daily_transaction_stats(
+  p_profile_id UUID,
+  p_days INTEGER
+)
+RETURNS TABLE (
+  date DATE,
+  type TEXT,
+  status TEXT,
+  total_amount DECIMAL(15, 2)
+) AS $$
+DECLARE
+  v_start_date DATE;
+BEGIN
+  -- Calculate start date (today - p_days)
+  v_start_date := CURRENT_DATE - (p_days || ' days')::INTERVAL;
+  
+  -- Return data grouped by date and transaction type
+  RETURN QUERY
+  SELECT 
+    DATE(created_at) AS date,
+    t.type,
+    t.status,
+    SUM(t.amount) AS total_amount
+  FROM 
+    transactions t
+  WHERE 
+    t.profile_id = p_profile_id
+    AND t.status = 'completed'
+    AND DATE(t.created_at) >= v_start_date
+  GROUP BY 
+    DATE(t.created_at),
+    t.type,
+    t.status
+  ORDER BY
+    date, type;
+END;
+$$ LANGUAGE plpgsql;
