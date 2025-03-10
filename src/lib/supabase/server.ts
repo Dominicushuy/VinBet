@@ -1,13 +1,20 @@
 // src/lib/supabase/server.ts
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
-import { Database } from "@/types/supabase";
-import { cache } from "react";
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import { Database } from '@/types/supabase'
+import { cache } from 'react'
 
-// Tạo hàm cache để tránh tạo nhiều client trong cùng một request
+// Lazy initialize để chỉ tạo client khi cần thiết và trong context request
 export const createServerClient = cache(() => {
-  const cookieStore = cookies();
-  return createServerComponentClient<Database>({ cookies: () => cookieStore });
-});
+  // Trì hoãn việc gọi cookies() cho đến khi hàm được thực thi
+  return () => {
+    const cookieStore = cookies()
+    return createServerComponentClient<Database>({ cookies: () => cookieStore })
+  }
+})
 
-export const supabaseServer = createServerClient();
+// Tạo và export một hàm để lấy client, không phải client trực tiếp
+export const getSupabaseServer = () => {
+  const clientFactory = createServerClient()
+  return clientFactory()
+}

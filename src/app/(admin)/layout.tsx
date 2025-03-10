@@ -1,7 +1,7 @@
 // src/app/(admin)/layout.tsx
 import { redirect } from 'next/navigation'
 import { getUserSession } from '@/lib/auth/session'
-import { createServerClient } from '@/lib/supabase/server'
+import { getSupabaseServer } from '@/lib/supabase/server'
 import Link from 'next/link'
 
 export default async function AdminLayout({
@@ -16,7 +16,7 @@ export default async function AdminLayout({
   }
 
   // Kiểm tra quyền admin
-  const supabase = createServerClient()
+  const supabase = getSupabaseServer()
   const { data: profile } = await supabase
     .from('profiles')
     .select('is_admin')
