@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -p 4321",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 1234",
     "lint": "next lint",
     "db": "supabase gen types typescript --project-id dygxdswguzjeueuzfgvn > src/types/supabase.ts"
   },

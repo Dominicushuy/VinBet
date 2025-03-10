@@ -35,12 +35,6 @@ export default async function DepositPage() {
     .order("created_at", { ascending: false })
     .range(0, 4);
 
-  // Lấy thông tin cấu hình nạp tiền
-  const { data: depositConfig } = await supabase
-    .from("payment_settings")
-    .select("*")
-    .single();
-
   return (
     <div className="space-y-6">
       <div>
@@ -70,51 +64,7 @@ export default async function DepositPage() {
         <TabsContent value="deposit" className="mt-6">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             <div className="col-span-1 md:col-span-2">
-              <DepositFlowSteps
-                initialConfig={
-                  depositConfig || {
-                    min_deposit: 50000,
-                    max_deposit: 100000000,
-                    payment_methods: [
-                      {
-                        id: "bank_transfer",
-                        name: "Chuyển khoản ngân hàng",
-                        description: "Chuyển khoản qua ngân hàng",
-                        accounts: [
-                          {
-                            bank_name: "Vietcombank",
-                            account_number: "1234567890",
-                            account_name: "NGUYEN VAN A",
-                            branch: "Hồ Chí Minh",
-                          },
-                        ],
-                      },
-                      {
-                        id: "momo",
-                        name: "Ví MoMo",
-                        description: "Chuyển tiền qua ví MoMo",
-                        accounts: [
-                          {
-                            phone: "0987654321",
-                            name: "NGUYEN VAN A",
-                          },
-                        ],
-                      },
-                      {
-                        id: "zalopay",
-                        name: "ZaloPay",
-                        description: "Chuyển tiền qua ZaloPay",
-                        accounts: [
-                          {
-                            phone: "0987654321",
-                            name: "NGUYEN VAN A",
-                          },
-                        ],
-                      },
-                    ],
-                  }
-                }
-              />
+              <DepositFlowSteps />
             </div>
             <div className="col-span-1">
               <Card>

@@ -1,7 +1,7 @@
 // src/components/finance/DepositFlowSteps.tsx
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -9,14 +9,11 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
-  CreditCard,
   DollarSign,
-  Upload,
   Wallet,
   Copy,
   QrCode,
   AlertCircle,
-  FileCheck,
   Loader2,
   RefreshCw,
 } from "lucide-react";
@@ -24,14 +21,13 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { RadioGroup } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Form,
@@ -164,7 +160,6 @@ export function DepositFlowSteps({ initialConfig }: DepositFlowStepsProps) {
 
   // Watch form values
   const watchAmount = form.watch("amount");
-  const watchPaymentMethod = form.watch("paymentMethod");
 
   // Handle deposit step 1
   const handleStep1Submit = async (data: DepositFormValues) => {
@@ -307,7 +302,10 @@ export function DepositFlowSteps({ initialConfig }: DepositFlowStepsProps) {
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 ml-1"
-                      onClick={() => copyToClipboard(bankAccount.branch)}
+                      onClick={() =>
+                        bankAccount.branch &&
+                        copyToClipboard(bankAccount.branch)
+                      }
                     >
                       <Copy className="h-3 w-3" />
                     </Button>
@@ -586,32 +584,35 @@ export function DepositFlowSteps({ initialConfig }: DepositFlowStepsProps) {
                 Thông tin chuyển khoản
               </h3>
 
-              {getSelectedMethodDetails()?.accounts.length > 1 && (
-                <Tabs
-                  value={selectedAccount.toString()}
-                  onValueChange={(value) => setSelectedAccount(parseInt(value))}
-                  className="mb-6"
-                >
-                  <TabsList className="grid w-full grid-cols-2">
-                    {getSelectedMethodDetails()?.accounts.map(
-                      (account, index) => (
-                        <TabsTrigger
-                          key={index}
-                          value={index.toString()}
-                          className="text-xs"
-                        >
-                          {selectedMethod === "bank_transfer"
-                            ? (account as BankAccount).bank_name
-                            : `Tài khoản ${index + 1}`}
-                        </TabsTrigger>
-                      )
-                    )}
-                  </TabsList>
-                  <TabsContent value={selectedAccount.toString()}>
-                    {getPaymentInstructions()}
-                  </TabsContent>
-                </Tabs>
-              )}
+              {getSelectedMethodDetails() &&
+                getSelectedMethodDetails()!.accounts.length > 1 && (
+                  <Tabs
+                    value={selectedAccount.toString()}
+                    onValueChange={(value) =>
+                      setSelectedAccount(parseInt(value))
+                    }
+                    className="mb-6"
+                  >
+                    <TabsList className="grid w-full grid-cols-2">
+                      {getSelectedMethodDetails()?.accounts.map(
+                        (account, index) => (
+                          <TabsTrigger
+                            key={index}
+                            value={index.toString()}
+                            className="text-xs"
+                          >
+                            {selectedMethod === "bank_transfer"
+                              ? (account as BankAccount).bank_name
+                              : `Tài khoản ${index + 1}`}
+                          </TabsTrigger>
+                        )
+                      )}
+                    </TabsList>
+                    <TabsContent value={selectedAccount.toString()}>
+                      {getPaymentInstructions()}
+                    </TabsContent>
+                  </Tabs>
+                )}
 
               {getSelectedMethodDetails()?.accounts.length === 1 &&
                 getPaymentInstructions()}

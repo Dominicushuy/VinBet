@@ -4,6 +4,10 @@ import { getUserSession } from "@/lib/auth/session";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import Link from "next/link";
 
+interface AdminProfile {
+  is_admin: boolean;
+}
+
 export default async function AdminLayout({
   children,
 }: {
@@ -17,13 +21,13 @@ export default async function AdminLayout({
 
   // Kiểm tra quyền admin
   const supabase = getSupabaseServer();
-  const { data: profile } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .select("is_admin")
     .eq("id", session.user.id)
-    .single();
+    .single<AdminProfile>();
 
-  if (!profile?.is_admin) {
+  if (error || !data?.is_admin) {
     redirect("/");
   }
 

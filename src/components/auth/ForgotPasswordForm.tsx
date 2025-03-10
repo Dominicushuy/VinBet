@@ -193,11 +193,11 @@ export function ForgotPasswordForm() {
           </form>
         </Form>
       </CardContent>
-      <CardFooter className="flex justify-center border-t p-4">
+      {/* <CardFooter className="flex justify-center border-t p-4">
         <Button variant="link" asChild>
           <Link href="/login">Quay lại đăng nhập</Link>
         </Button>
-      </CardFooter>
+      </CardFooter> */}
     </Card>
   );
 }
