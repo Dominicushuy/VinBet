@@ -1,4 +1,5 @@
 // app/layout.tsx
+import { fontSans, fontHeading } from '@/lib/fonts'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
@@ -18,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang='vi'>
+    <html lang='vi' className={`${fontSans.variable} ${fontHeading.variable}`}>
       <body className={inter.variable}>
         <ComponentsProvider>{children}</ComponentsProvider>
       </body>
