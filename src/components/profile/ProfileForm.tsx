@@ -1,7 +1,6 @@
 // src/components/profile/ProfileForm.tsx
 "use client";
 
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -27,7 +26,7 @@ import {
 } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "react-hot-toast";
-import { LoaderCircle, Save } from "lucide-react";
+import { Loader, Save } from "lucide-react";
 import { useUpdateProfileMutation } from "@/hooks/queries/useProfileQueries";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -214,7 +213,7 @@ export function ProfileForm({ initialProfile }) {
             >
               {updateProfileMutation.isLoading ? (
                 <>
-                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
                   Đang lưu...
                 </>
               ) : (
