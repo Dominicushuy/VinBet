@@ -30,7 +30,6 @@ export function GameCard({ game, className }: GameCardProps) {
   const [timeLeft, setTimeLeft] = useState<string>('')
   const [progressPercentage, setProgressPercentage] = useState<number>(0)
   const [isLive, setIsLive] = useState<boolean>(false)
-  const [isHovered, setIsHovered] = useState(false)
 
   // Format dates for display
   const formattedStartTime = format(
@@ -38,7 +37,6 @@ export function GameCard({ game, className }: GameCardProps) {
     'HH:mm, dd/MM/yyyy',
     { locale: vi }
   )
-
   const formattedEndTime = format(
     new Date(game.end_time),
     'HH:mm, dd/MM/yyyy',
@@ -70,7 +68,6 @@ export function GameCard({ game, className }: GameCardProps) {
         // Game is upcoming
         setIsLive(false)
         setProgressPercentage(0)
-
         setTimeLeft(
           `Bắt đầu trong ${formatDistanceToNow(startTime, {
             locale: vi,
@@ -81,19 +78,16 @@ export function GameCard({ game, className }: GameCardProps) {
         // Game is completed or cancelled
         setIsLive(false)
         setProgressPercentage(100)
-
         setTimeLeft('Đã kết thúc')
       }
     }
 
-    // Update immediately and then set interval
     updateTimeAndProgress()
     const intervalId = setInterval(updateTimeAndProgress, 60000)
-
     return () => clearInterval(intervalId)
   }, [game.start_time, game.end_time])
 
-  // Get status badge with appropriate styling
+  // Get status badge with appropriate styling and animation for active status
   const getStatusBadge = () => {
     switch (game.status) {
       case 'active':
@@ -156,15 +150,12 @@ export function GameCard({ game, className }: GameCardProps) {
   return (
     <Card
       className={cn(
-        'overflow-hidden h-full transition-all duration-300 group',
+        'overflow-hidden h-full transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1',
         isLive ? 'border-green-500/30' : '',
         isJackpot ? 'border-amber-500/50' : '',
         getCardBackground(),
-        isHovered ? 'shadow-md' : 'shadow-sm',
         className
-      )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}>
+      )}>
       <div className='relative'>
         {/* Card Header with Gradient Overlay */}
         <div className='relative h-40 bg-gradient-to-br from-primary/10 to-accent/5 overflow-hidden'>
@@ -191,7 +182,7 @@ export function GameCard({ game, className }: GameCardProps) {
           {/* Jackpot Indicator */}
           {isJackpot && (
             <div className='absolute bottom-3 left-3'>
-              <Badge className='bg-amber-500 text-white group-hover:animate-pulse'>
+              <Badge className='bg-amber-500 text-white animate-pulse'>
                 <Trophy className='mr-1 h-3 w-3' />
                 JACKPOT
               </Badge>
@@ -270,7 +261,7 @@ export function GameCard({ game, className }: GameCardProps) {
           <Button
             variant={isLive ? 'default' : 'outline'}
             className={cn(
-              'w-full transition-all duration-200 group-hover:shadow-sm',
+              'w-full transition-all duration-200',
               isJackpot ? 'bg-amber-500 hover:bg-amber-600 text-white' : '',
               game.status === 'completed'
                 ? 'bg-secondary hover:bg-secondary/80'

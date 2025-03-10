@@ -44,7 +44,7 @@ import {
 } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { BetConfirmation } from './BetConfirmation'
-import { BetSuccess } from './BetSuccess'
+import BetSuccessAnimation from '@/components/bet/BetSuccessAnimation'
 import { usePlaceBetMutation } from '@/hooks/queries/useBetQueries'
 import { GameRound, Bet } from '@/types/database'
 import { useAuth } from '@/hooks/useAuth'
@@ -156,8 +156,6 @@ export function BetForm({ gameRound, className }: BetFormProps) {
     } catch (error) {
       console.error('Error placing bet:', error)
       setShowConfirmation(false)
-
-      // Show error toast
       toast.error('Đặt cược thất bại. Vui lòng thử lại sau.')
     }
   }
@@ -205,7 +203,6 @@ export function BetForm({ gameRound, className }: BetFormProps) {
 
   // Check if user is logged in
   if (authLoading) {
-    // Loading state for authentication
     return (
       <Card className={className}>
         <CardHeader>
@@ -246,7 +243,11 @@ export function BetForm({ gameRound, className }: BetFormProps) {
 
   return (
     <>
-      <Card className={cn('relative overflow-hidden', className)}>
+      <Card
+        className={cn(
+          'relative overflow-hidden md:sticky md:top-24',
+          className
+        )}>
         {/* Decorative elements */}
         <div className='absolute top-0 right-0 w-40 h-40 rounded-full bg-primary/5 -mr-20 -mt-20'></div>
         <div className='absolute bottom-0 left-0 w-40 h-40 rounded-full bg-primary/5 -ml-20 -mb-20'></div>
@@ -292,7 +293,6 @@ export function BetForm({ gameRound, className }: BetFormProps) {
                         </Tooltip>
                       </TooltipProvider>
                     </FormLabel>
-
                     <div className='grid grid-cols-5 gap-2'>
                       <AnimatePresence mode='wait'>
                         {numbers.map((number) => (
@@ -318,7 +318,6 @@ export function BetForm({ gameRound, className }: BetFormProps) {
                         ))}
                       </AnimatePresence>
                     </div>
-
                     <FormMessage />
                   </FormItem>
                 )}
@@ -336,7 +335,6 @@ export function BetForm({ gameRound, className }: BetFormProps) {
                         Tối thiểu: 10,000₫
                       </Badge>
                     </FormLabel>
-
                     <Tabs
                       defaultValue='quick'
                       value={preferredTab}
@@ -347,7 +345,6 @@ export function BetForm({ gameRound, className }: BetFormProps) {
                         <TabsTrigger value='quick'>Nhanh</TabsTrigger>
                         <TabsTrigger value='custom'>Tùy chỉnh</TabsTrigger>
                       </TabsList>
-
                       <TabsContent value='quick' className='space-y-3'>
                         <div className='grid grid-cols-3 gap-2'>
                           {quickAmounts.map((quickAmount) => (
@@ -368,7 +365,6 @@ export function BetForm({ gameRound, className }: BetFormProps) {
                           ))}
                         </div>
                       </TabsContent>
-
                       <TabsContent value='custom'>
                         <FormControl>
                           <div className='relative'>
@@ -390,7 +386,6 @@ export function BetForm({ gameRound, className }: BetFormProps) {
                         </FormControl>
                       </TabsContent>
                     </Tabs>
-
                     <FormMessage />
                   </FormItem>
                 )}
@@ -412,16 +407,13 @@ export function BetForm({ gameRound, className }: BetFormProps) {
                     )}
                   </span>
                 </div>
-
                 <div className='flex justify-between items-center'>
                   <span className='text-sm'>Số tiền cược:</span>
                   <span className='font-medium'>
                     {formatMoney(amount || 0)}
                   </span>
                 </div>
-
                 <Separator />
-
                 <div className='flex justify-between items-center'>
                   <div className='flex items-center gap-1'>
                     <span className='text-sm font-medium'>
@@ -461,14 +453,12 @@ export function BetForm({ gameRound, className }: BetFormProps) {
                     {formatMoney(profile?.balance || 0)}
                   </span>
                 </div>
-
                 <div className='flex gap-2'>
                   {amount > (profile?.balance || 0) && (
                     <Button type='button' variant='outline' asChild>
                       <a href='/finance/deposit'>Nạp tiền</a>
                     </Button>
                   )}
-
                   <Button
                     type='submit'
                     disabled={
@@ -518,12 +508,15 @@ export function BetForm({ gameRound, className }: BetFormProps) {
         />
       )}
 
-      {/* Success notification */}
+      {/* Success notification sử dụng BetSuccessAnimation */}
       {showSuccess && successBet && (
-        <BetSuccess
-          open={showSuccess}
-          onOpenChange={setShowSuccess}
-          bet={successBet}
+        <BetSuccessAnimation
+          betId={successBet.id}
+          amount={successBet.amount}
+          potentialWin={successBet.potential_win}
+          chosenNumber={successBet.chosen_number}
+          onDismiss={() => setShowSuccess(false)}
+          gameId={gameRound.id}
         />
       )}
     </>

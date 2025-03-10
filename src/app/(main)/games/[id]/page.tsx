@@ -15,17 +15,13 @@ import {
   Users,
   AlertCircle,
   Share2,
-  ExternalLink,
   Gamepad,
-  History,
-  ChevronRight,
   BadgeCheck,
 } from 'lucide-react'
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
@@ -44,17 +40,17 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { BetForm } from '@/components/bet/BetForm'
 import { BetList } from '@/components/bet/BetList'
-import { GameResult } from '@/components/game/GameResult'
 import { WinnerList } from '@/components/game/WinnerList'
-import { GameCard } from '@/components/game/GameCard'
 import { useGameDetailQuery } from '@/hooks/queries/useGameQueries'
-import { cn } from '@/lib/utils'
-import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'react-hot-toast'
+
+// Các import mới
+import RelatedGames from '@/components/game/RelatedGames'
+import GameResultAnimation from '@/components/game/GameResultAnimation'
+import GameLeaderboard from '@/components/game/GameLeaderboard'
 
 export default function GameDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const { profile } = useAuth()
   const [activeTab, setActiveTab] = useState<string>('overview')
   const [timeLeft, setTimeLeft] = useState<string>('')
   const [progressPercentage, setProgressPercentage] = useState<number>(0)
@@ -62,7 +58,6 @@ export default function GameDetailPage() {
 
   // Fetch game details
   const { data: gameData, isLoading, error } = useGameDetailQuery(id as string)
-
   const game = gameData?.gameRound
 
   // Update time remaining and progress
@@ -156,7 +151,6 @@ export default function GameDetailPage() {
             Chi tiết lượt chơi
           </h2>
         </div>
-
         <Alert variant='destructive'>
           <AlertCircle className='h-4 w-4' />
           <AlertTitle>Lỗi</AlertTitle>
@@ -167,7 +161,6 @@ export default function GameDetailPage() {
             )}
           </AlertDescription>
         </Alert>
-
         <div className='flex justify-center'>
           <Button asChild>
             <Link href='/games'>Quay lại danh sách</Link>
@@ -258,7 +251,6 @@ export default function GameDetailPage() {
         </div>
         <div className='flex items-center gap-2'>
           {getStatusBadge()}
-
           <Popover>
             <PopoverTrigger asChild>
               <Button variant='outline' size='icon'>
@@ -327,13 +319,21 @@ export default function GameDetailPage() {
             defaultValue='overview'
             value={activeTab}
             onValueChange={setActiveTab}>
-            <TabsList className='mb-4'>
-              <TabsTrigger value='overview'>Tổng quan</TabsTrigger>
-              <TabsTrigger value='bets'>Đặt cược</TabsTrigger>
+            <TabsList className='mb-4 w-full overflow-auto'>
+              <TabsTrigger value='overview' className='whitespace-nowrap'>
+                <span className='sm:hidden'>Tổng quan</span>
+                <span className='hidden sm:inline'>Tổng quan</span>
+              </TabsTrigger>
+              <TabsTrigger value='bets' className='whitespace-nowrap'>
+                <span className='sm:hidden'>Đặt cược</span>
+                <span className='hidden sm:inline'>Đặt cược</span>
+              </TabsTrigger>
               <TabsTrigger
                 value='results'
-                disabled={game.status !== 'completed'}>
-                Kết quả
+                disabled={game.status !== 'completed'}
+                className='whitespace-nowrap'>
+                <span className='sm:hidden'>Kết quả</span>
+                <span className='hidden sm:inline'>Kết quả</span>
               </TabsTrigger>
             </TabsList>
 
@@ -356,7 +356,6 @@ export default function GameDetailPage() {
                         {formatDate(game.start_time)}
                       </div>
                     </div>
-
                     <div className='space-y-2'>
                       <div className='flex items-center gap-2 text-sm text-muted-foreground'>
                         <Clock className='h-4 w-4' />
@@ -418,39 +417,39 @@ export default function GameDetailPage() {
                       </p>
                     </div>
                   </div>
-
-                  {/* Game result (if completed) */}
-                  {game.status === 'completed' && game.result && (
-                    <>
-                      <Separator />
-                      <div className='space-y-2'>
-                        <div className='flex items-center gap-2 text-sm text-muted-foreground'>
-                          <Trophy className='h-4 w-4 text-amber-500' />
-                          <span>Kết quả</span>
-                        </div>
-                        <div className='flex justify-center'>
-                          <div className='bg-primary/10 w-20 h-20 rounded-full flex items-center justify-center'>
-                            <span className='text-4xl font-bold'>
-                              {game.result}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
                 </CardContent>
               </Card>
+
+              {/* New: Game Leaderboard */}
+              <GameLeaderboard
+                gameId={id as string}
+                isCompleted={game.status === 'completed'}
+              />
 
               {/* User's bets in this game */}
               <BetList gameRoundId={id as string} />
 
-              {/* Game result and winners (if completed) */}
-              {game.status === 'completed' && (
-                <div className='space-y-6'>
-                  <GameResult gameRound={game} />
-                  <WinnerList gameRound={game} />
-                </div>
+              {/* Game result and winners (if completed) với animation */}
+              {game.status === 'completed' && game.result && (
+                <>
+                  <Separator />
+                  <div className='space-y-2'>
+                    <div className='flex items-center gap-2 text-sm text-muted-foreground'>
+                      <Trophy className='h-4 w-4 text-amber-500' />
+                      <span>Kết quả</span>
+                    </div>
+                    <div className='flex justify-center py-4'>
+                      <GameResultAnimation
+                        result={game.result}
+                        autoPlay={false}
+                      />
+                    </div>
+                  </div>
+                </>
               )}
+
+              {/* Winner list (if completed) */}
+              {game.status === 'completed' && <WinnerList gameRound={game} />}
             </TabsContent>
 
             {/* Betting tab */}
@@ -463,7 +462,7 @@ export default function GameDetailPage() {
             <TabsContent value='results' className='space-y-6'>
               {game.status === 'completed' ? (
                 <>
-                  <GameResult gameRound={game} />
+                  <GameResultAnimation result={game.result} autoPlay={false} />
                   <WinnerList gameRound={game} />
                 </>
               ) : (
@@ -488,7 +487,6 @@ export default function GameDetailPage() {
               <BetForm gameRound={game} />
             </div>
           )}
-
           {/* Game status card */}
           <Card>
             <CardHeader>
@@ -502,7 +500,6 @@ export default function GameDetailPage() {
                   </span>
                   <div>{getStatusBadge()}</div>
                 </div>
-
                 <div className='flex justify-between items-center'>
                   <span className='text-sm text-muted-foreground'>
                     Người tham gia:
@@ -511,7 +508,6 @@ export default function GameDetailPage() {
                     {game.bets_count?.count || 0}
                   </div>
                 </div>
-
                 {isLive && (
                   <div className='flex justify-between items-center'>
                     <span className='text-sm text-muted-foreground'>
@@ -522,7 +518,6 @@ export default function GameDetailPage() {
                     </div>
                   </div>
                 )}
-
                 {game.status === 'completed' && game.result && (
                   <div className='flex justify-between items-center'>
                     <span className='text-sm text-muted-foreground'>
@@ -532,7 +527,6 @@ export default function GameDetailPage() {
                   </div>
                 )}
               </div>
-
               {/* Call to action */}
               {game.status === 'active' && !isLoading && (
                 <div className='pt-2'>
@@ -545,13 +539,19 @@ export default function GameDetailPage() {
               )}
             </CardContent>
           </Card>
-
           {/* User's bets */}
           <div className='hidden md:block'>
             <BetList gameRoundId={id as string} />
           </div>
         </div>
       </div>
+
+      {/* New: Related games section */}
+      {game && (
+        <div className='mt-8'>
+          <RelatedGames currentGameId={id as string} />
+        </div>
+      )}
     </div>
   )
 }
@@ -578,7 +578,7 @@ function GameDetailSkeleton() {
       {/* Tabs skeleton */}
       <Skeleton className='h-10 w-full max-w-xs' />
 
-      {/* Main content */}
+      {/* Main content skeleton */}
       <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
         <div className='md:col-span-2 space-y-6'>
           {/* Game info skeleton */}
@@ -597,9 +597,7 @@ function GameDetailSkeleton() {
                   <Skeleton className='h-5 w-44' />
                 </div>
               </div>
-
               <Separator />
-
               <div className='space-y-2'>
                 <Skeleton className='h-4 w-24' />
                 <div className='flex items-center gap-2'>
@@ -607,9 +605,7 @@ function GameDetailSkeleton() {
                   <Skeleton className='h-5 w-32' />
                 </div>
               </div>
-
               <Separator />
-
               <div className='space-y-2'>
                 <Skeleton className='h-4 w-20' />
                 <div className='space-y-2'>
@@ -621,7 +617,6 @@ function GameDetailSkeleton() {
             </CardContent>
           </Card>
         </div>
-
         {/* Sidebar skeleton */}
         <div className='space-y-6'>
           <Card>
@@ -643,11 +638,9 @@ function GameDetailSkeleton() {
                   <Skeleton className='h-5 w-24' />
                 </div>
               </div>
-
               <Skeleton className='h-9 w-full mt-2' />
             </CardContent>
           </Card>
-
           <Card>
             <CardHeader>
               <Skeleton className='h-6 w-32' />
