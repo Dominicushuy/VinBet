@@ -25,6 +25,7 @@ import { StatsCounter } from '@/components/home/StatsCounter'
 import { TestimonialSlider } from '@/components/home/TestimonialSlider'
 import { JackpotCounter } from '@/components/home/JackpotCounter'
 import { CTACard } from '@/components/home/CTACard'
+import { getSupabaseServer } from '@/lib/supabase/server'
 
 export const metadata: Metadata = {
   title: 'VinBet - Nền tảng cá cược trực tuyến hàng đầu Việt Nam',
@@ -32,7 +33,55 @@ export const metadata: Metadata = {
     'Tham gia cá cược, trải nghiệm những ván chơi hấp dẫn và nhận thưởng tức thì tại VinBet',
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = getSupabaseServer()
+
+  // Lấy thống kê từ Database thực tế
+  const { data: statsData } = await supabase.rpc('get_platform_statistics')
+
+  // Lấy danh sách game đang diễn ra
+  const { data: activeGames } = await supabase
+    .from('game_rounds')
+    .select('*')
+    .eq('status', 'active')
+    .order('end_time', { ascending: true })
+    .limit(6)
+
+  // Lấy danh sách game sắp diễn ra
+  const { data: upcomingGames } = await supabase
+    .from('game_rounds')
+    .select('*')
+    .eq('status', 'scheduled')
+    .order('start_time', { ascending: true })
+    .limit(6)
+
+  // Lấy danh sách người thắng gần đây
+  const { data: recentWinners } = await supabase
+    .from('bets')
+    .select(
+      `
+      id,
+      amount,
+      potential_win,
+      created_at,
+      profiles:profile_id(id, username, display_name, avatar_url),
+      game_rounds:game_round_id(id, result)
+    `
+    )
+    .eq('status', 'won')
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  // Tính toán jackpot hiện tại
+  const { data: jackpotData } = await supabase.rpc('calculate_current_jackpot')
+  const jackpotAmount = jackpotData?.jackpot_amount || 100000000
+
+  // Lấy số liệu thống kê
+  const userCount = statsData?.user_count || 5000
+  const totalReward = statsData?.total_reward_paid || 50000000000
+  const gameCount = statsData?.total_game_rounds || 10000
+  const winRate = statsData?.win_rate || 95
+
   return (
     <div className='space-y-10 pb-10 -mt-6 -mx-6'>
       {/* Hero Section */}
@@ -62,25 +111,32 @@ export default function HomePage() {
               </p>
 
               <div className='flex flex-wrap gap-4 pt-4'>
-                <Button size='lg' className='gap-2'>
-                  <Gamepad className='h-5 w-5' /> Tham gia ngay
+                <Button size='lg' className='gap-2' asChild>
+                  <Link href='/games'>
+                    <Gamepad className='h-5 w-5' /> Tham gia ngay
+                  </Link>
                 </Button>
                 <Button
                   size='lg'
                   variant='outline'
-                  className='bg-white/10 border-white/20 text-white hover:bg-white/20'>
-                  Tìm hiểu thêm
+                  className='bg-white/10 border-white/20 text-white hover:bg-white/20'
+                  asChild>
+                  <Link href='/about'>Tìm hiểu thêm</Link>
                 </Button>
               </div>
 
               <div className='flex gap-4 pt-2'>
                 <div className='flex items-center gap-2'>
                   <Users className='h-4 w-4 text-white/70' />
-                  <span className='text-white/70 text-sm'>10K+ người chơi</span>
+                  <span className='text-white/70 text-sm'>
+                    {userCount.toLocaleString()}+ người chơi
+                  </span>
                 </div>
                 <div className='flex items-center gap-2'>
                   <Trophy className='h-4 w-4 text-white/70' />
-                  <span className='text-white/70 text-sm'>99% tỷ lệ thắng</span>
+                  <span className='text-white/70 text-sm'>
+                    {winRate}% tỷ lệ thắng
+                  </span>
                 </div>
                 <div className='flex items-center gap-2'>
                   <Clock3 className='h-4 w-4 text-white/70' />
@@ -105,7 +161,7 @@ export default function HomePage() {
                   <div className='absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6'>
                     <JackpotCounter
                       className='text-3xl font-bold text-accent mb-2'
-                      value={5000000000}
+                      initialValue={jackpotAmount}
                     />
                     <p className='text-white'>
                       Jackpot đang chờ người chiến thắng!
@@ -124,26 +180,26 @@ export default function HomePage() {
           <StatsCounter
             icon={<Users className='h-6 w-6 text-primary' />}
             label='Người chơi'
-            value={12500}
+            value={userCount}
             suffix='+'
           />
           <StatsCounter
             icon={<DollarSign className='h-6 w-6 text-primary' />}
             label='Tiền thưởng'
-            value={120000000000}
+            value={totalReward}
             prefix='₫'
             isMonetary={true}
           />
           <StatsCounter
             icon={<Gamepad className='h-6 w-6 text-primary' />}
             label='Lượt chơi'
-            value={45000}
+            value={gameCount}
             suffix='+'
           />
           <StatsCounter
             icon={<Trophy className='h-6 w-6 text-primary' />}
             label='Tỷ lệ thắng'
-            value={99}
+            value={winRate}
             suffix='%'
           />
         </div>
@@ -220,19 +276,19 @@ export default function HomePage() {
           </TabsList>
 
           <TabsContent value='active' className='mt-0'>
-            <GameCardShowcase type='active' count={6} />
+            <GameCardShowcase initialGames={activeGames} type='active' />
           </TabsContent>
 
           <TabsContent value='upcoming' className='mt-0'>
-            <GameCardShowcase type='upcoming' count={6} />
+            <GameCardShowcase initialGames={upcomingGames} type='upcoming' />
           </TabsContent>
 
           <TabsContent value='popular' className='mt-0'>
-            <GameCardShowcase type='popular' count={6} />
+            <GameCardShowcase type='popular' />
           </TabsContent>
 
           <TabsContent value='jackpot' className='mt-0'>
-            <GameCardShowcase type='jackpot' count={6} />
+            <GameCardShowcase type='jackpot' />
           </TabsContent>
         </Tabs>
       </section>
@@ -247,7 +303,7 @@ export default function HomePage() {
                 Người thắng cuộc gần đây
               </h2>
 
-              <WinnersList />
+              <WinnersList initialWinners={recentWinners} />
 
               <div className='mt-4 text-center'>
                 <Button variant='outline' asChild>
@@ -285,11 +341,11 @@ export default function HomePage() {
                 </p>
 
                 <div className='flex flex-wrap gap-4 pt-2'>
-                  <Button size='lg' className='gap-2'>
-                    Đăng ký ngay
+                  <Button size='lg' className='gap-2' asChild>
+                    <Link href='/register'>Đăng ký ngay</Link>
                   </Button>
-                  <Button size='lg' variant='outline'>
-                    Tìm hiểu thêm
+                  <Button size='lg' variant='outline' asChild>
+                    <Link href='/about'>Tìm hiểu thêm</Link>
                   </Button>
                 </div>
               </div>

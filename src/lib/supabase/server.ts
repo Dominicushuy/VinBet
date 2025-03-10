@@ -1,5 +1,8 @@
 // src/lib/supabase/server.ts
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import {
+  createServerComponentClient,
+  SupabaseClient,
+} from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { Database } from '@/types/supabase'
 import { cache } from 'react'
@@ -9,7 +12,9 @@ export const createServerClient = cache(() => {
   // Trì hoãn việc gọi cookies() cho đến khi hàm được thực thi
   return () => {
     const cookieStore = cookies()
-    return createServerComponentClient<Database>({ cookies: () => cookieStore })
+    return createServerComponentClient<Database>({
+      cookies: () => cookieStore,
+    }) as SupabaseClient
   }
 })
 
