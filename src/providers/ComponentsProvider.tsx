@@ -1,8 +1,9 @@
 "use client";
 
 import { ThemeProvider } from "next-themes";
-import { Toaster } from "react-hot-toast";
+import { Toaster as HotToaster } from "react-hot-toast";
 import { QueryProvider } from "./QueryProvider";
+import { Toaster } from "@/components/ui/toaster";
 
 export function ComponentsProvider({
   children,
@@ -12,7 +13,7 @@ export function ComponentsProvider({
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
       <QueryProvider>
-        <Toaster
+        <HotToaster
           position="top-center"
           reverseOrder={false}
           gutter={8}
@@ -38,6 +39,8 @@ export function ComponentsProvider({
             },
           }}
         />
+        {/* Thêm Toaster mới */}
+        <Toaster />
         {children}
       </QueryProvider>
     </ThemeProvider>

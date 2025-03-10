@@ -24,6 +24,7 @@ components=(
   tooltip
   radio-group
   collapsible
+  slider
 )
 
 for comp in "${components[@]}"; do
