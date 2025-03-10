@@ -1,29 +1,5 @@
-Tạo prompt theo cấu trúc ở trên với nhiệm vụ cụ thể sau:
+Tôi đã hoàn thành các tính năng chính của dự án,  tôi muốn nâng cấp nó bằng cách chỉnh sửa các UI,UX một cách đẹp hơn bắt mắt người dùng hơn. Tôi sẽ cung cấp cho bạn plan và cấu trúc thư mục dự án của tôi. Bạn hãy gợi ý prompt chuẩn để tôi có thể dùng nó cho Chat Bot của tôi để làm việc đó tốt nhất có thể:
 
-### 4.2 Quản lý giao dịch (2 ngày)
-
-#### Backend - 0.5 ngày
-
-- [ ] Tạo function get_transaction_history
-  - [ ] Lấy lịch sử giao dịch với filters
-- [ ] Tạo function get_transaction_summary
-  - [ ] Tính toán tổng hợp giao dịch
-
-#### Frontend Components - 1.5 ngày
-
-- [ ] Tạo TransactionHistory component
-  - [ ] Hiển thị lịch sử giao dịch
-  - [ ] Pagination và filters
-- [ ] Tạo TransactionFilters component
-  - [ ] Bộ lọc theo loại và thời gian
-- [ ] Tạo TransactionDetail component
-  - [ ] Hiển thị chi tiết giao dịch
-- [ ] Tạo FinancialSummary component
-  - [ ] Hiển thị tổng hợp tài chính
-
-#### API Routes - 0.5 ngày
-
-- [ ] Tạo route /api/transactions
-  - [ ] GET lịch sử giao dịch với filters
-- [ ] Tạo route /api/transactions/summary
-  - [ ] GET tổng hợp giao dịch
+Dự án có khá nhiều tính năng và mỗi tính năng Chat Bot sẽ tạo ra kết quả rất nhiều kết quả code TSX,...
+Hãy chia nhỏ từng phần riêng biệt và cấu trúc prompt để tôi có thể làm theo nhiều công đoạn
+(Đưa file `plan.md` và cấu trúc thư mục dự án vào)
