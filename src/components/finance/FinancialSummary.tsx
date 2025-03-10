@@ -1,187 +1,172 @@
 // src/components/finance/FinancialSummary.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+  ArrowDown,
+  ArrowUp,
+  TrendingDown,
+  TrendingUp,
+  RefreshCcw,
+} from "lucide-react";
 import { useTransactionSummaryQuery } from "@/hooks/queries/useTransactionQueries";
-import { Loader2, ArrowDown, ArrowUp } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { format, subDays } from "date-fns";
 
-export function FinancialSummary() {
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [appliedStartDate, setAppliedStartDate] = useState<string | undefined>(
-    undefined
-  );
-  const [appliedEndDate, setAppliedEndDate] = useState<string | undefined>(
-    undefined
-  );
+interface FinancialSummaryProps {
+  summaryData?: any;
+  balance: number;
+}
 
-  const { data, isLoading, refetch } = useTransactionSummaryQuery({
-    startDate: appliedStartDate,
-    endDate: appliedEndDate,
+export function FinancialSummary({
+  summaryData,
+  balance,
+}: FinancialSummaryProps) {
+  const [mounted, setMounted] = useState(false);
+
+  // Get last 30 days data
+  const thirty_days_ago = format(subDays(new Date(), 30), "yyyy-MM-dd");
+  const today = format(new Date(), "yyyy-MM-dd");
+
+  // Fetch summary data using React Query
+  const { data, isLoading } = useTransactionSummaryQuery({
+    startDate: thirty_days_ago,
+    endDate: today,
   });
-
-  const summary = data?.summary || {
-    total_deposit: 0,
-    total_withdrawal: 0,
-    total_bet: 0,
-    total_win: 0,
-    total_referral_reward: 0,
-    net_balance: 0,
-  };
-
-  const handleFilter = () => {
-    setAppliedStartDate(startDate || undefined);
-    setAppliedEndDate(endDate || undefined);
-  };
-
-  const handleReset = () => {
-    setStartDate("");
-    setEndDate("");
-    setAppliedStartDate(undefined);
-    setAppliedEndDate(undefined);
-  };
 
   // Format money
   const formatMoney = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
+      maximumFractionDigits: 0,
     }).format(amount);
   };
 
+  // Use the initialized data or fetched data
+  const summary = data?.summary ||
+    summaryData || {
+      total_deposit: 0,
+      total_withdrawal: 0,
+      total_bet: 0,
+      total_win: 0,
+      total_referral_reward: 0,
+      net_balance: 0,
+    };
+
+  // Set mounted after client-side execution
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-32 w-full" />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Tổng hợp tài chính</CardTitle>
-        <CardDescription>
-          {appliedStartDate && appliedEndDate
-            ? `Thống kê từ ${appliedStartDate} đến ${appliedEndDate}`
-            : appliedStartDate
-            ? `Thống kê từ ${appliedStartDate} đến nay`
-            : appliedEndDate
-            ? `Thống kê đến ${appliedEndDate}`
-            : "Thống kê tất cả giao dịch"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 space-y-2">
-            <label className="text-sm font-medium">Từ ngày</label>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Balance Card */}
+      <Card className="bg-primary/5 border-primary/20">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Số dư hiện tại
+            </h3>
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <RefreshCcw className="h-4 w-4 text-primary" />
+            </div>
           </div>
-          <div className="flex-1 space-y-2">
-            <label className="text-sm font-medium">Đến ngày</label>
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
+          <div className="text-2xl font-bold text-foreground">
+            {formatMoney(balance)}
           </div>
-          <div className="flex items-end gap-2">
-            <Button onClick={handleFilter}>Lọc</Button>
-            <Button variant="outline" onClick={handleReset}>
-              Xóa
-            </Button>
+          <div className="mt-2 text-xs text-muted-foreground">
+            Cập nhật theo thời gian thực
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {isLoading ? (
-          <div className="flex justify-center py-6">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      {/* Deposits Card */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Tổng nạp tiền
+            </h3>
+            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+              <ArrowUp className="h-4 w-4 text-green-600" />
+            </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="py-4">
-                <CardTitle className="text-lg flex items-center">
-                  <ArrowUp className="mr-2 h-5 w-5 text-green-500" />
-                  Tổng tiền nạp
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="py-2">
-                <div className="text-2xl font-bold text-green-600">
-                  {formatMoney(summary.total_deposit)}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="py-4">
-                <CardTitle className="text-lg flex items-center">
-                  <ArrowDown className="mr-2 h-5 w-5 text-red-500" />
-                  Tổng tiền rút
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="py-2">
-                <div className="text-2xl font-bold text-red-600">
-                  {formatMoney(summary.total_withdrawal)}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="py-4">
-                <CardTitle className="text-lg">Số dư ròng</CardTitle>
-              </CardHeader>
-              <CardContent className="py-2">
-                <div
-                  className={`text-2xl font-bold ${
-                    summary.net_balance >= 0 ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {formatMoney(summary.net_balance)}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="py-4">
-                <CardTitle className="text-lg">Tổng tiền đặt cược</CardTitle>
-              </CardHeader>
-              <CardContent className="py-2">
-                <div className="text-2xl font-bold">
-                  {formatMoney(summary.total_bet)}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="py-4">
-                <CardTitle className="text-lg">Tổng tiền thắng cược</CardTitle>
-              </CardHeader>
-              <CardContent className="py-2">
-                <div className="text-2xl font-bold text-green-600">
-                  {formatMoney(summary.total_win)}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="py-4">
-                <CardTitle className="text-lg">Thưởng giới thiệu</CardTitle>
-              </CardHeader>
-              <CardContent className="py-2">
-                <div className="text-2xl font-bold text-green-600">
-                  {formatMoney(summary.total_referral_reward)}
-                </div>
-              </CardContent>
-            </Card>
+          <div className="text-2xl font-bold text-green-600">
+            {isLoading ? (
+              <Skeleton className="h-7 w-24" />
+            ) : (
+              formatMoney(summary.total_deposit)
+            )}
           </div>
-        )}
-      </CardContent>
-    </Card>
+          <div className="mt-2 text-xs text-muted-foreground">30 ngày qua</div>
+        </CardContent>
+      </Card>
+
+      {/* Withdrawals Card */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Tổng rút tiền
+            </h3>
+            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+              <ArrowDown className="h-4 w-4 text-red-600" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-red-600">
+            {isLoading ? (
+              <Skeleton className="h-7 w-24" />
+            ) : (
+              formatMoney(summary.total_withdrawal)
+            )}
+          </div>
+          <div className="mt-2 text-xs text-muted-foreground">30 ngày qua</div>
+        </CardContent>
+      </Card>
+
+      {/* Profit/Loss Card */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Lời/Lỗ cá cược
+            </h3>
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+              {summary.total_win - summary.total_bet >= 0 ? (
+                <TrendingUp className="h-4 w-4 text-blue-600" />
+              ) : (
+                <TrendingDown className="h-4 w-4 text-blue-600" />
+              )}
+            </div>
+          </div>
+          <div
+            className={`text-2xl font-bold ${
+              summary.total_win - summary.total_bet >= 0
+                ? "text-green-600"
+                : "text-red-600"
+            }`}
+          >
+            {isLoading ? (
+              <Skeleton className="h-7 w-24" />
+            ) : (
+              formatMoney(summary.total_win - summary.total_bet)
+            )}
+          </div>
+          <div className="mt-2 text-xs text-muted-foreground">30 ngày qua</div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

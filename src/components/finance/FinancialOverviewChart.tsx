@@ -74,7 +74,7 @@ export function FinancialOverviewChart({
       const typeParam = filter !== "all" ? `&type=${filter}` : "";
 
       const response = await fetch(
-        `/api/user/transactions/chart?startDate=${startDate}&endDate=${endDate}${typeParam}`
+        `/api/transactions/chart?startDate=${startDate}&endDate=${endDate}${typeParam}`
       );
       if (!response.ok) {
         throw new Error("Failed to fetch financial data");

@@ -166,6 +166,9 @@ export function useCreatePaymentRequestMutation() {
       queryClient.invalidateQueries({
         queryKey: FINANCE_QUERY_KEYS.paymentRequests(),
       });
+      queryClient.invalidateQueries({
+        queryKey: FINANCE_QUERY_KEYS.withdrawalRequests(),
+      });
       return data;
     },
     onError: (error: any) => {

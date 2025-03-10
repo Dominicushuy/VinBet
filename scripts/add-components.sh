@@ -23,6 +23,7 @@ components=(
   checkbox
   tooltip
   radio-group
+  collapsible
 )
 
 for comp in "${components[@]}"; do
