@@ -11,7 +11,7 @@ Tôi hiểu dự án của bạn có nhiều tính năng và việc cải thiệ
 ## 1. Prompt Thiết lập Theme & Design System
 
 ```
-Tôi đang phát triển nền tảng cá cược Vinbet sử dụng Next.js, TypeScript, Tailwind CSS và shadcn/ui. Tôi cần thiết lập design system làm nền tảng cho toàn bộ dự án.
+Tôi đang phát triển nền tảng cá cược Vinbet sử dụng Next.js, TypeScript, Tailwind CSS và radix-ui. Tôi cần thiết lập design system làm nền tảng cho toàn bộ dự án.
 
 Hãy giúp tôi:
 1. Xây dựng color palette chuyên nghiệp cho nền tảng cá cược (primary, secondary, accent, warning, success, error)
@@ -23,7 +23,7 @@ Cung cấp:
 - Color palette dưới dạng biến Tailwind (trong tailwind.config.js)
 - Các class utility Tailwind tái sử dụng
 - Mẫu CSS global nếu cần
-- Ví dụ về các component shadcn/ui đã tùy chỉnh theo theme mới
+- Ví dụ về các component radix-ui đã tùy chỉnh theo theme mới
 
 Phong cách mong muốn: hiện đại, chuyên nghiệp, tạo cảm giác đáng tin cậy và sang trọng phù hợp với nền tảng cá cược.
 ```
@@ -105,7 +105,7 @@ Hãy thiết kế:
    - Confirmation flow
    - Success/error states
 
-Cung cấp code TSX đầy đủ với Tailwind và components từ shadcn/ui, đảm bảo UX mượt mà và hấp dẫn người dùng tham gia.
+Cung cấp code TSX đầy đủ với Tailwind và components từ radix-ui, đảm bảo UX mượt mà và hấp dẫn người dùng tham gia.
 ```
 
 ## 5. Prompt Cải thiện Finance Interface
@@ -137,7 +137,7 @@ Hãy thiết kế:
    - Chi tiết giao dịch
    - Export options
 
-Cung cấp code TSX đầy đủ với Tailwind và shadcn/ui components, tập trung vào tính minh bạch, dễ sử dụng và tạo sự tin tưởng cho người dùng.
+Cung cấp code TSX đầy đủ với Tailwind và radix-ui components, tập trung vào tính minh bạch, dễ sử dụng và tạo sự tin tưởng cho người dùng.
 ```
 
 ## 6. Prompt Cải thiện Authentication UI
@@ -164,7 +164,7 @@ Hãy thiết kế:
    - New password creation
    - Success confirmation
 
-Cung cấp code TSX đầy đủ với Tailwind và shadcn/ui, tập trung vào UX mượt mà, responsive và giảm thiểu friction trong quá trình đăng ký/đăng nhập.
+Cung cấp code TSX đầy đủ với Tailwind và radix-ui, tập trung vào UX mượt mà, responsive và giảm thiểu friction trong quá trình đăng ký/đăng nhập.
 ```
 
 ## 7. Prompt Cải thiện Profile & User Settings
@@ -193,7 +193,7 @@ Hãy thiết kế:
    - Telegram integration UI
    - Email/SMS preferences
 
-Cung cấp code TSX đầy đủ với Tailwind và shadcn/ui components, tập trung vào organization hợp lý, dễ sử dụng và bảo mật trực quan.
+Cung cấp code TSX đầy đủ với Tailwind và radix-ui components, tập trung vào organization hợp lý, dễ sử dụng và bảo mật trực quan.
 ```
 
 ## 8. Prompt Cải thiện Notification System
@@ -224,7 +224,7 @@ Hãy thiết kế:
    - Visually appealing empty state
    - Loading indicators
 
-Cung cấp code TSX đầy đủ với Tailwind và shadcn/ui components, tập trung vào real-time feel và không làm gián đoạn trải nghiệm người dùng.
+Cung cấp code TSX đầy đủ với Tailwind và radix-ui components, tập trung vào real-time feel và không làm gián đoạn trải nghiệm người dùng.
 ```
 
 ## 9. Prompt Cải thiện Admin Dashboard
@@ -254,7 +254,7 @@ Hãy thiết kế:
    - Filtering và sorting
    - Detail view với proof validation
 
-Cung cấp code TSX đầy đủ với Tailwind và shadcn/ui components, tập trung vào data density phù hợp, quản lý hiệu quả và trải nghiệm admin mượt mà.
+Cung cấp code TSX đầy đủ với Tailwind và radix-ui components, tập trung vào data density phù hợp, quản lý hiệu quả và trải nghiệm admin mượt mà.
 ```
 
 ## 10. Prompt Cải thiện Mobile Experience

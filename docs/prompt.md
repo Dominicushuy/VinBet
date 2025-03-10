@@ -37,7 +37,7 @@ Theo file `plan.md`, cần phát triển hệ thống quản lý thanh toán v�
 
 - Database Schema: Xem file `schema.sql` để hiểu cấu trúc dữ liệu, đặc biệt là các bảng liên quan đến payments và transactions
 - API Services: Sử dụng @tanstack/react-query cho client-side data fetching
-- UI: TailwindCSS + Shadcn/UI components
+- UI: TailwindCSS + Radix-ui components
 - Authentication: Supabase Auth
 - Database: Supabase PostgreSQL với RLS policies
 
