@@ -1457,3 +1457,130 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Thêm vào file trigger_functions.sql
+-- Function để lấy các game rounds dạng jackpot
+CREATE OR REPLACE FUNCTION get_jackpot_games(p_limit INTEGER DEFAULT 6)
+RETURNS TABLE (
+  id UUID,
+  start_time TIMESTAMP WITH TIME ZONE,
+  end_time TIMESTAMP WITH TIME ZONE,
+  status TEXT,
+  result TEXT,
+  total_bet_amount DECIMAL(15, 2)
+) AS $$
+BEGIN
+  RETURN QUERY
+  WITH game_bets AS (
+    SELECT 
+      game_round_id,
+      SUM(amount) as total_bet_amount
+    FROM bets
+    GROUP BY game_round_id
+  )
+  SELECT 
+    gr.id,
+    gr.start_time,
+    gr.end_time,
+    gr.status,
+    gr.result,
+    COALESCE(gb.total_bet_amount, 0) as total_bet_amount
+  FROM 
+    game_rounds gr
+    LEFT JOIN game_bets gb ON gr.id = gb.game_round_id
+  WHERE 
+    gr.status = 'active'
+    AND (
+      -- Điều kiện 1: Game dài hơn 24 giờ
+      (gr.end_time - gr.start_time) > INTERVAL '24 hours'
+      OR
+      -- Điều kiện 2: Tổng tiền đặt cược lớn hơn 10,000,000
+      COALESCE(gb.total_bet_amount, 0) > 10000000
+    )
+  ORDER BY 
+    COALESCE(gb.total_bet_amount, 0) DESC,
+    gr.end_time DESC
+  LIMIT p_limit;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function tính toán giá trị jackpot hiện tại dựa trên:
+-- 1. Giá trị cơ bản
+-- 2. Phần trăm từ tổng tiền đặt cược hiện tại
+-- 3. Lịch sử giao dịch jackpot
+
+CREATE OR REPLACE FUNCTION calculate_current_jackpot()
+RETURNS JSON AS $$
+DECLARE
+    base_jackpot DECIMAL(15, 2) := 50000000; -- Giá trị jackpot cơ bản (50 triệu VND)
+    jackpot_contribution_rate DECIMAL(5, 4) := 0.0500; -- 5% từ mỗi lượt đặt cược đóng góp vào jackpot
+    active_multiplier DECIMAL(5, 4) := 1.1000; -- Hệ số nhân cho jackpot khi có nhiều người chơi (10%)
+    jackpot_amount DECIMAL(15, 2) := 0;
+    active_bets_count INTEGER := 0;
+    total_bet_amount DECIMAL(15, 2) := 0;
+    total_jackpot_payouts DECIMAL(15, 2) := 0;
+    current_active_games INTEGER := 0;
+BEGIN
+    -- Đếm số lượng lượt chơi active
+    SELECT COUNT(*) INTO current_active_games
+    FROM game_rounds
+    WHERE status = 'active';
+    
+    -- Tính tổng số tiền đặt cược trong các lượt chơi đang diễn ra
+    SELECT COALESCE(SUM(amount), 0) INTO total_bet_amount
+    FROM bets b
+    JOIN game_rounds gr ON b.game_round_id = gr.id
+    WHERE gr.status = 'active';
+    
+    -- Đếm số lượng đặt cược đang hoạt động
+    SELECT COUNT(*) INTO active_bets_count
+    FROM bets b
+    JOIN game_rounds gr ON b.game_round_id = gr.id
+    WHERE gr.status = 'active';
+    
+    -- Tính tổng số tiền đã trả cho jackpot
+    SELECT COALESCE(SUM(amount), 0) INTO total_jackpot_payouts
+    FROM transactions
+    WHERE type = 'win'
+      AND status = 'completed' 
+      AND description LIKE '%jackpot%';
+    
+    -- Tính toán jackpot dựa trên công thức:
+    -- Jackpot cơ bản + (Tổng tiền đặt cược * tỷ lệ đóng góp) - Tổng đã trả
+    jackpot_amount := base_jackpot + (total_bet_amount * jackpot_contribution_rate);
+    
+    -- Tăng jackpot dựa trên số lượng đặt cược đang hoạt động
+    IF active_bets_count > 50 THEN
+        jackpot_amount := jackpot_amount * active_multiplier;
+    END IF;
+    
+    -- Nếu không có lượt chơi active, reset jackpot về giá trị cơ bản
+    IF current_active_games = 0 THEN
+        jackpot_amount := base_jackpot;
+    END IF;
+    
+    -- Trừ đi số tiền jackpot đã trả 
+    jackpot_amount := jackpot_amount - total_jackpot_payouts;
+    
+    -- Đảm bảo jackpot không âm và không nhỏ hơn giá trị cơ bản
+    IF jackpot_amount < base_jackpot THEN
+        jackpot_amount := base_jackpot;
+    END IF;
+    
+    -- Random thêm một chút để tạo cảm giác jackpot đang tăng
+    jackpot_amount := jackpot_amount + (random() * 10000);
+    
+    -- Làm tròn để không có số lẻ
+    jackpot_amount := ROUND(jackpot_amount, -3);
+    
+    -- Trả về JSON với các thông tin chi tiết
+    RETURN json_build_object(
+        'jackpot_amount', jackpot_amount,
+        'base_jackpot', base_jackpot,
+        'total_bet_amount', total_bet_amount,
+        'active_bets_count', active_bets_count,
+        'current_active_games', current_active_games,
+        'timestamp', NOW()
+    );
+END;
+$$ LANGUAGE plpgsql;

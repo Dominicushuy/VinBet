@@ -39,22 +39,6 @@ export default async function HomePage() {
   // Lấy thống kê từ Database thực tế
   const { data: statsData } = await supabase.rpc('get_platform_statistics')
 
-  // Lấy danh sách game đang diễn ra
-  const { data: activeGames } = await supabase
-    .from('game_rounds')
-    .select('*')
-    .eq('status', 'active')
-    .order('end_time', { ascending: true })
-    .limit(6)
-
-  // Lấy danh sách game sắp diễn ra
-  const { data: upcomingGames } = await supabase
-    .from('game_rounds')
-    .select('*')
-    .eq('status', 'scheduled')
-    .order('start_time', { ascending: true })
-    .limit(6)
-
   // Lấy danh sách người thắng gần đây
   const { data: recentWinners } = await supabase
     .from('bets')
@@ -276,11 +260,11 @@ export default async function HomePage() {
           </TabsList>
 
           <TabsContent value='active' className='mt-0'>
-            <GameCardShowcase initialGames={activeGames} type='active' />
+            <GameCardShowcase type='active' />
           </TabsContent>
 
           <TabsContent value='upcoming' className='mt-0'>
-            <GameCardShowcase initialGames={upcomingGames} type='upcoming' />
+            <GameCardShowcase type='upcoming' />
           </TabsContent>
 
           <TabsContent value='popular' className='mt-0'>

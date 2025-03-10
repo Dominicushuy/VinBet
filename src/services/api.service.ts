@@ -91,22 +91,18 @@ export const apiService = {
       }
       return response.json()
     },
-
-    // Các hàm mới được thêm vào
-    // Lấy các game phổ biến
-    getPopularGames: async () => {
-      return fetcher('/api/games/popular')
-    },
-
-    // Lấy thông tin jackpot hiện tại
     getJackpotAmount: async () => {
       return fetcher('/api/games/jackpot')
     },
 
+    // Các hàm mới được thêm vào
+    // Lấy các game phổ biến
+    getPopularGames: () => fetcher('/api/games/popular'),
+    getJackpotGames: () => fetcher('/api/games/jackpot-games'),
+    getUpcomingGames: () => fetcher('/api/games/upcoming'),
+
     // Lấy danh sách người thắng gần đây
-    getRecentWinners: async () => {
-      return fetcher('/api/games/winners/recent')
-    },
+    getRecentWinners: () => fetcher('/api/games/winners/recent'),
   },
 
   // Transactions service
