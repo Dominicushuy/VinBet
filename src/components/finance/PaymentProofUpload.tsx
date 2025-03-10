@@ -1,21 +1,35 @@
-// src/components/finance/PaymentProofUpload.tsx
+// src/components/finance/PaymentProofUpload.tsx - Enhanced
 "use client";
 
 import { useState, useRef } from "react";
 import { toast } from "react-hot-toast";
-import { Upload, X, Image, CheckCircle, Loader2 } from "lucide-react";
+import {
+  Upload,
+  X,
+  Image,
+  CheckCircle,
+  Loader2,
+  Info,
+  AlertCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useUploadPaymentProofMutation } from "@/hooks/queries/useFinanceQueries";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface PaymentProofUploadProps {
   requestId: string;
+  onUploadComplete?: () => void;
 }
 
-export function PaymentProofUpload({ requestId }: PaymentProofUploadProps) {
+export function PaymentProofUpload({
+  requestId,
+  onUploadComplete,
+}: PaymentProofUploadProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [preview, setPreview] = useState<string | null>(null);
   const [isUploaded, setIsUploaded] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { isLoading, mutateAsync } = useUploadPaymentProofMutation();
@@ -23,6 +37,11 @@ export function PaymentProofUpload({ requestId }: PaymentProofUploadProps) {
   // Hàm xử lý khi chọn file
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    processFile(file);
+  };
+
+  // Hàm xử lý file drag & drop
+  const processFile = (file?: File) => {
     if (!file) return;
 
     // Kiểm tra kiểu file
@@ -73,12 +92,16 @@ export function PaymentProofUpload({ requestId }: PaymentProofUploadProps) {
       setUploadProgress(100);
       setIsUploaded(true);
 
-      setTimeout(() => {
-        setUploadProgress(0);
-      }, 1000);
+      // Notify parent component
+      if (onUploadComplete) {
+        setTimeout(() => {
+          onUploadComplete();
+        }, 1000);
+      }
     } catch (error) {
       console.error("Upload error:", error);
       setUploadProgress(0);
+      toast.error("Không thể tải lên bằng chứng thanh toán. Vui lòng thử lại.");
     }
   };
 
@@ -91,8 +114,37 @@ export function PaymentProofUpload({ requestId }: PaymentProofUploadProps) {
     }
   };
 
+  // Handle drag events
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    processFile(file);
+  };
+
   return (
     <div className="space-y-4">
+      <Alert
+        variant="default"
+        className="bg-blue-50 text-blue-800 border-blue-200 mb-4"
+      >
+        <Info className="h-4 w-4" />
+        <AlertDescription className="text-sm">
+          Tải lên ảnh chụp màn hình hoặc biên lai xác nhận giao dịch chuyển
+          khoản đã hoàn thành.
+        </AlertDescription>
+      </Alert>
+
       <div className="flex flex-col items-center justify-center gap-4">
         {preview ? (
           <div className="relative w-full max-w-md">
@@ -109,15 +161,23 @@ export function PaymentProofUpload({ requestId }: PaymentProofUploadProps) {
           </div>
         ) : (
           <div
-            className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg cursor-pointer bg-muted/30 hover:bg-muted/50"
+            className={`flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg cursor-pointer ${
+              isDragging
+                ? "border-primary bg-primary/5"
+                : "bg-muted/30 hover:bg-muted/50"
+            }`}
             onClick={() => fileInputRef.current?.click()}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
           >
-            <Image className="h-10 w-10 text-muted-foreground" />
-            <p className="mt-2 text-sm text-muted-foreground">
-              Click để tải lên bằng chứng thanh toán
+            <Image className="h-10 w-10 text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">
+              Kéo và thả ảnh vào đây hoặc{" "}
+              <span className="text-primary font-medium">chọn file</span>
             </p>
-            <p className="text-xs text-muted-foreground">
-              (chỉ chấp nhận file ảnh, kích thước tối đa 2MB)
+            <p className="text-xs text-muted-foreground mt-1">
+              (PNG, JPG, JPEG tối đa 2MB)
             </p>
           </div>
         )}
@@ -175,6 +235,16 @@ export function PaymentProofUpload({ requestId }: PaymentProofUploadProps) {
           </Button>
         )}
       </div>
+
+      {!isUploaded && (
+        <Alert variant="destructive" className="mt-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Yêu cầu nạp tiền sẽ không được xử lý cho đến khi bạn tải lên bằng
+            chứng thanh toán.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 }

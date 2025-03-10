@@ -22,6 +22,7 @@ components=(
   switch
   checkbox
   tooltip
+  radio-group
 )
 
 for comp in "${components[@]}"; do
