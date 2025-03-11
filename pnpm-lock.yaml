@@ -29,6 +29,9 @@ importers:
       '@radix-ui/react-dropdown-menu':
         specifier: ^2.1.6
         version: 2.1.6(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      '@radix-ui/react-hover-card':
+        specifier: ^1.1.6
+        version: 1.1.6(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@radix-ui/react-label':
         specifier: ^2.1.2
         version: 2.1.2(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -162,6 +165,9 @@ importers:
       eslint:
         specifier: ^9.22.0
         version: 9.22.0(jiti@1.21.7)
+      eslint-import-resolver-alias:
+        specifier: ^1.1.2
+        version: 1.1.2(eslint-plugin-import@2.31.0(eslint@9.22.0(jiti@1.21.7)))
       eslint-plugin-import:
         specifier: ^2.31.0
         version: 2.31.0(eslint@9.22.0(jiti@1.21.7))
@@ -543,6 +549,19 @@ packages:
 
   '@radix-ui/react-focus-scope@1.1.2':
     resolution: {integrity: sha512-zxwE80FCU7lcXUGWkdt6XpTTCKPitG1XKOwViTxHVKIJhZl9MvIl2dVHeZENCWD9+EdWv05wlaEkRXUykU27RA==}
+    peerDependencies:
+      '@types/react': '*'
+      '@types/react-dom': '*'
+      react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+      react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      '@types/react-dom':
+        optional: true
+
+  '@radix-ui/react-hover-card@1.1.6':
+    resolution: {integrity: sha512-E4ozl35jq0VRlrdc4dhHrNSV0JqBb4Jy73WAhBEK7JoYnQ83ED5r0Rb/XdVKw89ReAJN38N492BAPBZQ57VmqQ==}
     peerDependencies:
       '@types/react': '*'
       '@types/react-dom': '*'
@@ -1408,6 +1427,12 @@ packages:
   escape-string-regexp@4.0.0:
     resolution: {integrity: sha512-TtpcNJ3XAzx3Gq8sWRzJaVajRs0uVxA2YAkdb1jm2YkPz4G6egUFAyA3n5vtEIZefPk5Wa4UXbKuS5fKkJWdgA==}
     engines: {node: '>=10'}
+
+  eslint-import-resolver-alias@1.1.2:
+    resolution: {integrity: sha512-WdviM1Eu834zsfjHtcGHtGfcu+F30Od3V7I9Fi57uhBEwPkjDcii7/yW8jAT+gOhn4P/vOxxNAXbFAKsrrc15w==}
+    engines: {node: '>= 4'}
+    peerDependencies:
+      eslint-plugin-import: '>=1.4.0'
 
   eslint-import-resolver-node@0.3.9:
     resolution: {integrity: sha512-WFj2isz22JahUv+B788TlO3N6zL3nNJGU8CcZbPZvVEkBPaJdCV4vy5wyghty5ROFbCRnm132v8BScu5/1BQ8g==}
@@ -2963,6 +2988,20 @@ snapshots:
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
 
+  '@radix-ui/react-hover-card@1.1.6(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
+    dependencies:
+      '@radix-ui/primitive': 1.1.1
+      '@radix-ui/react-compose-refs': 1.1.1(react@18.2.0)
+      '@radix-ui/react-context': 1.1.1(react@18.2.0)
+      '@radix-ui/react-dismissable-layer': 1.1.5(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      '@radix-ui/react-popper': 1.2.2(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      '@radix-ui/react-portal': 1.1.4(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      '@radix-ui/react-presence': 1.1.2(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      '@radix-ui/react-primitive': 2.0.2(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      '@radix-ui/react-use-controllable-state': 1.1.0(react@18.2.0)
+      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
+
   '@radix-ui/react-id@1.1.0(react@18.2.0)':
     dependencies:
       '@radix-ui/react-use-layout-effect': 1.1.0(react@18.2.0)
@@ -3849,6 +3888,10 @@ snapshots:
   escalade@3.2.0: {}
 
   escape-string-regexp@4.0.0: {}
+
+  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.31.0(eslint@9.22.0(jiti@1.21.7))):
+    dependencies:
+      eslint-plugin-import: 2.31.0(eslint@9.22.0(jiti@1.21.7))
 
   eslint-import-resolver-node@0.3.9:
     dependencies:

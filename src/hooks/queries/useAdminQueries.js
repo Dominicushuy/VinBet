@@ -8,7 +8,8 @@ export const ADMIN_QUERY_KEYS = {
   paymentRequests: params => ['admin', 'payment-requests', { ...params }],
   usersList: params => ['admin', 'users', { ...params }],
   dashboard: ['admin', 'dashboard'],
-  metrics: params => ['admin', 'metrics', { ...params }]
+  metrics: params => ['admin', 'metrics', { ...params }],
+  transactions: ['admin', 'transactions']
 }
 
 // API functions
@@ -152,6 +153,17 @@ const adminApi = {
     }
 
     return response.json()
+  },
+
+  getTransactions: async () => {
+    const response = await fetch('/api/admin/transactions')
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Không thể lấy danh sách giao dịch')
+    }
+
+    return response.json()
   }
 }
 
@@ -252,5 +264,12 @@ export function useSetGameResultMutation() {
     onError: error => {
       toast.error(error.message || 'Không thể cập nhật kết quả')
     }
+  })
+}
+
+export function useAdminTransactionsQuery() {
+  return useQuery({
+    queryKey: ADMIN_QUERY_KEYS.transactions,
+    queryFn: adminApi.getTransactions
   })
 }

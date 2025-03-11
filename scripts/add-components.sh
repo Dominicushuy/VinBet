@@ -26,6 +26,7 @@ components=(
   collapsible
   slider
   scroll-area
+  hover-card
 )
 
 for comp in "${components[@]}"; do

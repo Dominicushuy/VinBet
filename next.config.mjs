@@ -5,7 +5,7 @@ const nextConfig = {
   reactStrictMode: true,
 
   // Thay đổi output mode
-  output: 'server', // Thay vì 'standalone'
+  output: 'standalone',
 
   // Disable the "X-Powered-By: Next.js" HTTP header
   poweredByHeader: false,
@@ -14,11 +14,6 @@ const nextConfig = {
   images: {
     domains: ['localhost'],
     formats: ['image/avif', 'image/webp']
-  },
-
-  // Cấu hình tự động cho dynamic routes
-  experimental: {
-    serverActions: true
   },
 
   eslint: {

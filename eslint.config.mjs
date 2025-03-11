@@ -4,6 +4,7 @@ import globals from 'globals'
 import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import nextPlugin from '@next/eslint-plugin-next'
+import importPlugin from 'eslint-plugin-import'
 
 export default [
   { ignores: ['dist', '.next', 'node_modules'] },
@@ -23,12 +24,24 @@ export default [
     },
     settings: {
       react: { version: 'detect' },
-      next: { rootDir: '.' }
+      next: { rootDir: '.' },
+      'import/resolver': {
+        alias: {
+          map: [
+            ['@', './src'] // Phù hợp với cấu hình jsconfig.json
+          ],
+          extensions: ['.js', '.jsx', '.json']
+        },
+        node: {
+          extensions: ['.js', '.jsx']
+        }
+      }
     },
     plugins: {
       react,
       'react-hooks': reactHooks,
-      '@next/next': nextPlugin
+      '@next/next': nextPlugin,
+      import: importPlugin
     },
     rules: {
       // Base JS and React rules
@@ -37,13 +50,17 @@ export default [
       ...react.configs['jsx-runtime'].rules,
       ...reactHooks.configs.recommended.rules,
 
+      // Import plugin rules
+      'import/no-unresolved': 'error', // Báo lỗi khi import không tồn tại
+      'import/named': 'error', // Báo lỗi khi import named export không tồn tại
+
       // Next.js specific rules
       '@next/next/no-html-link-for-pages': 'error',
       '@next/next/no-img-element': 'warn',
       '@next/next/no-unwanted-polyfillio': 'warn',
       '@next/next/no-sync-scripts': 'warn',
 
-      // Customized React rules (from your example)
+      // Customized React rules
       'react/jsx-no-target-blank': 'off',
       'react/prop-types': 'off',
 
