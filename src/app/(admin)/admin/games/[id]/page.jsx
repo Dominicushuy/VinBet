@@ -1,14 +1,11 @@
-import { UserDetail } from '@/components/admin/AdminUserDetail'
+// src/app/(admin)/admin/games/[id]/page.tsx
+import { AdminGameDetail } from '@/components/admin/AdminGameDetail'
 
 export const metadata = {
-  title: 'Chi tiết đặt cược - Admin - VinBet',
-  description: 'Xem và quản lý thông tin chi tiết đặt cược trên VinBet'
+  title: 'Chi tiết lượt chơi - Admin - VinBet',
+  description: 'Xem và quản lý thông tin chi tiết lượt chơi trên VinBet'
 }
 
-export default function AdminUserDetailPage({ params }) {
-  return (
-    <div className='space-y-6'>
-      <UserDetail userId={params.id} />
-    </div>
-  )
+export default function GameDetailPage({ params }) {
+  return <AdminGameDetail gameId={params.id} />
 }
