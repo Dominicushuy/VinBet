@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -23,8 +23,14 @@ import { useRouter } from 'next/navigation'
 export function AdminHeader({ userProfile }) {
   const { theme, setTheme } = useTheme()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
+
+  // Xử lý mounted để tránh hydration error
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark')
@@ -42,6 +48,17 @@ export function AdminHeader({ userProfile }) {
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen)
+  }
+
+  // Chỉ render khi đã mounted để tránh hydration error
+  if (!mounted) {
+    return (
+      <header className='sticky top-0 z-40 border-b bg-background'>
+        <div className='container flex h-16 items-center justify-between px-4 md:px-6'>
+          {/* Placeholder skeleton */}
+        </div>
+      </header>
+    )
   }
 
   return (
@@ -81,15 +98,15 @@ export function AdminHeader({ userProfile }) {
             <DropdownMenuTrigger asChild>
               <Button variant='ghost' size='icon' className='rounded-full h-8 w-8 overflow-hidden'>
                 <Avatar className='h-8 w-8'>
-                  <AvatarImage src={userProfile.avatar} />
-                  <AvatarFallback>{userProfile.name.charAt(0).toUpperCase()}</AvatarFallback>
+                  <AvatarImage src={userProfile?.avatar} />
+                  <AvatarFallback>{userProfile?.name?.charAt(0).toUpperCase() || 'A'}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end' className='w-56'>
               <div className='px-2 py-1.5'>
-                <p className='text-sm font-medium'>{userProfile.name}</p>
-                <p className='text-xs text-muted-foreground truncate'>{userProfile.email}</p>
+                <p className='text-sm font-medium'>{userProfile?.name}</p>
+                <p className='text-xs text-muted-foreground truncate'>{userProfile?.email}</p>
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
