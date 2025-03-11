@@ -1,11 +1,11 @@
-// src/components/notifications/NotificationToast.jsx
+// src/components/notifications/NotificationToastjsx
 'use client'
 
-import * as Toast from '@/components/ui/toast'
 import { X, Bell, DollarSign, Gamepad, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import { Toast, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport, useToast } from '../ui/toast'
 
 const TOAST_TYPES = {
   system: {
@@ -35,7 +35,7 @@ export function NotificationToast({ notification, onClose = () => {} }) {
   const { icon, className } = TOAST_TYPES[type] || TOAST_TYPES.default
 
   return (
-    <Toast.Root
+    <Toast
       className={cn(
         'group pointer-events-auto relative flex w-full items-center justify-between space-x-2 overflow-hidden rounded-md border p-4 pr-6 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full',
         className
@@ -44,10 +44,10 @@ export function NotificationToast({ notification, onClose = () => {} }) {
       <div className='flex items-start gap-3 w-full'>
         <div className='flex-shrink-0 p-1 rounded-full bg-white/20'>{icon}</div>
         <div className='flex-1 min-w-0'>
-          <Toast.Title className='font-semibold [&:has([role=link])]:underline-offset-4 line-clamp-1'>
+          <ToastTitle className='font-semibold [&:has([role=link])]:underline-offset-4 line-clamp-1'>
             {notification.title}
-          </Toast.Title>
-          <Toast.Description className='mt-1 text-sm opacity-90 line-clamp-2'>{notification.content}</Toast.Description>
+          </ToastTitle>
+          <ToastDescription className='mt-1 text-sm opacity-90 line-clamp-2'>{notification.content}</ToastDescription>
           {notification.id && (
             <Link
               href={`/notifications?id=${notification.id}`}
@@ -58,28 +58,28 @@ export function NotificationToast({ notification, onClose = () => {} }) {
           )}
         </div>
       </div>
-      <Toast.Close
+      <ToastClose
         className='absolute right-1 top-1 rounded-md p-1 opacity-0 transition-opacity group-hover:opacity-100'
         onClick={onClose}
       >
         <X className='h-4 w-4' />
-      </Toast.Close>
-    </Toast.Root>
+      </ToastClose>
+    </Toast>
   )
 }
 
 export function NotificationToastViewport() {
   return (
-    <Toast.Provider>
+    <ToastProvider>
       <AnimatePresence>
-        <Toast.Viewport className='fixed bottom-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-4 sm:right-4 sm:top-auto sm:flex-col md:max-w-[420px] gap-2' />
+        <ToastViewport className='fixed bottom-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-4 sm:right-4 sm:top-auto sm:flex-col md:max-w-[420px] gap-2' />
       </AnimatePresence>
-    </Toast.Provider>
+    </ToastProvider>
   )
 }
 
 export function useNotificationToast() {
-  const { toast } = Toast.useToast()
+  const { toast } = useToast()
 
   const showNotificationToast = notification => {
     toast({
