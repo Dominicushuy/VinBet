@@ -1,47 +1,63 @@
 // src/hooks/useAuth.js
-import { useCallback } from 'react'
-import { useSessionQuery, useProfileQuery, useLogoutMutation, useUpdateProfileMutation } from './queries/useAuthQueries'
+import { useCallback, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useLogoutMutation, useProfileQuery, useSessionQuery } from '@/hooks/queries/useAuthQueries'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
-export function useAuth() {
-  // Fetch session & profile
-  const { data: sessionData, isFetching: isSessionLoading, refetch: refreshSession } = useSessionQuery()
-  const user = sessionData?.user || null
+export function useAuth({ required = false, redirectTo = '/login', adminRequired = false } = {}) {
+  const router = useRouter()
+  const { data: session, isFetching: isSessionFetching } = useSessionQuery()
+  const user = session?.user
+  const isAdmin = user?.app_metadata?.is_admin === true || user?.user_metadata?.is_admin === true
 
-  // Only fetch profile if we have a user
-  const { data: profileData, isFetching: isProfileLoading } = useProfileQuery(!!user)
+  const { data: profileData, isFetching: isProfileFetching } = useProfileQuery(!!user)
   const profile = profileData?.profile || null
+
+  const isLoading = isSessionFetching || isProfileFetching
 
   // Mutations
   const logoutMutation = useLogoutMutation()
-  const updateProfileMutation = useUpdateProfileMutation()
-
-  // Loading state
-  const isLoading = isSessionLoading || (!!user && isProfileLoading)
-
   const signOut = useCallback(() => {
     return logoutMutation.mutateAsync()
   }, [logoutMutation])
 
-  const updateProfile = useCallback(
-    data => {
-      return updateProfileMutation.mutateAsync(data)
-    },
-    [updateProfileMutation]
-  )
+  useEffect(() => {
+    // Xử lý refresh token khi component mount
+    const refreshSession = async () => {
+      const supabase = createClientComponentClient()
+      const { data, error } = await supabase.auth.getSession()
 
-  const isPasswordResetSession = useCallback(() => {
-    if (typeof window === 'undefined') return false
-    return !!user && new URL(window.location.href).searchParams.get('type') === 'recovery'
-  }, [user])
+      // Nếu có session nhưng sắp hết hạn (ví dụ: còn dưới 5 phút)
+      if (data?.session) {
+        const expiresAt = new Date(data.session.expires_at * 1000)
+        const now = new Date()
+        const timeUntilExpiry = expiresAt.getTime() - now.getTime()
 
-  return {
-    user,
-    profile,
-    isLoading,
-    isAuthenticated: !!user,
-    signOut,
-    updateProfile,
-    refreshSession,
-    isPasswordResetSession
-  }
+        // Nếu session sắp hết hạn, refresh token
+        if (timeUntilExpiry < 5 * 60 * 1000) {
+          // 5 phút
+          await supabase.auth.refreshSession()
+        }
+      }
+    }
+
+    refreshSession()
+  }, [])
+
+  useEffect(() => {
+    // Nếu đã load xong và không đang loading
+    if (!isLoading) {
+      // Nếu cần đăng nhập nhưng không có session -> redirect
+      if (required && !user) {
+        router.push(`${redirectTo}?redirectTo=${encodeURIComponent(window.location.pathname)}`)
+      }
+
+      // Nếu cần quyền admin nhưng không phải admin -> redirect về home
+      if (adminRequired && !isAdmin) {
+        router.push('/')
+      }
+    }
+  }, [isLoading, user, required, adminRequired, redirectTo, router, isAdmin])
+
+  return { user, isAdmin, isLoading, signOut, profile }
 }

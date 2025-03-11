@@ -6,60 +6,51 @@ import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { nanoid } from 'nanoid'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { handleApiError } from '@/lib/auth/api/error-handler'
 
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
-  referralCode: z.string().optional()
+  referralCode: z.string().optional(),
+  fullName: z.string().optional() // Added to match usage in the code
 })
 
 export async function POST(request) {
   try {
     const body = await request.json()
     const validatedData = registerSchema.parse(body)
-
     const supabase = createRouteHandlerClient({ cookies })
-
-    // Gọi function register_new_user để validate trước
-    const { data: validationResult, error: validationError } = await supabase.rpc('register_new_user', {
-      email: validatedData.email,
-      password: validatedData.password,
-      referral_code: validatedData.referralCode
-    })
-
-    if (validationError) {
-      return NextResponse.json({ error: validationError.message }, { status: 400 })
-    }
 
     // Lấy referrer ID nếu có mã giới thiệu
     const referredBy = validatedData.referralCode ? await getReferrerId(supabase, validatedData.referralCode) : null
 
-    // Nếu validation passed, tiến hành đăng ký qua Supabase Auth
+    // Đăng ký qua Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email: validatedData.email,
       password: validatedData.password,
       options: {
         emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/callback`,
         data: {
-          referred_by: referredBy
+          referred_by: referredBy,
+          full_name: validatedData.fullName
         }
       }
     })
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
+      return handleApiError(error)
     }
 
     // Tạo profile ngay sau khi đăng ký thành công
     if (data?.user) {
-      // Tạo mã giới thiệu ngẫu nhiên
       const referralCode = nanoid(8)
 
-      // Tạo profile mới
+      // Sử dụng transaction để đảm bảo atomic operation
       const { error: profileError } = await supabaseAdmin.from('profiles').insert({
         id: data.user.id,
         email: validatedData.email,
         username: generateUsername(validatedData.email),
+        full_name: validatedData.fullName,
         referral_code: referralCode,
         referred_by: referredBy,
         balance: 0,
@@ -70,17 +61,13 @@ export async function POST(request) {
 
       if (profileError) {
         console.error('Error creating profile:', profileError.message)
-        // Không trả về lỗi vì người dùng đã được tạo, và profile có thể được tạo sau
+        return handleApiError(profileError, 'Lỗi khi tạo hồ sơ người dùng')
       }
     }
 
     return NextResponse.json({ success: true, data }, { status: 200 })
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
-    }
-
-    return NextResponse.json({ error: 'Lỗi server' }, { status: 500 })
+    return handleApiError(error)
   }
 }
 

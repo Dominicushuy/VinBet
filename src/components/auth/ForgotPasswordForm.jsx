@@ -1,28 +1,26 @@
 // src/components/auth/ForgotPasswordForm.jsx
 'use client'
-
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { z } from 'zod'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { Loader2, Mail, ArrowLeft, CheckCircle, Send } from 'lucide-react'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Loader2, Mail, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Form, FormControl, FormField, FormItem, FormLabel, FormDescription, FormMessage } from '@/components/ui/form'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useForgotPasswordMutation } from '@/hooks/queries/useAuthQueries'
 
 const forgotPasswordSchema = z.object({
-  email: z.string().email('Email không hợp lệ')
+  email: z.string().min(1, 'Email là bắt buộc').email('Email không hợp lệ')
 })
 
 export function ForgotPasswordForm() {
-  const router = useRouter()
-  const resetPasswordMutation = useForgotPasswordMutation()
   const [success, setSuccess] = useState(false)
+  const [email, setEmail] = useState('')
+  const forgotPasswordMutation = useForgotPasswordMutation()
 
   const form = useForm({
     resolver: zodResolver(forgotPasswordSchema),
@@ -33,117 +31,110 @@ export function ForgotPasswordForm() {
 
   async function onSubmit(data) {
     try {
-      await resetPasswordMutation.mutateAsync(data.email)
+      await forgotPasswordMutation.mutateAsync(data)
+      setEmail(data.email)
       setSuccess(true)
     } catch (error) {
-      // Lỗi đã được xử lý trong hook mutation
+      // Lỗi đã được xử lý trong mutation hook
     }
   }
 
-  return (
-    <Card className='w-full max-w-md mx-auto'>
-      <CardHeader className='space-y-1'>
-        <CardTitle className='text-2xl font-bold'>Khôi phục mật khẩu</CardTitle>
-        <CardDescription>Nhập email của bạn để nhận link đặt lại mật khẩu</CardDescription>
-      </CardHeader>
-
-      <CardContent className='space-y-4'>
-        {resetPasswordMutation.error && (
-          <Alert variant='destructive'>
-            <AlertDescription>{resetPasswordMutation.error.message}</AlertDescription>
+  if (success) {
+    return (
+      <Card className='w-full max-w-md mx-auto'>
+        <CardHeader>
+          <CardTitle className='text-center'>Kiểm tra email của bạn</CardTitle>
+        </CardHeader>
+        <CardContent className='space-y-4'>
+          <p className='text-center'>
+            Chúng tôi đã gửi một email đến <strong>{email}</strong> với hướng dẫn đặt lại mật khẩu.
+          </p>
+          <p className='text-center text-sm text-gray-500'>
+            Vui lòng kiểm tra cả thư mục spam nếu bạn không thấy email.
+          </p>
+          <Alert className='bg-blue-50 border-blue-100'>
+            <AlertDescription className='text-blue-800'>
+              Vì lý do bảo mật, liên kết đặt lại mật khẩu sẽ hết hạn sau 1 giờ.
+            </AlertDescription>
           </Alert>
-        )}
-
-        {success ? (
-          <div className='space-y-4'>
-            <Alert className='bg-success/20 border-success text-success'>
-              <CheckCircle className='h-4 w-4 mr-2' />
-              <AlertDescription>
-                Link khôi phục mật khẩu đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư (bao gồm thư rác).
-              </AlertDescription>
-            </Alert>
-
-            <div className='flex flex-col space-y-2'>
-              <Button onClick={() => router.push('/login')} variant='default'>
-                <ArrowLeft className='mr-2 h-4 w-4' />
-                Quay lại đăng nhập
-              </Button>
-
-              <Button
-                onClick={() => {
-                  setSuccess(false)
-                  form.reset()
-                }}
-                variant='outline'
-              >
-                Gửi lại yêu cầu
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
-              <FormField
-                control={form.control}
-                name='email'
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <div className='relative'>
-                        <Mail className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
-                        <Input
-                          {...field}
-                          type='email'
-                          placeholder='email@example.com'
-                          className='pl-9 h-11'
-                          disabled={resetPasswordMutation.isLoading}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormDescription className='text-xs'>Nhập email bạn đã dùng để đăng ký tài khoản.</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className='flex justify-between items-center pt-2'>
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={() => router.push('/login')}
-                  disabled={resetPasswordMutation.isLoading}
-                >
-                  <ArrowLeft className='mr-2 h-4 w-4' /> Quay lại
-                </Button>
-
-                <Button type='submit' disabled={resetPasswordMutation.isLoading}>
-                  {resetPasswordMutation.isLoading ? (
-                    <>
-                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                      Đang gửi...
-                    </>
-                  ) : (
-                    <>
-                      Gửi yêu cầu
-                      <Send className='ml-2 h-4 w-4' />
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        )}
-      </CardContent>
-
-      <CardFooter className='flex justify-center border-t pt-4'>
-        <p className='text-sm text-muted-foreground'>
-          Chưa có tài khoản?{' '}
-          <Link href='/register' className='text-primary underline underline-offset-4 hover:text-primary/90'>
-            Đăng ký ngay
+        </CardContent>
+        <CardFooter className='flex justify-center'>
+          <Link href='/login'>
+            <Button variant='outline'>
+              <ArrowLeft className='mr-2 h-4 w-4' />
+              Quay lại đăng nhập
+            </Button>
           </Link>
-        </p>
-      </CardFooter>
-    </Card>
+        </CardFooter>
+      </Card>
+    )
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
+        <Card className='w-full max-w-md mx-auto'>
+          <CardHeader>
+            <CardTitle className='text-center'>Quên mật khẩu</CardTitle>
+            <CardDescription className='text-center'>
+              Nhập email của bạn và chúng tôi sẽ gửi link đặt lại mật khẩu
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className='space-y-4'>
+            {forgotPasswordMutation.isError && (
+              <Alert variant='destructive'>
+                <AlertDescription>
+                  {forgotPasswordMutation.error?.message || 'Có lỗi xảy ra. Vui lòng thử lại.'}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <FormField
+              control={form.control}
+              name='email'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <div className='relative'>
+                      <Mail className='absolute left-3 top-2.5 h-5 w-5 text-gray-400' />
+                      <Input
+                        type='email'
+                        placeholder='example@email.com'
+                        className='pl-10'
+                        autoComplete='email'
+                        {...field}
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+
+          <CardFooter className='flex flex-col space-y-4'>
+            <Button type='submit' className='w-full' disabled={forgotPasswordMutation.isPending}>
+              {forgotPasswordMutation.isPending ? (
+                <>
+                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  Đang xử lý
+                </>
+              ) : (
+                'Gửi link đặt lại mật khẩu'
+              )}
+            </Button>
+
+            <div className='text-center text-sm'>
+              <Link href='/login' className='text-primary hover:underline'>
+                <ArrowLeft className='mr-1 h-3 w-3 inline' />
+                Quay lại đăng nhập
+              </Link>
+            </div>
+          </CardFooter>
+        </Card>
+      </form>
+    </Form>
   )
 }

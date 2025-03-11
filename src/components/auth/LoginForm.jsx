@@ -69,23 +69,13 @@ export function LoginForm() {
     try {
       const supabase = createClientComponentClient()
 
-      // Lấy CSRF token từ cookie
-      const csrfToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrf_token='))
-        ?.split('=')[1]
-
-      // Thêm CSRF token vào options
-      const authOptions = {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=${redirectTo}`,
-        queryParams: {
-          csrf_token: csrfToken
-        }
-      }
-
+      // Sử dụng cơ chế CSRF tích hợp của Supabase
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider.toLowerCase(),
-        options: authOptions
+        options: {
+          redirectTo: `${window.location.origin}/api/auth/callback?next=${redirectTo}`
+          // Bỏ queryParams CSRF tự định nghĩa
+        }
       })
 
       if (error) throw error

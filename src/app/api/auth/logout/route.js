@@ -1,17 +1,19 @@
-export const dynamic = 'force-dynamic';
-
 import { NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { handleApiError } from '@/lib/auth/api/error-handler'
 
-export async function POST() {
-  const supabase = createRouteHandlerClient({ cookies })
+export async function POST(request) {
+  try {
+    const supabase = createRouteHandlerClient({ cookies })
+    const { error } = await supabase.auth.signOut()
 
-  const { error } = await supabase.auth.signOut()
+    if (error) {
+      return handleApiError(error, 'Đăng xuất thất bại')
+    }
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 })
+    return NextResponse.json({ success: true }, { status: 200 })
+  } catch (error) {
+    return handleApiError(error)
   }
-
-  return NextResponse.json({ success: true }, { status: 200 })
 }

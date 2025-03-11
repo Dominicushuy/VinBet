@@ -7,44 +7,6 @@ DROP TRIGGER IF EXISTS on_game_round_completed ON game_rounds;
 DROP FUNCTION IF EXISTS update_balance_on_bet();
 DROP FUNCTION IF EXISTS complete_game_round();
 
--- Function để xử lý đăng ký người dùng mới với validation
-CREATE OR REPLACE FUNCTION register_new_user(
-  email TEXT,
-  password TEXT,
-  referral_code TEXT DEFAULT NULL
-) RETURNS UUID AS $$
-DECLARE
-  new_user_id UUID;
-  referrer_id UUID;
-BEGIN
-  -- Validate email (basic check)
-  IF email IS NULL OR email = '' OR position('@' in email) = 0 THEN
-    RAISE EXCEPTION 'Email không hợp lệ';
-  END IF;
-  
-  -- Validate password
-  IF password IS NULL OR length(password) < 6 THEN
-    RAISE EXCEPTION 'Mật khẩu phải có ít nhất 6 ký tự';
-  END IF;
-  
-  -- Check referral code and get referrer
-  IF referral_code IS NOT NULL AND referral_code != '' THEN
-    SELECT id INTO referrer_id
-    FROM profiles
-    WHERE referral_code = register_new_user.referral_code;
-    
-    IF referrer_id IS NULL THEN
-      RAISE EXCEPTION 'Mã giới thiệu không hợp lệ';
-    END IF;
-  END IF;
-  
-  -- Create user and return ID (the actual user creation happens via Supabase Auth)
-  -- This is just a placeholder for the function signature
-  -- The real implementation will be handled by Supabase Auth API
-  RETURN gen_random_uuid();
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
 -- Function to update balance when a bet is placed
 CREATE OR REPLACE FUNCTION update_balance_on_bet()
 RETURNS TRIGGER AS $$

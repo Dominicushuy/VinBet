@@ -1,35 +1,28 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { z } from 'zod'
+import { handleApiError } from '@/lib/auth/api/error-handler'
 
-const forgotPasswordSchema = z.object({
-  email: z.string().email('Email không hợp lệ')
-})
-
-export async function POST(request) {
+export async function GET(request) {
   try {
-    const body = await request.json()
-    const validatedData = forgotPasswordSchema.parse(body)
+    const requestUrl = new URL(request.url)
+    const code = requestUrl.searchParams.get('code')
+    const next = requestUrl.searchParams.get('next') || '/'
 
-    const supabase = createRouteHandlerClient({ cookies })
-
-    const { error } = await supabase.auth.resetPasswordForEmail(validatedData.email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/callback?next=/reset-password`
-    })
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
+    if (code) {
+      const supabase = createRouteHandlerClient({ cookies })
+      await supabase.auth.exchangeCodeForSession(code)
     }
 
-    return NextResponse.json({ success: true }, { status: 200 })
+    if (next === '/reset-password') {
+      return NextResponse.redirect(`${requestUrl.origin}/reset-password?type=recovery`)
+    }
+
+    // Chuyển hướng đến trang được chỉ định hoặc trang chủ
+    return NextResponse.redirect(`${requestUrl.origin}${next}`)
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
-    }
-
-    return NextResponse.json({ error: 'Lỗi khi gửi email đặt lại mật khẩu' }, { status: 500 })
+    return handleApiError(error, 'Lỗi xác thực người dùng')
   }
 }

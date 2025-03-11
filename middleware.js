@@ -14,8 +14,8 @@ const adminRoutes = ['/admin']
 export async function middleware(req) {
   const { pathname } = req.nextUrl
 
-  // Bỏ qua các file tĩnh
-  const isPublicFile = /\.(js|css|png|jpg|jpeg|svg|ico|json)$/i.test(pathname)
+  // Tạo helper functions để tăng khả năng đọc hiểu code
+  const isPublicFile = pathname.match(/\.(js|css|png|jpg|jpeg|svg|ico|json)$/i)
   const isNextInternal = pathname.startsWith('/_next/')
   const isApiRoute = pathname.startsWith('/api/')
 
@@ -23,10 +23,16 @@ export async function middleware(req) {
     return NextResponse.next()
   }
 
-  // Xác định loại route
-  const isAuthRoute = authRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`))
-  const isProtectedRoute = protectedRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`))
-  const isAdminRoute = adminRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`))
+  // Sử dụng tối ưu cho route matching
+  const routePatterns = {
+    auth: authRoutes.map(route => new RegExp(`^${route}(/.*)?$`)),
+    protected: protectedRoutes.map(route => new RegExp(`^${route}(/.*)?$`)),
+    admin: adminRoutes.map(route => new RegExp(`^${route}(/.*)?$`))
+  }
+
+  const isAuthRoute = routePatterns.auth.some(pattern => pathname.match(pattern))
+  const isProtectedRoute = routePatterns.protected.some(pattern => pathname.match(pattern))
+  const isAdminRoute = routePatterns.admin.some(pattern => pathname.match(pattern))
   const isHomePage = pathname === '/' || pathname === '/home'
 
   // Tạo response
@@ -38,39 +44,39 @@ export async function middleware(req) {
     data: { session }
   } = await supabase.auth.getSession()
 
-  // Lấy profile để kiểm tra admin
+  // Sử dụng try-catch để xử lý lỗi khi truy vấn admin status
   let isAdmin = false
   if (session) {
     try {
       const { data } = await supabase.from('profiles').select('is_admin').eq('id', session.user.id).single()
+
       isAdmin = data?.is_admin === true
     } catch (error) {
       console.error('Error fetching admin status:', error)
     }
   }
 
-  // ===== REDIRECT LOGIC =====
+  // Sử dụng early return pattern để tăng khả năng đọc hiểu
 
-  // 1. Nếu là admin đã đăng nhập và đang ở trang chủ hoặc trang auth
+  // Admin đã đăng nhập đang ở trang chủ hoặc trang auth -> chuyển đến admin dashboard
   if (session && isAdmin && (isHomePage || isAuthRoute)) {
-    // Chuyển hướng đến admin dashboard
     return NextResponse.redirect(new URL('/admin/dashboard', req.url))
   }
 
-  // 2. Route bảo vệ mà không có session
+  // Route bảo vệ mà không có session -> chuyển đến đăng nhập
   if (isProtectedRoute && !session) {
     const redirectUrl = new URL('/login', req.url)
     redirectUrl.searchParams.set('redirectTo', pathname)
     return NextResponse.redirect(redirectUrl)
   }
 
-  // 3. Route admin mà không phải admin hoặc không có session
+  // Route admin mà không phải admin hoặc không có session -> chuyển đến trang chủ
   if (isAdminRoute && (!session || !isAdmin)) {
     return NextResponse.redirect(new URL('/', req.url))
   }
 
-  // 4. Route auth nhưng đã đăng nhập (nhưng không phải admin)
-  if (isAuthRoute && session) {
+  // Route auth nhưng đã đăng nhập (và không phải admin) -> chuyển đến trang chủ
+  if (isAuthRoute && session && !isAdmin) {
     return NextResponse.redirect(new URL('/', req.url))
   }
 
