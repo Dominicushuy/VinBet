@@ -25,6 +25,7 @@ components=(
   radio-group
   collapsible
   slider
+  scroll-area
 )
 
 for comp in "${components[@]}"; do

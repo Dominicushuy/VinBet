@@ -37,6 +37,7 @@ import {
 } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { useAuth } from '@/hooks/useAuth'
+import { useNotificationListener } from '@/hooks/useNotificationListener'
 
 interface NavItemProps {
   href: string
@@ -137,6 +138,10 @@ function NavItemWithSub({
 }
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
+  // *** HOOKS ***
+  useNotificationListener()
+
+  // *** STATE ***
   const [isOpen, setIsOpen] = useState(false)
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({})
   const pathname = usePathname()
