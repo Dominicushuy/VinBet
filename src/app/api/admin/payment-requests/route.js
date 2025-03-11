@@ -1,4 +1,5 @@
-export const dynamic = 'force-dynamic';
+// src/app/api/admin/payment-requests/route.ts (update)
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
@@ -9,7 +10,12 @@ const getPaymentRequestsSchema = z.object({
   type: z.enum(['deposit', 'withdrawal']).optional(),
   status: z.enum(['pending', 'approved', 'rejected', 'cancelled']).optional(),
   page: z.string().optional(),
-  pageSize: z.string().optional()
+  pageSize: z.string().optional(),
+  search: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  sortBy: z.string().optional(),
+  sortOrder: z.enum(['asc', 'desc']).optional()
 })
 
 // GET: admin lấy danh sách tất cả payment requests
@@ -42,7 +48,8 @@ export async function GET(request) {
     // Set up pagination parameters
     const page = Number(validatedParams.page) || 1
     const pageSize = Number(validatedParams.pageSize) || 10
-    const offset = (page - 1) * pageSize
+    const sortBy = validatedParams.sortBy || 'created_at'
+    const sortOrder = validatedParams.sortOrder || 'desc'
 
     // Build query
     let query = supabase
@@ -53,8 +60,7 @@ export async function GET(request) {
         approved_by_profile:profiles!payment_requests_approved_by_fkey(id, username, display_name)`,
         { count: 'exact' }
       )
-      .order('created_at', { ascending: false })
-      .range(offset, offset + pageSize - 1)
+      .order(sortBy, { ascending: sortOrder === 'asc' })
 
     // Apply filters if provided
     if (validatedParams.type) {
@@ -65,8 +71,31 @@ export async function GET(request) {
       query = query.eq('status', validatedParams.status)
     }
 
+    // Add date range filtering
+    if (validatedParams.startDate) {
+      query = query.gte('created_at', new Date(validatedParams.startDate).toISOString())
+    }
+
+    if (validatedParams.endDate) {
+      const endDate = new Date(validatedParams.endDate)
+      endDate.setHours(23, 59, 59, 999)
+      query = query.lte('created_at', endDate.toISOString())
+    }
+
+    // Add search functionality
+    if (validatedParams.search) {
+      query = query.or(
+        `profiles.username.ilike.%${validatedParams.search}%,profiles.display_name.ilike.%${validatedParams.search}%,profiles.email.ilike.%${validatedParams.search}%`
+      )
+    }
+
+    // Apply pagination
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+    query = query.range(from, to)
+
     // Execute query
-    const { data: requests, error, count } = await query
+    const { data: paymentRequests, error, count } = await query
 
     if (error) {
       console.error('Error fetching payment requests:', error)
@@ -74,7 +103,7 @@ export async function GET(request) {
     }
 
     return NextResponse.json({
-      paymentRequests: requests || [],
+      paymentRequests: paymentRequests || [],
       pagination: {
         total: count || 0,
         page,

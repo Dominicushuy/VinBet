@@ -21,6 +21,12 @@ export const adminApi = {
     if (params && params.status) queryParams.append('status', params.status)
     if (params && params.page) queryParams.append('page', params.page.toString())
     if (params && params.pageSize) queryParams.append('pageSize', params.pageSize.toString())
+    // Add these new filter parameters
+    if (params && params.startDate) queryParams.append('startDate', params.startDate)
+    if (params && params.endDate) queryParams.append('endDate', params.endDate)
+    if (params && params.search) queryParams.append('search', params.search)
+    if (params && params.sortBy) queryParams.append('sortBy', params.sortBy)
+    if (params && params.sortOrder) queryParams.append('sortOrder', params.sortOrder)
 
     const response = await fetch(`/api/admin/payment-requests?${queryParams}`)
 

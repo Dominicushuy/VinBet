@@ -1,58 +1,71 @@
+// src/components/admin/PaymentRequestsManagement.tsx
 'use client'
 
 import { useState } from 'react'
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Pagination } from '@/components/ui/pagination'
-import { PaymentStatus } from '@/components/finance/PaymentStatus'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from '@/components/ui/dropdown-menu'
+import {
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable
+} from '@tanstack/react-table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { PaymentRequestDetail } from './PaymentRequestDetail'
+import { useAdminPaymentRequestsQuery } from '@/hooks/queries/useAdminQueries'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from '@/components/ui/alert-dialog'
-import { Textarea } from '@/components/ui/textarea'
-import { Loader2, RefreshCw, Eye, CheckCircle, XCircle, Filter } from 'lucide-react'
-import { useAdminPaymentRequestsQuery, useProcessPaymentRequestMutation } from '@/hooks/queries/useAdminQueries'
+  RefreshCw,
+  ChevronDown,
+  Filter,
+  Search,
+  MoreHorizontal,
+  CheckCircle,
+  XCircle,
+  ExternalLink,
+  Eye,
+  Calendar
+} from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 export function PaymentRequestsManagement() {
-  const [selectedType, setSelectedType] = useState('deposit')
+  const router = useRouter()
+  const [selectedType, setSelectedType] = (useState < 'deposit') | 'withdrawal' | (undefined > 'deposit')
   const [selectedStatus, setSelectedStatus] = useState('pending')
   const [page, setPage] = useState(1)
-  const pageSize = 10
-
-  const [selectedRequest, setSelectedRequest] = useState(null)
-  const [viewProofDialogOpen, setViewProofDialogOpen] = useState(false)
-  const [approveDialogOpen, setApproveDialogOpen] = useState(false)
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
-  const [adminNotes, setAdminNotes] = useState('')
+  const [pageSize, setPageSize] = useState(10)
+  const [sorting, setSorting] = useState([{ id: 'created_at', desc: true }])
+  const [columnFilters, setColumnFilters] = useState([])
+  const [selectedRequest, setSelectedRequest] = (useState < PaymentRequest) | (null > null)
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+  const [dateRange, setDateRange] = useState({})
 
   const { data, isLoading, refetch } = useAdminPaymentRequestsQuery({
     type: selectedType,
     status: selectedStatus,
     page,
-    pageSize
+    pageSize,
+    startDate: dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
+    endDate: dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined
   })
-
-  const approveMutation = useProcessPaymentRequestMutation('approve')
-  const rejectMutation = useProcessPaymentRequestMutation('reject')
 
   const paymentRequests = data?.paymentRequests || []
   const pagination = data?.pagination || {
@@ -70,55 +83,155 @@ export function PaymentRequestsManagement() {
     }).format(amount)
   }
 
+  const columns = [
+    {
+      accessorKey: 'profiles',
+      header: 'Người dùng',
+      cell: ({ row }) => {
+        const profiles = row.getValue('profiles')
+        return (
+          <div className='flex items-center gap-2'>
+            <Avatar className='h-8 w-8'>
+              <AvatarImage src={profiles?.avatar_url || ''} />
+              <AvatarFallback>{(profiles?.display_name || profiles?.username || 'U')[0].toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div>
+              <p className='font-medium'>{profiles?.display_name || profiles?.username}</p>
+              <p className='text-xs text-muted-foreground'>{profiles?.email}</p>
+            </div>
+          </div>
+        )
+      },
+      filterFn: (row, id, value) => {
+        const profiles = row.getValue(id)
+        return (
+          profiles?.display_name?.toLowerCase().includes(value.toLowerCase()) ||
+          profiles?.username?.toLowerCase().includes(value.toLowerCase()) ||
+          profiles?.email?.toLowerCase().includes(value.toLowerCase())
+        )
+      }
+    },
+    {
+      accessorKey: 'created_at',
+      header: ({ column }) => {
+        return (
+          <Button variant='ghost' onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
+            Thời gian
+            <ChevronDown className='ml-2 h-4 w-4' />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        return format(new Date(row.getValue('created_at')), 'HH:mm, dd/MM/yyyy', { locale: vi })
+      }
+    },
+    {
+      accessorKey: 'payment_method',
+      header: 'Phương thức',
+      cell: ({ row }) => formatPaymentMethod(row.getValue('payment_method'))
+    },
+    {
+      accessorKey: 'amount',
+      header: ({ column }) => {
+        return (
+          <Button variant='ghost' onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
+            Số tiền
+            <ChevronDown className='ml-2 h-4 w-4' />
+          </Button>
+        )
+      },
+      cell: ({ row }) => formatMoney(row.getValue('amount'))
+    },
+    {
+      accessorKey: 'status',
+      header: 'Trạng thái',
+      cell: ({ row }) => <PaymentStatusBadge status={row.getValue('status')} />
+    },
+    {
+      id: 'actions',
+      cell: ({ row }) => {
+        const payment = row.original
+        return (
+          <div className='flex space-x-2'>
+            <Button variant='outline' size='sm' onClick={() => handleViewDetail(payment)}>
+              <Eye className='h-4 w-4' />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant='ghost' size='sm'>
+                  <MoreHorizontal className='h-4 w-4' />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuItem onClick={() => handleViewDetail(payment)}>
+                  <Eye className='mr-2 h-4 w-4' />
+                  Xem chi tiết
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push(`/admin/users/${payment.profile_id}`)}>
+                  <ExternalLink className='mr-2 h-4 w-4' />
+                  Xem người dùng
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {payment.status === 'pending' && (
+                  <>
+                    <DropdownMenuItem onClick={() => handleViewDetail(payment, 'approve')}>
+                      <CheckCircle className='mr-2 h-4 w-4 text-green-500' />
+                      <span className='text-green-500'>Phê duyệt</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleViewDetail(payment, 'reject')}>
+                      <XCircle className='mr-2 h-4 w-4 text-red-500' />
+                      <span className='text-red-500'>Từ chối</span>
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )
+      }
+    }
+  ]
+
+  const table = useReactTable({
+    data: paymentRequests,
+    columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    state: {
+      sorting,
+      columnFilters,
+      pagination: {
+        pageIndex: page - 1,
+        pageSize
+      }
+    }
+  })
+
+  const handleViewDetail = (request, action) => {
+    setSelectedRequest(request)
+    setDetailDialogOpen(true)
+  }
+
+  const handleSearch = term => {
+    setColumnFilters(prev => {
+      // Remove existing profiles filter if it exists
+      const filtered = prev.filter(filter => filter.id !== 'profiles')
+
+      // Add new filter if term is not empty
+      if (term) {
+        return [...filtered, { id: 'profiles', value: term }]
+      }
+
+      return filtered
+    })
+  }
+
   const handlePageChange = newPage => {
     setPage(newPage)
-  }
-
-  const handleViewProof = request => {
-    setSelectedRequest(request)
-    setViewProofDialogOpen(true)
-  }
-
-  const handleApprove = request => {
-    setSelectedRequest(request)
-    setAdminNotes('')
-    setApproveDialogOpen(true)
-  }
-
-  const handleReject = request => {
-    setSelectedRequest(request)
-    setAdminNotes('')
-    setRejectDialogOpen(true)
-  }
-
-  const confirmApprove = async () => {
-    if (!selectedRequest) return
-
-    try {
-      await approveMutation.mutateAsync({
-        id: selectedRequest.id,
-        notes: adminNotes
-      })
-      setApproveDialogOpen(false)
-      refetch()
-    } catch (error) {
-      console.error('Error approving payment:', error)
-    }
-  }
-
-  const confirmReject = async () => {
-    if (!selectedRequest) return
-
-    try {
-      await rejectMutation.mutateAsync({
-        id: selectedRequest.id,
-        notes: adminNotes
-      })
-      setRejectDialogOpen(false)
-      refetch()
-    } catch (error) {
-      console.error('Error rejecting payment:', error)
-    }
   }
 
   return (
@@ -143,277 +256,310 @@ export function PaymentRequestsManagement() {
             </div>
 
             <div className='flex items-center space-x-2'>
-              <Button variant='outline' size='sm'>
-                <Filter className='mr-2 h-4 w-4' />
-                Bộ lọc
-              </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant='outline' size='sm'>
+                    <Filter className='mr-2 h-4 w-4' />
+                    Bộ lọc
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className='w-80'>
+                  <div className='grid gap-4'>
+                    <div className='space-y-2'>
+                      <h4 className='font-medium leading-none'>Khoảng thời gian</h4>
+                      <div className='flex flex-col gap-2'>
+                        <div className='grid grid-cols-3 items-center gap-2'>
+                          <span className='text-sm'>Từ ngày:</span>
+                          <Input
+                            type='date'
+                            className='col-span-2'
+                            onChange={e =>
+                              setDateRange(prev => ({
+                                ...prev,
+                                from: e.target.value ? new Date(e.target.value) : undefined
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className='grid grid-cols-3 items-center gap-2'>
+                          <span className='text-sm'>Đến ngày:</span>
+                          <Input
+                            type='date'
+                            className='col-span-2'
+                            onChange={e =>
+                              setDateRange(prev => ({
+                                ...prev,
+                                to: e.target.value ? new Date(e.target.value) : undefined
+                              }))
+                            }
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className='grid grid-cols-2 gap-2'>
+                      <Button
+                        variant='outline'
+                        className='justify-start'
+                        onClick={() => {
+                          const today = new Date()
+                          setDateRange({ from: today, to: today })
+                        }}
+                      >
+                        <Calendar className='mr-2 h-4 w-4' />
+                        Hôm nay
+                      </Button>
+                      <Button
+                        variant='outline'
+                        className='justify-start'
+                        onClick={() => {
+                          const today = new Date()
+                          const yesterday = new Date(today)
+                          yesterday.setDate(yesterday.getDate() - 1)
+                          setDateRange({ from: yesterday, to: yesterday })
+                        }}
+                      >
+                        <Calendar className='mr-2 h-4 w-4' />
+                        Hôm qua
+                      </Button>
+                    </div>
+                    <Button variant='outline' onClick={() => setDateRange({})}>
+                      Reset thời gian
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs
-            defaultValue='deposit'
-            className='w-full'
-            onValueChange={value => {
-              setSelectedType(value === 'all' ? undefined : value)
-              setPage(1)
-            }}
-          >
-            <div className='flex justify-between mb-4'>
-              <TabsList>
-                <TabsTrigger value='deposit'>Nạp tiền</TabsTrigger>
-                <TabsTrigger value='withdrawal'>Rút tiền</TabsTrigger>
-                <TabsTrigger value='all'>Tất cả</TabsTrigger>
-              </TabsList>
+          <div className='mb-4 flex items-center justify-between'>
+            <Tabs
+              defaultValue='deposit'
+              className='w-full'
+              onValueChange={value => {
+                if (value === 'all') {
+                  setSelectedType(undefined)
+                } else {
+                  setSelectedType(value)
+                }
+                setPage(1)
+              }}
+            >
+              <div className='flex justify-between'>
+                <TabsList>
+                  <TabsTrigger value='deposit'>Nạp tiền</TabsTrigger>
+                  <TabsTrigger value='withdrawal'>Rút tiền</TabsTrigger>
+                  <TabsTrigger value='all'>Tất cả</TabsTrigger>
+                </TabsList>
 
-              <TabsList>
-                <TabsTrigger
-                  value='pending'
-                  onClick={() => {
-                    setSelectedStatus('pending')
-                    setPage(1)
-                  }}
-                >
-                  Đang xử lý
-                </TabsTrigger>
-                <TabsTrigger
-                  value='all_status'
-                  onClick={() => {
-                    setSelectedStatus(undefined)
-                    setPage(1)
-                  }}
-                >
-                  Tất cả trạng thái
-                </TabsTrigger>
-              </TabsList>
-            </div>
+                <TabsList>
+                  <TabsTrigger
+                    value='pending'
+                    onClick={() => {
+                      setSelectedStatus('pending')
+                      setPage(1)
+                    }}
+                  >
+                    Đang xử lý
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value='approved'
+                    onClick={() => {
+                      setSelectedStatus('approved')
+                      setPage(1)
+                    }}
+                  >
+                    Đã duyệt
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value='rejected'
+                    onClick={() => {
+                      setSelectedStatus('rejected')
+                      setPage(1)
+                    }}
+                  >
+                    Từ chối
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value='all_status'
+                    onClick={() => {
+                      setSelectedStatus(undefined)
+                      setPage(1)
+                    }}
+                  >
+                    Tất cả
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+            </Tabs>
+          </div>
 
-            <PaymentRequestsTable
-              paymentRequests={paymentRequests}
-              isLoading={isLoading}
-              formatMoney={formatMoney}
-              onViewProof={handleViewProof}
-              onApprove={handleApprove}
-              onReject={handleReject}
-            />
-          </Tabs>
-
-          {pagination.totalPages > 1 && (
-            <div className='mt-4'>
-              <Pagination
-                currentPage={pagination.page}
-                totalPages={pagination.totalPages}
-                onPageChange={handlePageChange}
+          <div className='flex items-center py-4'>
+            <div className='relative w-full max-w-sm'>
+              <Search className='absolute left-2 top-2.5 h-4 w-4 text-muted-foreground' />
+              <Input
+                placeholder='Tìm theo tên, email...'
+                className='pl-8'
+                onChange={e => handleSearch(e.target.value)}
               />
+            </div>
+            <div className='ml-auto flex items-center space-x-2'>
+              <Select value={pageSize.toString()} onValueChange={value => setPageSize(Number(value))}>
+                <SelectTrigger className='w-[120px]'>
+                  <SelectValue placeholder='Số dòng' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='5'>5 dòng</SelectItem>
+                  <SelectItem value='10'>10 dòng</SelectItem>
+                  <SelectItem value='20'>20 dòng</SelectItem>
+                  <SelectItem value='50'>50 dòng</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className='rounded-md border'>
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map(headerGroup => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map(header => {
+                      return (
+                        <TableHead key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      )
+                    })}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      {Array.from({ length: 6 }).map((_, j) => (
+                        <TableCell key={j}>
+                          <Skeleton className='h-8 w-full' />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map(row => (
+                    <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                      {row.getVisibleCells().map(cell => (
+                        <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={columns.length} className='h-24 text-center'>
+                      Không có dữ liệu
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {table.getRowModel().rows?.length > 0 && (
+            <div className='flex items-center justify-between py-4'>
+              <div className='text-sm text-muted-foreground'>
+                Hiển thị {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, pagination.total)}
+                trong số {pagination.total} yêu cầu
+              </div>
+              <div className='flex items-center space-x-2'>
+                <Button variant='outline' size='sm' onClick={() => handlePageChange(page - 1)} disabled={page === 1}>
+                  Trước
+                </Button>
+                <div className='flex items-center space-x-1'>
+                  {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                    const pageNum = i + 1
+                    if (pagination.totalPages <= 5 || pageNum <= 3 || pageNum > pagination.totalPages - 2) {
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={pageNum === page ? 'default' : 'outline'}
+                          size='sm'
+                          onClick={() => handlePageChange(pageNum)}
+                          className='w-8 h-8 p-0'
+                        >
+                          {pageNum}
+                        </Button>
+                      )
+                    } else if (pageNum === 3 && pagination.totalPages > 5) {
+                      return (
+                        <span key='ellipsis' className='px-2'>
+                          ...
+                        </span>
+                      )
+                    }
+                    return null
+                  })}
+                </div>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => handlePageChange(page + 1)}
+                  disabled={page === pagination.totalPages}
+                >
+                  Sau
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* View Proof Dialog */}
-      <Dialog open={viewProofDialogOpen} onOpenChange={setViewProofDialogOpen}>
-        <DialogContent className='sm:max-w-lg'>
-          <DialogHeader>
-            <DialogTitle>Bằng chứng thanh toán</DialogTitle>
-            <DialogDescription>Xem bằng chứng thanh toán đã tải lên bởi người dùng</DialogDescription>
-          </DialogHeader>
-
-          {selectedRequest?.proof_url ? (
-            <div className='flex justify-center'>
-              <img
-                src={selectedRequest.proof_url}
-                alt='Payment proof'
-                className='max-h-[60vh] object-contain rounded-md border'
-              />
-            </div>
-          ) : (
-            <div className='py-8 text-center text-muted-foreground'>Người dùng chưa tải lên bằng chứng thanh toán</div>
-          )}
-
-          <DialogFooter>
-            <Button onClick={() => setViewProofDialogOpen(false)}>Đóng</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Approve Dialog */}
-      <AlertDialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận phê duyệt</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bạn có chắc chắn muốn phê duyệt yêu cầu nạp tiền này? Số tiền{' '}
-              {selectedRequest ? formatMoney(selectedRequest.amount) : ''} sẽ được cộng vào tài khoản của người dùng.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          <div className='py-4'>
-            <label className='text-sm font-medium'>Ghi chú (không bắt buộc)</label>
-            <Textarea
-              placeholder='Nhập ghi chú cho người dùng'
-              className='mt-1'
-              value={adminNotes}
-              onChange={e => setAdminNotes(e.target.value)}
+      {/* Detail Dialog */}
+      {selectedRequest && (
+        <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+          <DialogContent className='max-w-3xl'>
+            <DialogHeader>
+              <DialogTitle>Chi tiết yêu cầu thanh toán</DialogTitle>
+              <DialogDescription>Xem và quản lý thông tin chi tiết yêu cầu</DialogDescription>
+            </DialogHeader>
+            <PaymentRequestDetail
+              request={selectedRequest}
+              onClose={() => setDetailDialogOpen(false)}
+              onSuccess={() => {
+                setDetailDialogOpen(false)
+                refetch()
+              }}
             />
-          </div>
-
-          <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmApprove}
-              disabled={approveMutation.isLoading}
-              className='bg-green-600 hover:bg-green-700'
-            >
-              {approveMutation.isLoading ? (
-                <>
-                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                  Đang xử lý...
-                </>
-              ) : (
-                'Phê duyệt'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Reject Dialog */}
-      <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận từ chối</AlertDialogTitle>
-            <AlertDialogDescription>Bạn có chắc chắn muốn từ chối yêu cầu nạp tiền này?</AlertDialogDescription>
-          </AlertDialogHeader>
-
-          <div className='py-4'>
-            <label className='text-sm font-medium'>
-              Lý do từ chối <span className='text-red-500'>*</span>
-            </label>
-            <Textarea
-              placeholder='Nhập lý do từ chối cho người dùng'
-              className='mt-1'
-              value={adminNotes}
-              onChange={e => setAdminNotes(e.target.value)}
-              required
-            />
-          </div>
-
-          <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmReject}
-              disabled={rejectMutation.isLoading || !adminNotes.trim()}
-              className='bg-destructive hover:bg-destructive/90'
-            >
-              {rejectMutation.isLoading ? (
-                <>
-                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                  Đang xử lý...
-                </>
-              ) : (
-                'Từ chối'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
 
-function PaymentRequestsTable({ paymentRequests, isLoading, formatMoney, onViewProof, onApprove, onReject }) {
-  if (isLoading) {
-    return (
-      <div className='flex justify-center py-8'>
-        <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
-      </div>
-    )
+function PaymentStatusBadge({ status }) {
+  switch (status) {
+    case 'pending':
+      return (
+        <Badge variant='outline' className='bg-yellow-100 text-yellow-800'>
+          Đang xử lý
+        </Badge>
+      )
+    case 'approved':
+      return <Badge className='bg-green-100 text-green-800'>Đã duyệt</Badge>
+    case 'rejected':
+      return <Badge variant='destructive'>Từ chối</Badge>
+    case 'cancelled':
+      return (
+        <Badge variant='outline' className='bg-gray-100 text-gray-800'>
+          Đã hủy
+        </Badge>
+      )
+    default:
+      return <Badge variant='outline'>{status}</Badge>
   }
-
-  if (paymentRequests.length === 0) {
-    return (
-      <div className='text-center py-8'>
-        <p className='text-muted-foreground'>Không có yêu cầu nào.</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className='rounded-md border'>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Người dùng</TableHead>
-            <TableHead>Thời gian</TableHead>
-            <TableHead>Phương thức</TableHead>
-            <TableHead>Số tiền</TableHead>
-            <TableHead>Trạng thái</TableHead>
-            <TableHead>Thao tác</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {paymentRequests.map(request => (
-            <TableRow key={request.id}>
-              <TableCell>
-                <div className='flex items-center gap-2'>
-                  <Avatar className='h-8 w-8'>
-                    <AvatarImage
-                      src={request.profiles?.avatar_url}
-                      alt={request.profiles?.display_name || request.profiles?.username}
-                    />
-                    <AvatarFallback>
-                      {(request.profiles?.display_name || request.profiles?.username || 'U')[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className='font-medium'>{request.profiles?.display_name || request.profiles?.username}</p>
-                    <p className='text-xs text-muted-foreground'>{request.profiles?.email}</p>
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                {format(new Date(request.created_at), 'HH:mm, dd/MM/yyyy', {
-                  locale: vi
-                })}
-              </TableCell>
-              <TableCell>{formatPaymentMethod(request.payment_method)}</TableCell>
-              <TableCell>{formatMoney(request.amount)}</TableCell>
-              <TableCell>
-                <PaymentStatus status={request.status} />
-              </TableCell>
-              <TableCell>
-                <div className='flex space-x-2'>
-                  {request.proof_url && (
-                    <Button variant='outline' size='sm' onClick={() => onViewProof(request)}>
-                      <Eye className='h-4 w-4' />
-                    </Button>
-                  )}
-                  {request.status === 'pending' && (
-                    <>
-                      <Button
-                        variant='default'
-                        size='sm'
-                        className='bg-green-600 hover:bg-green-700'
-                        onClick={() => onApprove(request)}
-                      >
-                        <CheckCircle className='h-4 w-4' />
-                      </Button>
-                      <Button variant='destructive' size='sm' onClick={() => onReject(request)}>
-                        <XCircle className='h-4 w-4' />
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  )
 }
 
-// Helper function to format payment method
 function formatPaymentMethod(method) {
   switch (method) {
     case 'bank_transfer':
