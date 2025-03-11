@@ -1,4 +1,4 @@
-docs,.gitignore,scripts,pnpm-lock.yaml,tsconfig.json,package.json,README.md,public,components.json
+docs,.gitignore,scripts,pnpm-lock.yaml,jsconfig.json,package.json,README.md,public,components.json,.prettierrc.json,eslint.config.mjs,next.config.mjs,README.md
 
 src/components/*
 src/app/*

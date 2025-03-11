@@ -1,66 +1,45 @@
-import {
-  useSessionQuery,
-  useProfileQuery,
-  useLoginMutation,
-  useRegisterMutation,
-  useLogoutMutation,
-  useResetPasswordMutation,
-  useUpdateProfileMutation
-} from './queries/useAuthQueries'
+// src/hooks/useAuth.js
+import { useCallback } from 'react'
+import { useSessionQuery, useProfileQuery, useLogoutMutation, useUpdateProfileMutation } from './queries/useAuthQueries'
 
 export function useAuth() {
   // Fetch session & profile
-  const { data: sessionData, isLoading: isSessionLoading, refetch: refreshSession } = useSessionQuery()
+  const { data: sessionData, isFetching: isSessionLoading, refetch: refreshSession } = useSessionQuery()
   const user = sessionData?.user || null
 
   // Only fetch profile if we have a user
-  const { data: profileData, isLoading: isProfileLoading } = useProfileQuery(!!user)
+  const { data: profileData, isFetching: isProfileLoading } = useProfileQuery(!!user)
   const profile = profileData?.profile || null
 
   // Mutations
-  const loginMutation = useLoginMutation()
-  const registerMutation = useRegisterMutation()
   const logoutMutation = useLogoutMutation()
-  const resetPasswordMutation = useResetPasswordMutation()
   const updateProfileMutation = useUpdateProfileMutation()
 
   // Loading state
   const isLoading = isSessionLoading || (!!user && isProfileLoading)
 
-  // Auth methods
-  const signIn = credentials => {
-    return loginMutation.mutateAsync(credentials)
-  }
-
-  const signUp = data => {
-    return registerMutation.mutateAsync(data)
-  }
-
-  const signOut = () => {
+  const signOut = useCallback(() => {
     return logoutMutation.mutateAsync()
-  }
+  }, [logoutMutation])
 
-  const resetPassword = email => {
-    return resetPasswordMutation.mutateAsync(email)
-  }
+  const updateProfile = useCallback(
+    data => {
+      return updateProfileMutation.mutateAsync(data)
+    },
+    [updateProfileMutation]
+  )
 
-  const updateProfile = data => {
-    return updateProfileMutation.mutateAsync(data)
-  }
-
-  const isPasswordResetSession = () => {
+  const isPasswordResetSession = useCallback(() => {
+    if (typeof window === 'undefined') return false
     return !!user && new URL(window.location.href).searchParams.get('type') === 'recovery'
-  }
+  }, [user])
 
   return {
     user,
     profile,
     isLoading,
     isAuthenticated: !!user,
-    signIn,
-    signUp,
     signOut,
-    resetPassword,
     updateProfile,
     refreshSession,
     isPasswordResetSession

@@ -1,29 +1,28 @@
+// src/components/auth/ForgotPasswordForm.jsx
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { Loader2, ArrowRight, Mail, CheckCircle, AlertCircle } from 'lucide-react'
+import { Loader2, Mail, ArrowLeft, CheckCircle, Send } from 'lucide-react'
 import Link from 'next/link'
-
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormDescription, FormMessage } from '@/components/ui/form'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { useAuth } from '@/hooks/useAuth'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useForgotPasswordMutation } from '@/hooks/queries/useAuthQueries'
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Email không hợp lệ')
 })
 
 export function ForgotPasswordForm() {
-  const { resetPassword } = useAuth()
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSubmitted, setIsSubmitted] = useState(false)
-  const [error, setError] = useState(null)
-  const [submittedEmail, setSubmittedEmail] = useState('')
+  const router = useRouter()
+  const resetPasswordMutation = useForgotPasswordMutation()
+  const [success, setSuccess] = useState(false)
 
   const form = useForm({
     resolver: zodResolver(forgotPasswordSchema),
@@ -33,133 +32,118 @@ export function ForgotPasswordForm() {
   })
 
   async function onSubmit(data) {
-    setIsLoading(true)
-    setError(null)
     try {
-      await resetPassword(data.email)
-      setSubmittedEmail(data.email)
-      setIsSubmitted(true)
-    } catch (err) {
-      setError(err.message || 'Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại sau.')
-    } finally {
-      setIsLoading(false)
+      await resetPasswordMutation.mutateAsync(data.email)
+      setSuccess(true)
+    } catch (error) {
+      // Lỗi đã được xử lý trong hook mutation
     }
   }
 
-  if (isSubmitted) {
-    return (
-      <Card className='border-success/20 bg-success/5'>
-        <CardHeader>
-          <div className='flex items-center space-x-2'>
-            <div className='h-10 w-10 rounded-full bg-success/20 flex items-center justify-center'>
-              <Mail className='h-5 w-5 text-success' />
-            </div>
-            <div>
-              <CardTitle className='text-success'>Email đã được gửi</CardTitle>
-              <CardDescription>Kiểm tra hộp thư của bạn</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className='space-y-4'>
-          <p className='text-sm'>
-            Chúng tôi đã gửi hướng dẫn đặt lại mật khẩu đến <span className='font-medium'>{submittedEmail}</span>
-          </p>
-          <p className='text-sm text-muted-foreground'>
-            Nếu bạn không nhận được email trong vòng vài phút, vui lòng kiểm tra thư mục spam hoặc thử lại.
-          </p>
-
-          <div className='bg-background rounded-lg p-4 border border-border'>
-            <div className='flex items-center space-x-3'>
-              <div className='h-8 w-8 rounded-full flex items-center justify-center bg-success/20'>
-                <CheckCircle className='h-4 w-4 text-success' />
-              </div>
-              <div>
-                <p className='text-sm font-medium'>Bước tiếp theo</p>
-                <p className='text-xs text-muted-foreground'>Nhấp vào liên kết trong email để đặt lại mật khẩu</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter className='flex justify-between border-t p-4'>
-          <Button variant='ghost' size='sm' asChild>
-            <Link href='/login'>Quay lại đăng nhập</Link>
-          </Button>
-          <Button
-            onClick={() => {
-              setIsSubmitted(false)
-              form.reset()
-            }}
-            size='sm'
-          >
-            Thử email khác
-          </Button>
-        </CardFooter>
-      </Card>
-    )
-  }
-
   return (
-    <Card>
-      <CardHeader>
-        <div className='flex items-center space-x-2'>
-          <div className='h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center'>
-            <Mail className='h-5 w-5 text-primary' />
-          </div>
-          <div>
-            <CardTitle>Đặt lại mật khẩu</CardTitle>
-            <CardDescription>Nhập email của bạn để nhận hướng dẫn</CardDescription>
-          </div>
-        </div>
+    <Card className='w-full max-w-md mx-auto'>
+      <CardHeader className='space-y-1'>
+        <CardTitle className='text-2xl font-bold'>Khôi phục mật khẩu</CardTitle>
+        <CardDescription>Nhập email của bạn để nhận link đặt lại mật khẩu</CardDescription>
       </CardHeader>
+
       <CardContent className='space-y-4'>
-        {error && (
+        {resetPasswordMutation.error && (
           <Alert variant='destructive'>
-            <AlertCircle className='h-4 w-4' />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{resetPasswordMutation.error.message}</AlertDescription>
           </Alert>
         )}
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
-            <FormField
-              control={form.control}
-              name='email'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder='email@example.com'
-                      type='email'
-                      className='h-11'
-                      disabled={isLoading}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription className='text-xs'>
-                    Chúng tôi sẽ gửi link đặt lại mật khẩu đến email này
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        {success ? (
+          <div className='space-y-4'>
+            <Alert className='bg-success/20 border-success text-success'>
+              <CheckCircle className='h-4 w-4 mr-2' />
+              <AlertDescription>
+                Link khôi phục mật khẩu đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư (bao gồm thư rác).
+              </AlertDescription>
+            </Alert>
 
-            <Button type='submit' className='w-full h-11' disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                  Đang gửi...
-                </>
-              ) : (
-                <>
-                  Gửi hướng dẫn đặt lại
-                  <ArrowRight className='ml-2 h-4 w-4' />
-                </>
-              )}
-            </Button>
-          </form>
-        </Form>
+            <div className='flex flex-col space-y-2'>
+              <Button onClick={() => router.push('/login')} variant='default'>
+                <ArrowLeft className='mr-2 h-4 w-4' />
+                Quay lại đăng nhập
+              </Button>
+
+              <Button
+                onClick={() => {
+                  setSuccess(false)
+                  form.reset()
+                }}
+                variant='outline'
+              >
+                Gửi lại yêu cầu
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
+              <FormField
+                control={form.control}
+                name='email'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <div className='relative'>
+                        <Mail className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
+                        <Input
+                          {...field}
+                          type='email'
+                          placeholder='email@example.com'
+                          className='pl-9 h-11'
+                          disabled={resetPasswordMutation.isLoading}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormDescription className='text-xs'>Nhập email bạn đã dùng để đăng ký tài khoản.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className='flex justify-between items-center pt-2'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={() => router.push('/login')}
+                  disabled={resetPasswordMutation.isLoading}
+                >
+                  <ArrowLeft className='mr-2 h-4 w-4' /> Quay lại
+                </Button>
+
+                <Button type='submit' disabled={resetPasswordMutation.isLoading}>
+                  {resetPasswordMutation.isLoading ? (
+                    <>
+                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                      Đang gửi...
+                    </>
+                  ) : (
+                    <>
+                      Gửi yêu cầu
+                      <Send className='ml-2 h-4 w-4' />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        )}
       </CardContent>
+
+      <CardFooter className='flex justify-center border-t pt-4'>
+        <p className='text-sm text-muted-foreground'>
+          Chưa có tài khoản?{' '}
+          <Link href='/register' className='text-primary underline underline-offset-4 hover:text-primary/90'>
+            Đăng ký ngay
+          </Link>
+        </p>
+      </CardFooter>
     </Card>
   )
 }

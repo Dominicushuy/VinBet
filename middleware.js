@@ -1,31 +1,63 @@
-// middleware.js
+// src/middleware.js
 import { NextResponse } from 'next/server'
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 
-// Define protected routes for better maintainability
-const PROTECTED_ROUTES = ['/profile', '/games', '/finance', '/referrals', '/admin']
+// Danh sách các routes xác thực
+const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password']
 
-const AUTH_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password']
+// Danh sách các routes yêu cầu đăng nhập, không bao gồm admin routes
+const protectedRoutes = ['/profile', '/referrals', '/finance', '/games', '/notifications']
+
+// Danh sách các routes chỉ dành cho admin
+const adminRoutes = ['/admin']
 
 export async function middleware(req) {
+  const { pathname } = req.nextUrl
+
+  // Bỏ qua các file tĩnh
+  const isPublicFile = /\.(js|css|png|jpg|jpeg|svg|ico|json)$/i.test(pathname)
+  const isNextInternal = pathname.startsWith('/_next/')
+  const isApiRoute = pathname.startsWith('/api/')
+
+  if (isPublicFile || isNextInternal) {
+    return NextResponse.next()
+  }
+
+  // Xác định loại route
+  const isAuthRoute = authRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`))
+  const isProtectedRoute = protectedRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`))
+  const isAdminRoute = adminRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`))
+
+  // Tạo response
   const res = NextResponse.next()
+
+  // Khởi tạo Supabase client
   const supabase = createMiddlewareClient({ req, res })
   const {
     data: { session }
   } = await supabase.auth.getSession()
 
-  const path = req.nextUrl.pathname
+  // Lấy profile để kiểm tra admin
+  let isAdmin = false
+  if (session) {
+    const { data } = await supabase.from('profiles').select('is_admin').eq('id', session.user.id).single()
 
-  // Check if current path is protected
-  const isProtectedRoute = PROTECTED_ROUTES.some(route => path.startsWith(route))
-  const isAuthRoute = AUTH_ROUTES.some(route => path === route)
+    isAdmin = data?.is_admin === true
+  }
 
+  // Route bảo vệ và không có session
   if (isProtectedRoute && !session) {
     const redirectUrl = new URL('/login', req.url)
-    redirectUrl.searchParams.set('redirectTo', path)
+    redirectUrl.searchParams.set('redirectTo', pathname)
     return NextResponse.redirect(redirectUrl)
   }
 
+  // Route admin và không phải admin
+  if (isAdminRoute && (!session || !isAdmin)) {
+    return NextResponse.redirect(new URL('/', req.url))
+  }
+
+  // Route auth nhưng đã đăng nhập
   if (isAuthRoute && session) {
     return NextResponse.redirect(new URL('/', req.url))
   }
@@ -34,14 +66,5 @@ export async function middleware(req) {
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public directory
-     */
-    '/((?!_next/static|_next/image|favicon.ico|public).*)'
-  ]
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)']
 }

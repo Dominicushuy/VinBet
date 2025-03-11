@@ -1,318 +1,356 @@
 Directory structure:
 └── dominicushuy-vinbet/
-    ├── README.md
     ├── components.json
     ├── eslint.config.mjs
-    ├── middleware.ts
+    ├── jsconfig.json
+    ├── middleware.js
     ├── next.config.mjs
     ├── package.json
     ├── postcss.config.js
     ├── tailwind.config.js
-    ├── tsconfig.json
+    ├── .prettierrc.json
     └── src/
         ├── app/
+        │   ├── config.js
         │   ├── globals.css
-        │   ├── layout.tsx
+        │   ├── layout.jsx
         │   ├── (admin)/
-        │   │   ├── layout.tsx
+        │   │   ├── layout.jsx
         │   │   └── admin/
-        │   │       ├── page.tsx
         │   │       ├── dashboard/
-        │   │       │   └── page.tsx
+        │   │       │   └── page.jsx
         │   │       ├── games/
-        │   │       │   └── page.tsx
+        │   │       │   ├── page.jsx
+        │   │       │   └── [id]/
+        │   │       │       └── page.jsx
         │   │       ├── notifications/
-        │   │       │   └── route.tsx
+        │   │       │   └── page.jsx
         │   │       ├── payments/
-        │   │       │   └── page.tsx
+        │   │       │   └── page.jsx
         │   │       └── users/
-        │   │           ├── page.tsx
+        │   │           ├── page.jsx
         │   │           └── [id]/
-        │   │               └── page.tsx
+        │   │               └── page.jsx
         │   ├── (auth)/
-        │   │   ├── layout.tsx
+        │   │   ├── layout.jsx
         │   │   ├── forgot-password/
-        │   │   │   └── page.tsx
+        │   │   │   └── page.jsx
         │   │   ├── login/
-        │   │   │   └── page.tsx
+        │   │   │   └── page.jsx
         │   │   ├── register/
-        │   │   │   └── page.tsx
+        │   │   │   └── page.jsx
         │   │   └── reset-password/
-        │   │       └── page.tsx
+        │   │       └── page.jsx
         │   ├── (main)/
-        │   │   ├── layout.tsx
-        │   │   ├── page.tsx
+        │   │   ├── layout.jsx
+        │   │   ├── page.jsx
         │   │   ├── finance/
-        │   │   │   ├── layout.tsx
-        │   │   │   ├── page.tsx
+        │   │   │   ├── layout.jsx
+        │   │   │   ├── page.jsx
         │   │   │   ├── deposit/
-        │   │   │   │   └── page.tsx
+        │   │   │   │   └── page.jsx
         │   │   │   ├── transactions/
-        │   │   │   │   └── page.tsx
+        │   │   │   │   └── page.jsx
         │   │   │   └── withdrawal/
-        │   │   │       └── page.tsx
+        │   │   │       └── page.jsx
         │   │   ├── games/
-        │   │   │   ├── page.tsx
+        │   │   │   ├── page.jsx
         │   │   │   └── [id]/
-        │   │   │       └── page.tsx
+        │   │   │       └── page.jsx
         │   │   ├── notifications/
-        │   │   │   ├── page.tsx
+        │   │   │   ├── page.jsx
         │   │   │   ├── settings/
-        │   │   │   │   └── page.tsx
+        │   │   │   │   └── page.jsx
         │   │   │   └── telegram/
-        │   │   │       └── page.tsx
+        │   │   │       └── page.jsx
         │   │   ├── profile/
-        │   │   │   └── page.tsx
+        │   │   │   └── page.jsx
         │   │   └── referrals/
-        │   │       └── page.tsx
+        │   │       └── page.jsx
         │   └── api/
         │       ├── admin/
         │       │   ├── dashboard-summary/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   ├── games/
         │       │   │   └── [id]/
         │       │   │       └── results/
-        │       │   │           └── route.ts
+        │       │   │           └── route.js
         │       │   ├── metrics/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   ├── notifications/
         │       │   │   └── send/
-        │       │   │       └── route.ts
+        │       │   │       └── route.js
         │       │   ├── payment-requests/
-        │       │   │   ├── route.ts
+        │       │   │   ├── route.js
         │       │   │   └── [id]/
         │       │   │       └── [action]/
-        │       │   │           └── route.ts
+        │       │   │           └── route.js
         │       │   ├── transactions/
-        │       │   │   ├── route.ts
+        │       │   │   ├── route.js
         │       │   │   └── summary/
-        │       │   │       └── route.ts
+        │       │   │       └── route.js
         │       │   └── users/
-        │       │       ├── route.ts
+        │       │       ├── route.js
         │       │       └── [id]/
-        │       │           └── route.ts
+        │       │           └── route.js
         │       ├── auth/
         │       │   ├── callback/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   ├── forgot-password/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   ├── login/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   ├── logout/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   ├── register/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   ├── reset-password/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   ├── session/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   └── verify-email/
-        │       │       └── route.ts
+        │       │       └── route.js
         │       ├── game-rounds/
-        │       │   ├── route.ts
+        │       │   ├── route.js
         │       │   ├── [id]/
-        │       │   │   ├── route.ts
+        │       │   │   ├── route.js
         │       │   │   ├── bets/
-        │       │   │   │   └── route.ts
+        │       │   │   │   └── route.js
         │       │   │   ├── my-bets/
-        │       │   │   │   └── route.ts
+        │       │   │   │   └── route.js
         │       │   │   ├── results/
-        │       │   │   │   └── route.ts
+        │       │   │   │   └── route.js
         │       │   │   └── winners/
-        │       │   │       └── route.ts
+        │       │   │       └── route.js
         │       │   └── active/
-        │       │       └── route.ts
+        │       │       └── route.js
         │       ├── games/
         │       │   ├── [id]/
         │       │   │   └── leaderboard/
-        │       │   │       └── route.ts
+        │       │   │       └── route.js
         │       │   ├── jackpot/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   ├── jackpot-games/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   ├── popular/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   ├── related/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   ├── upcoming/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   └── winners/
         │       │       └── recent/
-        │       │           └── route.ts
+        │       │           └── route.js
         │       ├── notifications/
-        │       │   ├── route.ts
+        │       │   ├── route.js
         │       │   ├── [id]/
+        │       │   │   ├── route.js
         │       │   │   └── read/
-        │       │   │       └── route.ts
+        │       │   │       └── route.js
         │       │   ├── count/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
+        │       │   ├── delete-all/
+        │       │   │   └── route.js
         │       │   ├── read-all/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   ├── settings/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   └── telegram/
-        │       │       └── route.ts
+        │       │       └── route.js
         │       ├── payment-requests/
-        │       │   ├── route.ts
+        │       │   ├── route.js
         │       │   ├── upload-proof/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   └── withdraw/
-        │       │       ├── route.ts
+        │       │       ├── route.js
         │       │       └── [id]/
-        │       │           └── route.ts
+        │       │           └── route.js
         │       ├── profile/
-        │       │   ├── route.ts
+        │       │   ├── route.js
         │       │   ├── avatar/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   ├── change-password/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   └── stats/
-        │       │       └── route.ts
+        │       │       └── route.js
         │       ├── referrals/
-        │       │   ├── route.ts
+        │       │   ├── route.js
         │       │   ├── code/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   ├── list/
-        │       │   │   └── route.ts
+        │       │   │   └── route.js
         │       │   └── stats/
-        │       │       └── route.ts
+        │       │       └── route.js
         │       ├── statistics/
         │       │   └── platform/
-        │       │       └── route.ts
+        │       │       └── route.js
         │       └── transactions/
-        │           ├── route.ts
+        │           ├── route.js
+        │           ├── chart/
+        │           │   └── route.js
+        │           ├── export/
+        │           │   └── route.js
         │           └── summary/
-        │               └── route.ts
+        │               └── route.js
         ├── components/
         │   ├── admin/
-        │   │   ├── Charts.tsx
-        │   │   ├── Dashboard.tsx
-        │   │   ├── GameResultInput.tsx
-        │   │   ├── GameRoundManagement.tsx
-        │   │   ├── NotificationSender.tsx
-        │   │   ├── PaymentRequestsManagement.tsx
-        │   │   ├── Stats.tsx
-        │   │   ├── UserDetail.tsx
-        │   │   └── UserManagement.tsx
+        │   │   ├── AdminDashboard.jsx
+        │   │   ├── AdminGameDetail.jsx
+        │   │   ├── AdminGameManagement.jsx
+        │   │   ├── AdminUserDetail.jsx
+        │   │   ├── AdminUserManagement.jsx
+        │   │   ├── NotificationSender.jsx
+        │   │   ├── PaymentRequestDetail.jsx
+        │   │   ├── PaymentRequestsManagement.jsx
+        │   │   ├── dashboard/
+        │   │   │   ├── ActiveGamesList.jsx
+        │   │   │   ├── MetricsCharts.jsx
+        │   │   │   ├── QuickActions.jsx
+        │   │   │   ├── RecentTransactions.jsx
+        │   │   │   └── StatsCard.jsx
+        │   │   └── layout/
+        │   │       ├── AdminBreadcrumb.jsx
+        │   │       ├── AdminFooter.jsx
+        │   │       ├── AdminHeader.jsx
+        │   │       ├── AdminPageHeader.jsx
+        │   │       ├── AdminSidebar.jsx
+        │   │       └── ResponsiveAdminMenu.jsx
         │   ├── auth/
-        │   │   ├── ForgotPasswordForm.tsx
-        │   │   ├── LoginForm.tsx
-        │   │   ├── RegisterForm.tsx
-        │   │   └── ResetPasswordForm.tsx
+        │   │   ├── ForgotPasswordForm.jsx
+        │   │   ├── LoginForm.jsx
+        │   │   ├── RegisterForm.jsx
+        │   │   └── ResetPasswordForm.jsx
         │   ├── bet/
-        │   │   ├── BetConfirmation.tsx
-        │   │   ├── BetForm.tsx
-        │   │   ├── BetList.tsx
-        │   │   ├── BetSuccess.tsx
-        │   │   └── BetSuccessAnimation.tsx
+        │   │   ├── BetConfirmation.jsx
+        │   │   ├── BetForm.jsx
+        │   │   ├── BetList.jsx
+        │   │   └── BetSuccessAnimation.jsx
         │   ├── finance/
-        │   │   ├── DepositForm.tsx
-        │   │   ├── FinancialSummary.tsx
-        │   │   ├── PaymentProofUpload.tsx
-        │   │   ├── PaymentRequestList.tsx
-        │   │   ├── PaymentStatus.tsx
-        │   │   ├── TransactionDetail.tsx
-        │   │   ├── TransactionFilters.tsx
-        │   │   ├── TransactionHistory.tsx
-        │   │   ├── WithdrawalForm.tsx
-        │   │   ├── WithdrawalHistory.tsx
-        │   │   └── WithdrawalMethodSelect.tsx
+        │   │   ├── DepositFlowSteps.jsx
+        │   │   ├── ExportTransactions.jsx
+        │   │   ├── FinancialOverviewChart.jsx
+        │   │   ├── FinancialSummary.jsx
+        │   │   ├── FinancialSummaryCards.jsx
+        │   │   ├── PaymentMethodCard.jsx
+        │   │   ├── PaymentProofUpload.jsx
+        │   │   ├── PaymentRequestList.jsx
+        │   │   ├── PaymentStatus.jsx
+        │   │   ├── RecentTransactionsList.jsx
+        │   │   ├── TransactionAdvancedFilters.jsx
+        │   │   ├── TransactionChartView.jsx
+        │   │   ├── TransactionDashboard.jsx
+        │   │   ├── TransactionDetailModal.jsx
+        │   │   ├── TransactionHistoryTable.jsx
+        │   │   ├── WithdrawalFlowSteps.jsx
+        │   │   └── WithdrawalHistory.jsx
         │   ├── game/
-        │   │   ├── ActiveGames.tsx
-        │   │   ├── GameCard.tsx
-        │   │   ├── GameFilters.tsx
-        │   │   ├── GameLeaderboard.tsx
-        │   │   ├── GameList.tsx
-        │   │   ├── GameListItem.tsx
-        │   │   ├── GameListSkeleton.tsx
-        │   │   ├── GameResult.tsx
-        │   │   ├── GameResultAnimation.tsx
-        │   │   ├── GameResultNotification.tsx
-        │   │   ├── RelatedGames.tsx
-        │   │   └── WinnerList.tsx
+        │   │   ├── GameCard.jsx
+        │   │   ├── GameFilters.jsx
+        │   │   ├── GameLeaderboard.jsx
+        │   │   ├── GameListItem.jsx
+        │   │   ├── GameListSkeleton.jsx
+        │   │   ├── GameResultAnimation.jsx
+        │   │   ├── RelatedGames.jsx
+        │   │   └── WinnerList.jsx
         │   ├── home/
-        │   │   ├── CTACard.tsx
-        │   │   ├── GameCardShowcase.tsx
-        │   │   ├── JackpotCounter.tsx
-        │   │   ├── StatsCounter.tsx
-        │   │   ├── TestimonialSlider.tsx
-        │   │   └── WinnersList.tsx
+        │   │   ├── CTACard.jsx
+        │   │   ├── GameCardShowcase.jsx
+        │   │   ├── JackpotCounter.jsx
+        │   │   ├── StatsCounter.jsx
+        │   │   ├── TestimonialSlider.jsx
+        │   │   └── WinnersList.jsx
         │   ├── layout/
-        │   │   └── MainLayout.tsx
+        │   │   └── MainLayout.jsx
         │   ├── notifications/
-        │   │   ├── NotificationBadge.tsx
-        │   │   ├── NotificationDropdown.tsx
-        │   │   ├── NotificationItem.tsx
-        │   │   ├── NotificationList.tsx
-        │   │   ├── NotificationSettings.tsx
-        │   │   └── TelegramConnect.tsx
+        │   │   ├── EmptyNotifications.jsx
+        │   │   ├── NotificationBadge.jsx
+        │   │   ├── NotificationDetail.jsx
+        │   │   ├── NotificationDropdown.jsx
+        │   │   ├── NotificationItem.jsx
+        │   │   ├── NotificationSettings.jsx
+        │   │   ├── NotificationSkeleton.jsx
+        │   │   ├── NotificationSkeletonItem.jsx
+        │   │   ├── NotificationToast.jsx
+        │   │   └── TelegramConnect.jsx
         │   ├── profile/
-        │   │   ├── AvatarUpload.tsx
-        │   │   ├── ChangePasswordForm.tsx
-        │   │   ├── ProfileForm.tsx
-        │   │   └── UserStatistics.tsx
+        │   │   ├── AccountStatus.jsx
+        │   │   ├── AvatarUploader.jsx
+        │   │   ├── LoginHistory.jsx
+        │   │   ├── PasswordChangeForm.jsx
+        │   │   ├── ProfileDashboard.jsx
+        │   │   ├── ProfileForm.jsx
+        │   │   ├── ProfileHeader.jsx
+        │   │   └── ProfileStats.jsx
         │   ├── referrals/
-        │   │   ├── ReferralCodeCard.tsx
-        │   │   ├── ReferralShareLinks.tsx
-        │   │   ├── ReferralStatistics.tsx
-        │   │   └── ReferralsList.tsx
+        │   │   ├── ReferralCodeCard.jsx
+        │   │   ├── ReferralShareLinks.jsx
+        │   │   ├── ReferralsList.jsx
+        │   │   └── ReferralStatistics.jsx
         │   └── ui/
-        │       ├── alert-dialog.tsx
-        │       ├── alert.tsx
-        │       ├── avatar.tsx
-        │       ├── badge.tsx
-        │       ├── button.tsx
-        │       ├── calendar.tsx
-        │       ├── card.tsx
-        │       ├── checkbox.tsx
-        │       ├── date-picker.tsx
-        │       ├── dialog.tsx
-        │       ├── dropdown-menu.tsx
-        │       ├── form.tsx
-        │       ├── input.tsx
-        │       ├── label.tsx
-        │       ├── pagination.tsx
-        │       ├── popover.tsx
-        │       ├── progress.tsx
-        │       ├── select.tsx
-        │       ├── separator.tsx
-        │       ├── sheet.tsx
-        │       ├── skeleton.tsx
-        │       ├── sonner.tsx
-        │       ├── switch.tsx
-        │       ├── table.tsx
-        │       ├── tabs.tsx
-        │       ├── textarea.tsx
-        │       └── tooltip.tsx
+        │       ├── alert-dialog.jsx
+        │       ├── alert.jsx
+        │       ├── avatar.jsx
+        │       ├── badge.jsx
+        │       ├── button.jsx
+        │       ├── calendar.jsx
+        │       ├── card.jsx
+        │       ├── checkbox.jsx
+        │       ├── collapsible.jsx
+        │       ├── date-picker.jsx
+        │       ├── date-range-picker.jsx
+        │       ├── dialog.jsx
+        │       ├── dropdown-menu.jsx
+        │       ├── form.jsx
+        │       ├── hover-card.jsx
+        │       ├── input.jsx
+        │       ├── label.jsx
+        │       ├── lightbox.jsx
+        │       ├── pagination.jsx
+        │       ├── popover.jsx
+        │       ├── progress.jsx
+        │       ├── radio-group.jsx
+        │       ├── scroll-area.jsx
+        │       ├── select.jsx
+        │       ├── separator.jsx
+        │       ├── sheet.jsx
+        │       ├── skeleton.jsx
+        │       ├── slider.jsx
+        │       ├── steps.jsx
+        │       ├── switch.jsx
+        │       ├── table.jsx
+        │       ├── tabs.jsx
+        │       ├── textarea.jsx
+        │       ├── toast.jsx
+        │       ├── toaster.jsx
+        │       └── tooltip.jsx
         ├── hooks/
-        │   ├── useAuth.ts
+        │   ├── useAuth.js
+        │   ├── useNotificationListener.jsx
+        │   ├── useToast.js
         │   └── queries/
-        │       ├── useAdminQueries.ts
-        │       ├── useAuthQueries.ts
-        │       ├── useBetQueries.ts
-        │       ├── useFinanceQueries.ts
-        │       ├── useGameQueries.ts
-        │       ├── useNotificationQueries.ts
-        │       ├── useProfileQueries.ts
-        │       ├── useReferralQueries.ts
-        │       └── useTransactionQueries.ts
+        │       ├── useAdminQueries.js
+        │       ├── useAuthQueries.js
+        │       ├── useBetQueries.js
+        │       ├── useFinanceQueries.js
+        │       ├── useGameQueries.js
+        │       ├── useNotificationQueries.js
+        │       ├── useProfileQueries.js
+        │       ├── useReferralQueries.js
+        │       └── useTransactionQueries.js
         ├── lib/
-        │   ├── fonts.ts
-        │   ├── utils.ts
+        │   ├── fonts.js
+        │   ├── utils.js
         │   ├── auth/
-        │   │   └── session.ts
+        │   │   └── session.js
         │   └── supabase/
-        │       ├── admin.ts
-        │       ├── client.ts
-        │       └── server.ts
+        │       ├── admin.js
+        │       ├── client.js
+        │       └── server.js
         ├── providers/
-        │   ├── ComponentsProvider.tsx
-        │   └── QueryProvider.tsx
+        │   ├── ComponentsProvider.jsx
+        │   └── QueryProvider.jsx
         ├── services/
-        │   ├── api.service.ts
-        │   └── auth.service.ts
-        ├── types/
-        │   ├── database.ts
-        │   └── supabase.ts
+        │   ├── api.service.js
+        │   └── auth.service.js
         └── utils/
-            └── telegram.ts
+            └── telegram.js

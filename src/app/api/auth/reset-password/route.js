@@ -1,35 +1,45 @@
-export const dynamic = 'force-dynamic';
+// src/app/api/auth/reset-password/route.js
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { z } from 'zod'
-
-const resetPasswordSchema = z.object({
-  password: z.string().min(6)
-})
 
 export async function POST(request) {
   try {
     const body = await request.json()
-    const validatedData = resetPasswordSchema.parse(body)
+    const { password } = body
+
+    if (!password) {
+      return NextResponse.json({ error: 'Mật khẩu là bắt buộc' }, { status: 400 })
+    }
 
     const supabase = createRouteHandlerClient({ cookies })
 
+    // Kiểm tra session hiện tại
+    const {
+      data: { session }
+    } = await supabase.auth.getSession()
+
+    if (!session) {
+      return NextResponse.json({ error: 'Không tìm thấy phiên xác thực' }, { status: 401 })
+    }
+
+    // Cập nhật mật khẩu cho người dùng hiện tại
     const { error } = await supabase.auth.updateUser({
-      password: validatedData.password
+      password: password
     })
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
+      return NextResponse.json({ error: error.message || 'Không thể cập nhật mật khẩu' }, { status: 400 })
     }
 
-    return NextResponse.json({ success: true }, { status: 200 })
+    // Đăng xuất sau khi đổi mật khẩu
+    await supabase.auth.signOut()
+
+    return NextResponse.json({ success: true, message: 'Mật khẩu đã được cập nhật thành công' }, { status: 200 })
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
-    }
-
-    return NextResponse.json({ error: 'Lỗi server' }, { status: 500 })
+    console.error('Unexpected error in reset-password route:', error)
+    return NextResponse.json({ error: 'Lỗi máy chủ không mong muốn' }, { status: 500 })
   }
 }

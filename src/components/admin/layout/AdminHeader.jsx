@@ -19,13 +19,13 @@ import { Input } from '@/components/ui/input'
 import { authService } from '@/services/auth.service'
 import { toast } from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
+import { ResponsiveAdminMenu } from './ResponsiveAdminMenu' // Import ResponsiveAdminMenu
 
 export function AdminHeader({ userProfile }) {
   const { theme, setTheme } = useTheme()
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [mounted, setMounted] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
+  const [mounted, setMounted] = useState(false)
 
   // Xử lý mounted để tránh hydration error
   useEffect(() => {
@@ -46,10 +46,6 @@ export function AdminHeader({ userProfile }) {
     }
   }
 
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen)
-  }
-
   // Chỉ render khi đã mounted để tránh hydration error
   if (!mounted) {
     return (
@@ -65,9 +61,8 @@ export function AdminHeader({ userProfile }) {
     <header className='sticky top-0 z-40 border-b bg-background'>
       <div className='container flex h-16 items-center justify-between px-4 md:px-6'>
         <div className='flex items-center gap-4'>
-          <Button variant='ghost' size='icon' className='md:hidden' onClick={toggleMobileMenu}>
-            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-          </Button>
+          {/* Thay thế nút toggle bằng component ResponsiveAdminMenu */}
+          <ResponsiveAdminMenu />
 
           <Link href='/admin/dashboard' className='flex items-center gap-2'>
             <span className='text-xl font-bold'>VinBet</span>

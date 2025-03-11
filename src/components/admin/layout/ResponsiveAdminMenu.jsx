@@ -77,10 +77,10 @@ export function ResponsiveAdminMenu() {
               <Link href='/admin/dashboard' className='flex items-center' onClick={() => setOpen(false)}>
                 <span className='text-xl font-bold'>VinBet Admin</span>
               </Link>
-              <Button variant='ghost' size='icon' onClick={() => setOpen(false)}>
+              {/* <Button variant='ghost' size='icon' onClick={() => setOpen(false)}>
                 <X className='h-5 w-5' />
                 <span className='sr-only'>Close menu</span>
-              </Button>
+              </Button> */}
             </div>
           </div>
           <ScrollArea className='h-[calc(100vh-5rem)]'>

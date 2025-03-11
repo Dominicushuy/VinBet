@@ -35,7 +35,7 @@ import {
 } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { useAuth } from '@/hooks/useAuth'
-import { useNotificationListener } from '@/hooks/useNotificationListener'
+// import { useNotificationListener } from '@/hooks/useNotificationListener'
 
 function NavItem({ href, icon, label, isActive, onClick, badge }) {
   return (
@@ -94,7 +94,7 @@ function NavItemWithSub({ icon, label, isActive, subItems, isOpen, onToggle }) {
 
 export function MainLayout({ children }) {
   // *** HOOKS ***
-  useNotificationListener()
+  // useNotificationListener()
 
   // *** STATE ***
   const [isOpen, setIsOpen] = useState(false)
