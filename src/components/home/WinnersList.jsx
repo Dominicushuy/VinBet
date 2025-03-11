@@ -41,14 +41,27 @@ export function WinnersList({ initialWinners }) {
   const formatTimeAgo = dateString => {
     const date = new Date(dateString)
     const now = new Date()
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
 
-    if (diffInMinutes < 60) {
-      return `${diffInMinutes} phút trước`
-    } else if (diffInMinutes < 24 * 60) {
-      return `${Math.floor(diffInMinutes / 60)} giờ trước`
+    if (diffInSeconds < 60) {
+      return diffInSeconds <= 5 ? 'Vừa xong' : `${diffInSeconds} giây trước`
+    } else if (diffInSeconds < 3600) {
+      return `${Math.floor(diffInSeconds / 60)} phút trước`
+    } else if (diffInSeconds < 86400) {
+      return `${Math.floor(diffInSeconds / 3600)} giờ trước`
     } else {
-      return `${Math.floor(diffInMinutes / (60 * 24))} ngày trước`
+      const days = Math.floor(diffInSeconds / 86400)
+      if (days < 7) {
+        return `${days} ngày trước`
+      } else if (days < 30) {
+        return `${Math.floor(days / 7)} tuần trước`
+      } else {
+        return new Intl.DateTimeFormat('vi-VN', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        }).format(date)
+      }
     }
   }
 

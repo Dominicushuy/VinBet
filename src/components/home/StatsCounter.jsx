@@ -1,30 +1,47 @@
-// src/components/home/StatsCounter.jsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 
 export function StatsCounter({ icon, label, value, prefix = '', suffix = '', isMonetary = false }) {
   const [count, setCount] = useState(0)
+  const animationRef = useRef(null)
+  const startTimeRef = useRef(null)
+  const startValueRef = useRef(0)
+  const endValueRef = useRef(value)
 
   useEffect(() => {
-    const duration = 2000
-    const frameRate = 30
-    const frames = duration / (1000 / frameRate)
-    const increment = value / frames
-    let currentCount = 0
+    startValueRef.current = count
+    endValueRef.current = value
+    startTimeRef.current = null
 
-    const timer = setInterval(() => {
-      currentCount += increment
-      if (currentCount >= value) {
-        clearInterval(timer)
-        setCount(value)
+    const animate = timestamp => {
+      if (!startTimeRef.current) startTimeRef.current = timestamp
+
+      const elapsed = timestamp - startTimeRef.current
+      const duration = 2000 // 2 seconds
+
+      if (elapsed < duration) {
+        const progress = elapsed / duration
+        // Easing function for smoother animation
+        const easedProgress = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2
+
+        const currentValue = startValueRef.current + (endValueRef.current - startValueRef.current) * easedProgress
+
+        setCount(Math.floor(currentValue))
+        animationRef.current = requestAnimationFrame(animate)
       } else {
-        setCount(Math.floor(currentCount))
+        setCount(endValueRef.current)
       }
-    }, 1000 / frameRate)
+    }
 
-    return () => clearInterval(timer)
+    animationRef.current = requestAnimationFrame(animate)
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+    }
   }, [value])
 
   const formattedValue = isMonetary
@@ -32,7 +49,7 @@ export function StatsCounter({ icon, label, value, prefix = '', suffix = '', isM
     : new Intl.NumberFormat().format(count)
 
   return (
-    <Card className='bg-card/50 transition-transform hover:translate-y-[-5px]'>
+    <Card className='bg-card/50 transition-all hover:translate-y-[-5px]'>
       <CardContent className='p-6'>
         <div className='flex flex-col items-center text-center'>
           <div className='mb-3 p-3 bg-primary/10 rounded-full'>{icon}</div>

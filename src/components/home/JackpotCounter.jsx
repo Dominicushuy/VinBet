@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import { apiService } from '@/services/api.service'
@@ -9,28 +9,29 @@ import { Skeleton } from '@/components/ui/skeleton'
 export function JackpotCounter({ initialValue, className, animationSpeed = 'normal' }) {
   const [displayedValue, setDisplayedValue] = useState(initialValue || 10000000)
   const actualValueRef = useRef(initialValue || 10000000)
-  const animationIntervalRef = useRef(null)
+  const animationFrameRef = useRef(null)
+  const lastUpdateTimeRef = useRef(0)
 
-  // Xác định tốc độ cập nhật giá trị hiển thị dựa vào animation speed
-  const getAnimationInterval = () => {
+  // Xác định tốc độ cập nhật dựa vào animation speed
+  const getUpdateInterval = useCallback(() => {
     switch (animationSpeed) {
       case 'slow':
-        return 5000
+        return 100 // 10 FPS
       case 'fast':
-        return 1000
+        return 16 // 60 FPS
       default:
-        return 3000
+        return 33 // 30 FPS
     }
-  }
+  }, [animationSpeed])
 
   // Xác định mức tăng dựa vào giá trị hiện tại
-  const getIncrementAmount = () => {
+  const getIncrementAmount = useCallback(() => {
     const value = actualValueRef.current
     if (value < 1000000) return Math.floor(Math.random() * 100) + 50
     if (value < 10000000) return Math.floor(Math.random() * 1000) + 500
     if (value < 100000000) return Math.floor(Math.random() * 5000) + 1000
     return Math.floor(Math.random() * 10000) + 5000
-  }
+  }, [])
 
   // Lấy jackpot mới mỗi phút
   const { data, isLoading, isError } = useQuery({
@@ -45,9 +46,7 @@ export function JackpotCounter({ initialValue, className, animationSpeed = 'norm
       }
     },
     refetchInterval: 60000, // Refetch mỗi phút
-    enabled: true,
-    // Không cập nhật state ngay lập tức, để có thể xử lý animation
-    notifyOnChangeProps: ['data']
+    enabled: true
   })
 
   // Cập nhật giá trị thật khi có dữ liệu mới từ API
@@ -57,31 +56,45 @@ export function JackpotCounter({ initialValue, className, animationSpeed = 'norm
     }
   }, [data])
 
-  // Thiết lập animation tăng dần để tạo cảm giác sống động
+  // Animation loop tối ưu với requestAnimationFrame
   useEffect(() => {
-    const updateDisplayValue = () => {
-      const currentValue = actualValueRef.current
-      setDisplayedValue(prev => {
-        if (Math.abs(prev - currentValue) < 10000) {
-          return currentValue + getIncrementAmount()
-        }
+    const updateValue = timestamp => {
+      if (!lastUpdateTimeRef.current) {
+        lastUpdateTimeRef.current = timestamp
+      }
 
-        if (prev < currentValue) {
-          return prev + Math.ceil((currentValue - prev) / 10)
-        }
+      const elapsed = timestamp - lastUpdateTimeRef.current
+      const interval = getUpdateInterval()
 
-        return prev - Math.ceil((prev - currentValue) / 20) + getIncrementAmount()
-      })
+      if (elapsed >= interval) {
+        lastUpdateTimeRef.current = timestamp
+
+        const currentValue = actualValueRef.current
+        setDisplayedValue(prev => {
+          // Logic tương tự như trước
+          if (Math.abs(prev - currentValue) < 10000) {
+            return currentValue + getIncrementAmount()
+          }
+
+          if (prev < currentValue) {
+            return prev + Math.ceil((currentValue - prev) / 10)
+          }
+
+          return prev - Math.ceil((prev - currentValue) / 20) + getIncrementAmount()
+        })
+      }
+
+      animationFrameRef.current = requestAnimationFrame(updateValue)
     }
 
-    animationIntervalRef.current = setInterval(updateDisplayValue, getAnimationInterval())
+    animationFrameRef.current = requestAnimationFrame(updateValue)
 
     return () => {
-      if (animationIntervalRef.current) {
-        clearInterval(animationIntervalRef.current)
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
       }
     }
-  }, [animationSpeed])
+  }, [getUpdateInterval, getIncrementAmount])
 
   // Hiển thị skeleton khi đang loading lần đầu
   if (isLoading && !initialValue) {

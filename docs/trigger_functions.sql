@@ -1584,3 +1584,28 @@ BEGIN
     date, type;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Function to get platform statistics
+CREATE OR REPLACE FUNCTION get_platform_statistics()
+RETURNS TABLE (
+  user_count BIGINT,
+  total_reward_paid DECIMAL(15, 2),
+  total_game_rounds BIGINT,
+  win_rate DECIMAL(5, 2),
+  active_games_count BIGINT
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    (SELECT COUNT(*) FROM profiles) AS user_count,
+    (SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE type = 'win' AND status = 'completed') AS total_reward_paid,
+    (SELECT COUNT(*) FROM game_rounds) AS total_game_rounds,
+    (SELECT 
+      CASE 
+        WHEN COUNT(*) = 0 THEN 0
+        ELSE ROUND((COUNT(*) FILTER (WHERE status = 'won') * 100.0 / COUNT(*)), 2)
+      END
+     FROM bets) AS win_rate,
+    (SELECT COUNT(*) FROM game_rounds WHERE status = 'active') AS active_games_count;
+END;
+$$ LANGUAGE plpgsql;

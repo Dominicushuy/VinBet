@@ -91,7 +91,7 @@ importers:
         version: 1.8.2
       class-variance-authority:
         specifier: 0.6.0
-        version: 0.6.0(typescript@5.8.2)
+        version: 0.6.0
       clsx:
         specifier: 1.2.1
         version: 1.2.1
@@ -100,7 +100,7 @@ importers:
         version: 4.1.0
       framer-motion:
         specifier: ^12.4.10
-        version: 12.4.11(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 12.4.12(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       lucide-react:
         specifier: 0.263.0
         version: 0.263.0(react@18.2.0)
@@ -164,7 +164,7 @@ importers:
         version: 9.22.0
       '@next/eslint-plugin-next':
         specifier: ^15.2.1
-        version: 15.2.1
+        version: 15.2.2
       autoprefixer:
         specifier: 10.4.14
         version: 10.4.14(postcss@8.4.24)
@@ -212,8 +212,8 @@ packages:
   '@date-fns/tz@1.2.0':
     resolution: {integrity: sha512-LBrd7MiJZ9McsOgxqWX7AaxrDjcFVjWH/tIKJd7pnR7McaslGYOP1QmmiBXdJH/H/yLCT+rcQ7FaPBUxRGUtrg==}
 
-  '@eslint-community/eslint-utils@4.4.1':
-    resolution: {integrity: sha512-s3O3waFUrMV8P/XaF/+ZTp1X9XBZW1a4B97ZnjQF2KYWaFD2A8KyFBsrsfSjEmjn3RGWAIuvlneuZm3CUK3jbA==}
+  '@eslint-community/eslint-utils@4.5.0':
+    resolution: {integrity: sha512-RoV8Xs9eNwiDvhv7M+xcL4PWyRyIXRY/FLp3buU4h1EYfdF7unWUy3dOjPqb3C7rMUewIcqwW850PgS8h1o1yg==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     peerDependencies:
       eslint: ^6.0.0 || ^7.0.0 || >=8.0.0
@@ -315,8 +315,8 @@ packages:
   '@next/env@14.0.4':
     resolution: {integrity: sha512-irQnbMLbUNQpP1wcE5NstJtbuA/69kRfzBrpAD7Gsn8zm/CY6YQYc3HQBz8QPxwISG26tIm5afvvVbu508oBeQ==}
 
-  '@next/eslint-plugin-next@15.2.1':
-    resolution: {integrity: sha512-6ppeToFd02z38SllzWxayLxjjNfzvc7Wm07gQOKSLjyASvKcXjNStZrLXMHuaWkhjqxe+cnhb2uzfWXm1VEj/Q==}
+  '@next/eslint-plugin-next@15.2.2':
+    resolution: {integrity: sha512-1+BzokFuFQIfLaRxUKf2u5In4xhPV7tUgKcK53ywvFl6+LXHWHpFkcV7VNeKlyQKUotwiq4fy/aDNF9EiUp4RQ==}
 
   '@next/swc-darwin-arm64@14.0.4':
     resolution: {integrity: sha512-mF05E/5uPthWzyYDyptcwHptucf/jj09i2SXBPwNzbgBNc+XnwzrL0U6BmPjQeOL+FiB+iG1gwBeq7mlDjSRPg==}
@@ -1628,8 +1628,8 @@ packages:
   fraction.js@4.3.7:
     resolution: {integrity: sha512-ZsDfxO51wGAXREY55a7la9LScWpwv9RxIrYABrlvOFBlH/ShPnrtsXeuUIfXKKOVicNxQ+o8JTbJvjS4M89yew==}
 
-  framer-motion@12.4.11:
-    resolution: {integrity: sha512-MHeZlgzo9DnQ6+TFgRqJiOk4vWwsDcXFtxeXlVawVs1nwgcZW3966foGIgkIiIrBSPHB9RlbqspAxiYWosFT9g==}
+  framer-motion@12.4.12:
+    resolution: {integrity: sha512-zGRfz6ePwqlBetuCoUF4OjJ9X6XBjOYRB7ZLggvpRLMZBJGkrzuStRmOM3GaNqulBLNlfyBTITGeDU2j+1SQEw==}
     peerDependencies:
       '@emotion/is-prop-valid': '*'
       react: ^18.0.0 || ^19.0.0
@@ -2573,11 +2573,6 @@ packages:
     resolution: {integrity: sha512-3KS2b+kL7fsuk/eJZ7EQdnEmQoaho/r6KUef7hxvltNA5DR8NAUM+8wJMbJyZ4G9/7i3v5zPBIMN5aybAh2/Jg==}
     engines: {node: '>= 0.4'}
 
-  typescript@5.8.2:
-    resolution: {integrity: sha512-aJn6wq13/afZp/jT9QZmwEjDqqvSGp1VT5GVg+f/t6/oVyrgXM6BY1h9BRh/O5p3PlUPAe+WuiEZOmb/49RqoQ==}
-    engines: {node: '>=14.17'}
-    hasBin: true
-
   unbox-primitive@1.1.0:
     resolution: {integrity: sha512-nWJ91DjeOkej/TA8pXQ3myruKpKEYgqvpw9lz4OPHj/NWFNluYrjbz9j01CJ8yKQd2g4jFoOkINCTW2I5LEEyw==}
     engines: {node: '>= 0.4'}
@@ -2722,7 +2717,7 @@ snapshots:
 
   '@date-fns/tz@1.2.0': {}
 
-  '@eslint-community/eslint-utils@4.4.1(eslint@9.22.0(jiti@1.21.7))':
+  '@eslint-community/eslint-utils@4.5.0(eslint@9.22.0(jiti@1.21.7))':
     dependencies:
       eslint: 9.22.0(jiti@1.21.7)
       eslint-visitor-keys: 3.4.3
@@ -2828,7 +2823,7 @@ snapshots:
 
   '@next/env@14.0.4': {}
 
-  '@next/eslint-plugin-next@15.2.1':
+  '@next/eslint-plugin-next@15.2.2':
     dependencies:
       fast-glob: 3.3.1
 
@@ -3654,11 +3649,9 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.3
 
-  class-variance-authority@0.6.0(typescript@5.8.2):
+  class-variance-authority@0.6.0:
     dependencies:
       clsx: 1.2.1
-    optionalDependencies:
-      typescript: 5.8.2
 
   client-only@0.0.1: {}
 
@@ -4029,7 +4022,7 @@ snapshots:
 
   eslint@9.22.0(jiti@1.21.7):
     dependencies:
-      '@eslint-community/eslint-utils': 4.4.1(eslint@9.22.0(jiti@1.21.7))
+      '@eslint-community/eslint-utils': 4.5.0(eslint@9.22.0(jiti@1.21.7))
       '@eslint-community/regexpp': 4.12.1
       '@eslint/config-array': 0.19.2
       '@eslint/config-helpers': 0.1.0
@@ -4159,7 +4152,7 @@ snapshots:
 
   fraction.js@4.3.7: {}
 
-  framer-motion@12.4.11(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
+  framer-motion@12.4.12(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
     dependencies:
       motion-dom: 12.4.11
       motion-utils: 12.4.10
@@ -5177,9 +5170,6 @@ snapshots:
       is-typed-array: 1.1.15
       possible-typed-array-names: 1.1.0
       reflect.getprototypeof: 1.0.10
-
-  typescript@5.8.2:
-    optional: true
 
   unbox-primitive@1.1.0:
     dependencies:

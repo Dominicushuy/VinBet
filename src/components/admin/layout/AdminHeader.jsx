@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Bell, Sun, Moon, Search, Menu, X, User, LogOut, Settings } from 'lucide-react'
+import { Bell, Sun, Moon, Search, User, LogOut, Settings } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,15 +15,15 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useTheme } from 'next-themes'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { authService } from '@/services/auth.service'
 import { toast } from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import { ResponsiveAdminMenu } from './ResponsiveAdminMenu' // Import ResponsiveAdminMenu
+import { useAuth } from '@/hooks/useAuth'
 
 export function AdminHeader({ userProfile }) {
   const { theme, setTheme } = useTheme()
+  const { signOut } = useAuth()
   const router = useRouter()
-  const pathname = usePathname()
   const [mounted, setMounted] = useState(false)
 
   // Xử lý mounted để tránh hydration error
@@ -38,7 +37,7 @@ export function AdminHeader({ userProfile }) {
 
   const handleLogout = async () => {
     try {
-      await authService.logout()
+      await signOut()
       router.push('/login')
       toast.success('Đăng xuất thành công')
     } catch (error) {
