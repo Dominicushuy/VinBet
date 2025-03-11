@@ -73,7 +73,7 @@ export default async function HomePage() {
 
     // Lấy số liệu thống kê
     const userCount = statsData?.user_count || 5000
-    const totalReward = statsData?.total_reward_paid || 50000000000
+    const totalReward = statsData?.total_reward_paid || 5000000000
     const gameCount = statsData?.total_game_rounds || 10000
     const winRate = statsData?.win_rate || 95
 

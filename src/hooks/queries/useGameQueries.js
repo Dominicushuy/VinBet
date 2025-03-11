@@ -1,148 +1,126 @@
 // src/hooks/queries/useGameQueries.js
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchData, postData, buildQueryString } from '@/utils/fetchUtils'
+import { apiService } from '@/services/api.service'
+import { toast } from 'react-hot-toast'
+import { adminApi } from './useAdminQueries'
 
-/**
- * Hook để lấy thông tin chi tiết của game
- */
-export function useGameDetailQuery(gameId, options = {}) {
+// Query keys
+export const GAME_QUERY_KEYS = {
+  activeGames: ['games', 'active'],
+  gamesList: filters => ['games', 'list', { ...filters }],
+  gameDetail: id => ['games', 'detail', id],
+  gameRoundResults: id => ['games', 'results', id],
+  gameRoundWinners: id => ['games', 'winners', id]
+}
+
+// Queries
+export function useGameDetailQuery(id) {
   return useQuery({
-    queryKey: ['game', gameId],
-    queryFn: async () => {
-      if (!gameId) return null
-      const response = await fetchData(`/api/game-rounds/${gameId}`)
-      return response || null
-    },
-    enabled: !!gameId,
-    ...options
+    queryKey: GAME_QUERY_KEYS.gameDetail(id),
+    queryFn: () => apiService.games.getGameRound(id),
+    enabled: !!id
   })
 }
 
-/**
- * Hook để lấy danh sách game rounds với các bộ lọc
- */
-export function useGameRoundsQuery(params = {}, options = {}) {
+export function useActiveGamesQuery() {
   return useQuery({
-    queryKey: ['games', 'rounds', params],
-    queryFn: async () => {
-      const queryString = buildQueryString(params)
-      const response = await fetchData(`/api/game-rounds${queryString}`)
-      return response || { gameRounds: [], totalCount: 0 }
-    },
-    ...options
+    queryKey: GAME_QUERY_KEYS.activeGames,
+    queryFn: () => apiService.games.getActiveGames(),
+    refetchInterval: 60000 // 1 minute
   })
 }
 
-/**
- * Hook để lấy danh sách cược của người dùng trong một game
- */
-export function useUserGameBetsQuery(gameId, options = {}) {
+export function useGameRoundsQuery(params) {
   return useQuery({
-    queryKey: ['game', gameId, 'bets', 'user'],
-    queryFn: async () => {
-      if (!gameId) return []
-      const response = await fetchData(`/api/game-rounds/${gameId}/my-bets`)
-      return response.bets || []
-    },
-    enabled: !!gameId,
-    ...options
+    queryKey: GAME_QUERY_KEYS.gamesList(params),
+    queryFn: () => apiService.games.getGameRounds(params),
+    keepPreviousData: true
   })
 }
 
-/**
- * Hook để lấy danh sách tất cả cược trong một game (admin)
- */
-export function useAllGameBetsQuery(gameId, options = {}) {
+export function useGameRoundResults(id) {
   return useQuery({
-    queryKey: ['game', gameId, 'bets', 'all'],
-    queryFn: async () => {
-      if (!gameId) return []
-      const response = await fetchData(`/api/game-rounds/${gameId}/bets`)
-      return response.bets || []
-    },
-    enabled: !!gameId,
-    ...options
+    queryKey: GAME_QUERY_KEYS.gameRoundResults(id),
+    queryFn: () => apiService.games.getGameRoundResults(id),
+    enabled: !!id
   })
 }
 
-/**
- * Hook để đặt cược
- */
-export function usePlaceBetMutation() {
+export function useGameRoundWinners(id) {
+  return useQuery({
+    queryKey: GAME_QUERY_KEYS.gameRoundWinners(id),
+    queryFn: () => apiService.games.getGameRoundWinners(id),
+    enabled: !!id
+  })
+}
+
+export function useGameRoundResultsQuery(id) {
+  return useQuery({
+    queryKey: GAME_QUERY_KEYS.gameRoundResults(id),
+    queryFn: () => apiService.games.getGameRoundResults(id),
+    enabled: !!id
+  })
+}
+
+export function useGameRoundWinnersQuery(id) {
+  return useQuery({
+    queryKey: GAME_QUERY_KEYS.gameRoundWinners(id),
+    queryFn: () => apiService.games.getGameRoundWinners(id),
+    enabled: !!id
+  })
+}
+
+// Mutations
+export function useCreateGameRoundMutation() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ gameId, betData }) => {
-      return await postData(`/api/game-rounds/${gameId}/bets`, betData)
+    mutationFn: data => apiService.games.createGameRound(data),
+    onSuccess: () => {
+      toast.success('Lượt chơi đã được tạo thành công')
+      queryClient.invalidateQueries({ queryKey: GAME_QUERY_KEYS.activeGames })
+      queryClient.invalidateQueries({ queryKey: GAME_QUERY_KEYS.gamesList() })
     },
-    onSuccess: (_, variables) => {
-      // Invalidate các queries liên quan để cập nhật dữ liệu
-      queryClient.invalidateQueries({ queryKey: ['game', variables.gameId, 'bets'] })
-      queryClient.invalidateQueries({ queryKey: ['profile'] }) // Cập nhật số dư
+    onError: error => {
+      toast.error(error.message || 'Không thể tạo lượt chơi')
     }
   })
 }
 
-/**
- * Hook để lấy kết quả của game
- */
-export function useGameResultsQuery(gameId, options = {}) {
-  return useQuery({
-    queryKey: ['game', gameId, 'results'],
-    queryFn: async () => {
-      if (!gameId) return null
-      const response = await fetchData(`/api/game-rounds/${gameId}/results`)
-      return response || null
+export function useUpdateGameRoundMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, data }) => apiService.games.updateGameRound(id, data),
+    onSuccess: (_, variables) => {
+      toast.success('Lượt chơi đã được cập nhật thành công')
+      queryClient.invalidateQueries({ queryKey: GAME_QUERY_KEYS.activeGames })
+      queryClient.invalidateQueries({ queryKey: GAME_QUERY_KEYS.gamesList() })
+      queryClient.invalidateQueries({
+        queryKey: GAME_QUERY_KEYS.gameDetail(variables.id)
+      })
     },
-    enabled: !!gameId,
-    ...options
+    onError: error => {
+      toast.error(error.message || 'Không thể cập nhật lượt chơi')
+    }
   })
 }
 
-/**
- * Hook để lấy danh sách người thắng trong game
- */
-export function useGameWinnersQuery(gameId, options = {}) {
-  return useQuery({
-    queryKey: ['game', gameId, 'winners'],
-    queryFn: async () => {
-      if (!gameId) return []
-      const response = await fetchData(`/api/game-rounds/${gameId}/winners`)
-      return response.winners || []
-    },
-    enabled: !!gameId,
-    ...options
-  })
-}
+export function useSetGameResultMutation() {
+  const queryClient = useQueryClient()
 
-/**
- * Hook để lấy leaderboard của game
- */
-export function useGameLeaderboardQuery(gameId, options = {}) {
-  return useQuery({
-    queryKey: ['game', gameId, 'leaderboard'],
-    queryFn: async () => {
-      if (!gameId) return { topBets: [], topWinners: [] }
-      const response = await fetchData(`/api/games/${gameId}/leaderboard`)
-      return response || { topBets: [], topWinners: [] }
+  return useMutation({
+    mutationFn: ({ gameId, data }) => adminApi.setGameResult(gameId, data),
+    onSuccess: (_, variables) => {
+      toast.success('Kết quả đã được cập nhật thành công')
+      queryClient.invalidateQueries({
+        queryKey: GAME_QUERY_KEYS.gameDetail(variables.gameId)
+      })
+      queryClient.invalidateQueries({ queryKey: GAME_QUERY_KEYS.gamesList() })
+      queryClient.invalidateQueries({ queryKey: GAME_QUERY_KEYS.activeGames })
     },
-    enabled: !!gameId,
-    ...options
-  })
-}
-
-/**
- * Hook để lấy các game liên quan
- */
-export function useRelatedGamesQuery(gameId, options = {}) {
-  return useQuery({
-    queryKey: ['games', 'related', gameId],
-    queryFn: async () => {
-      if (!gameId) return []
-      const response = await fetchData(`/api/games/related?id=${gameId}`)
-      return response.gameRounds || []
-    },
-    enabled: !!gameId,
-    ...options
+    onError: error => {
+      toast.error(error.message || 'Không thể cập nhật kết quả')
+    }
   })
 }

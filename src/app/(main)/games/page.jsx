@@ -3,42 +3,19 @@
 import { useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Gamepad2,
-  ListFilter,
-  LayoutGrid,
-  LayoutList,
-  Search,
-  Calendar,
-  Clock,
-  Trophy,
-  Filter,
-  X,
-} from 'lucide-react'
+import { Gamepad2, ListFilter, LayoutGrid, LayoutList, Search, Calendar, Clock, Trophy, Filter, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DatePicker } from '@/components/ui/date-picker'
 import { GameCard } from '@/components/game/GameCard'
 import { GameListItem } from '@/components/game/GameListItem'
 import { Pagination } from '@/components/ui/pagination'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { toast } from 'react-hot-toast'
 import { useGameRoundsQuery } from '@/hooks/queries/useGameQueries'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
@@ -53,30 +30,18 @@ export default function GamesPage() {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
 
   // Filter states
-  const [searchQuery, setSearchQuery] = useState(
-    searchParams.get('query') || ''
-  )
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('query') || '')
   const [status, setStatus] = useState(searchParams.get('status') || 'all')
   const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'newest')
   const [fromDate, setFromDate] = useState(
-    searchParams.get('fromDate')
-      ? new Date(searchParams.get('fromDate'))
-      : undefined
+    searchParams.get('fromDate') ? new Date(searchParams.get('fromDate')) : undefined
   )
-  const [toDate, setToDate] = useState(
-    searchParams.get('toDate')
-      ? new Date(searchParams.get('toDate'))
-      : undefined
-  )
-  const [jackpotOnly, setJackpotOnly] = useState(
-    searchParams.get('jackpotOnly') === 'true'
-  )
+  const [toDate, setToDate] = useState(searchParams.get('toDate') ? new Date(searchParams.get('toDate')) : undefined)
+  const [jackpotOnly, setJackpotOnly] = useState(searchParams.get('jackpotOnly') === 'true')
 
   // Pagination
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1)
-  const [pageSize, setPageSize] = useState(
-    Number(searchParams.get('pageSize')) || 12
-  )
+  const [pageSize, setPageSize] = useState(Number(searchParams.get('pageSize')) || 12)
 
   // Query data
   const { data, isLoading, error, refetch } = useGameRoundsQuery({
@@ -87,7 +52,7 @@ export default function GamesPage() {
     page,
     pageSize,
     sortBy,
-    jackpotOnly: jackpotOnly ? 'true' : undefined,
+    jackpotOnly: jackpotOnly ? 'true' : undefined
   })
 
   const gameRounds = data?.gameRounds || []
@@ -95,7 +60,7 @@ export default function GamesPage() {
     total: 0,
     page: 1,
     pageSize: 12,
-    totalPages: 0,
+    totalPages: 0
   }
 
   // Apply filters
@@ -131,7 +96,7 @@ export default function GamesPage() {
   }
 
   // Handle page change
-  const handlePageChange = (newPage) => {
+  const handlePageChange = newPage => {
     setPage(newPage)
     const params = new URLSearchParams(searchParams.toString())
     params.set('page', newPage.toString())
@@ -148,7 +113,7 @@ export default function GamesPage() {
     sortBy !== 'newest' ? sortBy : null,
     fromDate,
     toDate,
-    jackpotOnly,
+    jackpotOnly
   ].filter(Boolean).length
 
   // Loading skeletons
@@ -200,8 +165,7 @@ export default function GamesPage() {
               Trò chơi
             </h1>
             <p className='text-muted-foreground mt-1'>
-              Khám phá và tham gia các lượt chơi hấp dẫn, đặt cược và nhận
-              thưởng lớn
+              Khám phá và tham gia các lượt chơi hấp dẫn, đặt cược và nhận thưởng lớn
             </p>
           </div>
 
@@ -223,14 +187,16 @@ export default function GamesPage() {
                 variant={view === 'grid' ? 'default' : 'ghost'}
                 size='icon'
                 onClick={() => setView('grid')}
-                className='rounded-none border-0'>
+                className='rounded-none border-0'
+              >
                 <LayoutGrid className='h-4 w-4' />
               </Button>
               <Button
                 variant={view === 'list' ? 'default' : 'ghost'}
                 size='icon'
                 onClick={() => setView('list')}
-                className='rounded-none border-0'>
+                className='rounded-none border-0'
+              >
                 <LayoutList className='h-4 w-4' />
               </Button>
             </div>
@@ -245,9 +211,9 @@ export default function GamesPage() {
           <Input
             placeholder='Tìm kiếm lượt chơi...'
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={e => setSearchQuery(e.target.value)}
             className='pl-9 pr-12'
-            onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
+            onKeyDown={e => e.key === 'Enter' && applyFilters()}
           />
           {searchQuery && (
             <Button
@@ -261,7 +227,8 @@ export default function GamesPage() {
                   params.delete('query')
                   router.push(`/games?${params.toString()}`)
                 }
-              }}>
+              }}
+            >
               <X className='h-3 w-3' />
             </Button>
           )}
@@ -287,9 +254,7 @@ export default function GamesPage() {
               <div className='space-y-6 py-4'>
                 <div>
                   <h3 className='text-lg font-semibold'>Bộ lọc</h3>
-                  <p className='text-sm text-muted-foreground'>
-                    Lọc danh sách lượt chơi theo nhu cầu của bạn
-                  </p>
+                  <p className='text-sm text-muted-foreground'>Lọc danh sách lượt chơi theo nhu cầu của bạn</p>
                 </div>
 
                 <Separator />
@@ -312,20 +277,12 @@ export default function GamesPage() {
 
                   <div>
                     <label className='text-sm font-medium'>Từ ngày</label>
-                    <DatePicker
-                      date={fromDate}
-                      setDate={setFromDate}
-                      className='w-full mt-1'
-                    />
+                    <DatePicker date={fromDate} setDate={setFromDate} className='w-full mt-1' />
                   </div>
 
                   <div>
                     <label className='text-sm font-medium'>Đến ngày</label>
-                    <DatePicker
-                      date={toDate}
-                      setDate={setToDate}
-                      className='w-full mt-1'
-                    />
+                    <DatePicker date={toDate} setDate={setToDate} className='w-full mt-1' />
                   </div>
 
                   <div className='flex items-center space-x-2'>
@@ -333,12 +290,10 @@ export default function GamesPage() {
                       type='checkbox'
                       id='jackpotOnly-mobile'
                       checked={jackpotOnly}
-                      onChange={(e) => setJackpotOnly(e.target.checked)}
+                      onChange={e => setJackpotOnly(e.target.checked)}
                       className='rounded border-gray-300'
                     />
-                    <label
-                      htmlFor='jackpotOnly-mobile'
-                      className='text-sm font-medium'>
+                    <label htmlFor='jackpotOnly-mobile' className='text-sm font-medium'>
                       Chỉ hiển thị Jackpot
                     </label>
                   </div>
@@ -347,10 +302,7 @@ export default function GamesPage() {
                 <Separator />
 
                 <div className='flex gap-2'>
-                  <Button
-                    variant='outline'
-                    onClick={resetFilters}
-                    className='flex-1'>
+                  <Button variant='outline' onClick={resetFilters} className='flex-1'>
                     <X className='mr-2 h-4 w-4' />
                     Đặt lại
                   </Button>
@@ -408,12 +360,8 @@ export default function GamesPage() {
                       <SelectContent>
                         <SelectItem value='newest'>Mới nhất</SelectItem>
                         <SelectItem value='endingSoon'>Sắp kết thúc</SelectItem>
-                        <SelectItem value='mostPlayed'>
-                          Nhiều lượt chơi
-                        </SelectItem>
-                        <SelectItem value='highestPot'>
-                          Tiền thưởng cao
-                        </SelectItem>
+                        <SelectItem value='mostPlayed'>Nhiều lượt chơi</SelectItem>
+                        <SelectItem value='highestPot'>Tiền thưởng cao</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -436,7 +384,7 @@ export default function GamesPage() {
                     type='checkbox'
                     id='jackpotOnly'
                     checked={jackpotOnly}
-                    onChange={(e) => setJackpotOnly(e.target.checked)}
+                    onChange={e => setJackpotOnly(e.target.checked)}
                     className='rounded border-gray-300'
                   />
                   <label htmlFor='jackpotOnly' className='text-sm font-medium'>
@@ -463,7 +411,8 @@ export default function GamesPage() {
           onClick={() => {
             applyFilters()
             refetch()
-          }}>
+          }}
+        >
           <Search className='mr-2 h-4 w-4' />
           Tìm kiếm
         </Button>
@@ -473,7 +422,7 @@ export default function GamesPage() {
       <Tabs
         defaultValue='all'
         value={status}
-        onValueChange={(value) => {
+        onValueChange={value => {
           setStatus(value)
           const params = new URLSearchParams(searchParams.toString())
           if (value === 'all') {
@@ -483,7 +432,8 @@ export default function GamesPage() {
           }
           params.set('page', '1')
           router.push(`/games?${params.toString()}`)
-        }}>
+        }}
+      >
         <TabsList className='w-full grid grid-cols-4'>
           <TabsTrigger value='all' className='flex gap-1 items-center'>
             <Gamepad2 className='h-4 w-4' />
@@ -507,18 +457,12 @@ export default function GamesPage() {
       {/* Active Filters Summary */}
       {activeFiltersCount > 0 && (
         <div className='flex flex-wrap gap-2 items-center p-2 bg-muted/50 rounded-lg'>
-          <span className='text-sm text-muted-foreground font-medium px-2'>
-            Bộ lọc:
-          </span>
+          <span className='text-sm text-muted-foreground font-medium px-2'>Bộ lọc:</span>
 
           {status !== 'all' && (
             <Badge variant='secondary' className='gap-1 group'>
               Trạng thái:{' '}
-              {status === 'active'
-                ? 'Đang diễn ra'
-                : status === 'scheduled'
-                ? 'Sắp diễn ra'
-                : 'Đã kết thúc'}
+              {status === 'active' ? 'Đang diễn ra' : status === 'scheduled' ? 'Sắp diễn ra' : 'Đã kết thúc'}
               <X
                 className='h-3 w-3 cursor-pointer'
                 onClick={() => {
@@ -591,11 +535,7 @@ export default function GamesPage() {
             </Badge>
           )}
 
-          <Button
-            variant='ghost'
-            size='sm'
-            onClick={resetFilters}
-            className='ml-auto'>
+          <Button variant='ghost' size='sm' onClick={resetFilters} className='ml-auto'>
             <X className='mr-1 h-3 w-3' />
             Xóa tất cả
           </Button>
@@ -624,9 +564,7 @@ export default function GamesPage() {
       {/* Error State */}
       {error && !isLoading && (
         <div className='p-8 text-center bg-destructive/10 rounded-lg'>
-          <p className='text-destructive font-medium'>
-            Không thể tải dữ liệu trò chơi.
-          </p>
+          <p className='text-destructive font-medium'>Không thể tải dữ liệu trò chơi.</p>
           <p className='text-sm text-muted-foreground mt-1'>{error.message}</p>
           <Button variant='outline' onClick={() => refetch()} className='mt-4'>
             Thử lại
@@ -639,9 +577,7 @@ export default function GamesPage() {
         <div className='p-12 text-center bg-muted/50 rounded-lg'>
           <Gamepad2 className='mx-auto h-12 w-12 text-muted-foreground mb-4' />
           <h3 className='text-lg font-medium'>Không tìm thấy lượt chơi nào</h3>
-          <p className='text-muted-foreground mt-1 mb-4'>
-            Không có lượt chơi nào phù hợp với các bộ lọc hiện tại
-          </p>
+          <p className='text-muted-foreground mt-1 mb-4'>Không có lượt chơi nào phù hợp với các bộ lọc hiện tại</p>
           <Button variant='outline' onClick={resetFilters}>
             Xóa bộ lọc
           </Button>
@@ -656,30 +592,33 @@ export default function GamesPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.2 }}>
+            transition={{ duration: 0.2 }}
+          >
             {view === 'grid' ? (
               <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
-                {gameRounds.map((game) => (
+                {gameRounds.map(game => (
                   <motion.div
                     key={game.id}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.3 }}
                     whileHover={{ scale: 1.02 }}
-                    className='transform transition-all duration-200'>
+                    className='transform transition-all duration-200'
+                  >
                     <GameCard game={game} />
                   </motion.div>
                 ))}
               </div>
             ) : (
               <div className='space-y-3'>
-                {gameRounds.map((game) => (
+                {gameRounds.map(game => (
                   <motion.div
                     key={game.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.2 }}
-                    className='hover:ring-1 hover:ring-primary/10 rounded-lg transition-all'>
+                    className='hover:ring-1 hover:ring-primary/10 rounded-lg transition-all'
+                  >
                     <GameListItem game={game} />
                   </motion.div>
                 ))}
@@ -690,25 +629,21 @@ export default function GamesPage() {
       )}
 
       {/* Pagination */}
-      {!isLoading &&
-        !error &&
-        gameRounds.length > 0 &&
-        pagination.totalPages > 1 && (
-          <div className='flex justify-center mt-8'>
-            <Pagination
-              currentPage={pagination.page}
-              totalPages={pagination.totalPages}
-              onPageChange={handlePageChange}
-            />
-          </div>
-        )}
+      {!isLoading && !error && gameRounds.length > 0 && pagination.totalPages > 1 && (
+        <div className='flex justify-center mt-8'>
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            onPageChange={handlePageChange}
+          />
+        </div>
+      )}
 
       {/* Results Summary */}
       {!isLoading && !error && gameRounds.length > 0 && (
         <div className='text-center text-sm text-muted-foreground'>
-          Hiển thị <span className='font-medium'>{gameRounds.length}</span> trên
-          tổng số <span className='font-medium'>{pagination.total}</span> lượt
-          chơi
+          Hiển thị <span className='font-medium'>{gameRounds.length}</span> trên tổng số{' '}
+          <span className='font-medium'>{pagination.total}</span> lượt chơi
         </div>
       )}
     </div>

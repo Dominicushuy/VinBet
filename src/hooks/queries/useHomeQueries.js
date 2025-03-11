@@ -2,18 +2,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { fetchData } from '@/utils/fetchUtils'
 
-// Query hook cho danh sách game đang hoạt động
-export function useActiveGamesQuery() {
-  return useQuery({
-    queryKey: ['games', 'active'],
-    queryFn: async () => {
-      const response = await fetchData('/api/game-rounds/active')
-      return response.active || []
-    },
-    refetchInterval: 30000 // Auto refresh mỗi 30 giây
-  })
-}
-
 // Query hook cho danh sách game sắp diễn ra
 export function useUpcomingGamesQuery() {
   return useQuery({
