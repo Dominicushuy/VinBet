@@ -19,7 +19,7 @@ export async function middleware(req) {
   const isNextInternal = pathname.startsWith('/_next/')
   const isApiRoute = pathname.startsWith('/api/')
 
-  if (isPublicFile || isNextInternal) {
+  if (isPublicFile || isNextInternal || isApiRoute) {
     return NextResponse.next()
   }
 
@@ -27,6 +27,7 @@ export async function middleware(req) {
   const isAuthRoute = authRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`))
   const isProtectedRoute = protectedRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`))
   const isAdminRoute = adminRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`))
+  const isHomePage = pathname === '/' || pathname === '/home'
 
   // Tạo response
   const res = NextResponse.next()
@@ -40,24 +41,35 @@ export async function middleware(req) {
   // Lấy profile để kiểm tra admin
   let isAdmin = false
   if (session) {
-    const { data } = await supabase.from('profiles').select('is_admin').eq('id', session.user.id).single()
-
-    isAdmin = data?.is_admin === true
+    try {
+      const { data } = await supabase.from('profiles').select('is_admin').eq('id', session.user.id).single()
+      isAdmin = data?.is_admin === true
+    } catch (error) {
+      console.error('Error fetching admin status:', error)
+    }
   }
 
-  // Route bảo vệ và không có session
+  // ===== REDIRECT LOGIC =====
+
+  // 1. Nếu là admin đã đăng nhập và đang ở trang chủ hoặc trang auth
+  if (session && isAdmin && (isHomePage || isAuthRoute)) {
+    // Chuyển hướng đến admin dashboard
+    return NextResponse.redirect(new URL('/admin/dashboard', req.url))
+  }
+
+  // 2. Route bảo vệ mà không có session
   if (isProtectedRoute && !session) {
     const redirectUrl = new URL('/login', req.url)
     redirectUrl.searchParams.set('redirectTo', pathname)
     return NextResponse.redirect(redirectUrl)
   }
 
-  // Route admin và không phải admin
+  // 3. Route admin mà không phải admin hoặc không có session
   if (isAdminRoute && (!session || !isAdmin)) {
     return NextResponse.redirect(new URL('/', req.url))
   }
 
-  // Route auth nhưng đã đăng nhập
+  // 4. Route auth nhưng đã đăng nhập (nhưng không phải admin)
   if (isAuthRoute && session) {
     return NextResponse.redirect(new URL('/', req.url))
   }
