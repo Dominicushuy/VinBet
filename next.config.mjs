@@ -4,34 +4,25 @@ const nextConfig = {
   // React strict mode provides additional development-time checks
   reactStrictMode: true,
 
-  // Set your preferred output mode
-  output: 'standalone',
+  // Thay đổi output mode
+  output: 'server', // Thay vì 'standalone'
 
   // Disable the "X-Powered-By: Next.js" HTTP header
   poweredByHeader: false,
 
   // Configure image domains
   images: {
-    domains: [
-      'localhost'
-      // Add other domains as needed
-    ],
+    domains: ['localhost'],
     formats: ['image/avif', 'image/webp']
   },
 
-  // Example environment variables (if needed)
-  env: {
-    // NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+  // Cấu hình tự động cho dynamic routes
+  experimental: {
+    serverActions: true
   },
 
   eslint: {
     ignoreDuringBuilds: true
-  },
-
-  // Example webpack configuration (if needed)
-  webpack: (config, { isServer }) => {
-    // Add custom webpack configurations here if needed
-    return config
   }
 }
 

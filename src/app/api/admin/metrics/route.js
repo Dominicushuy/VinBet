@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 // Cache response for metrics API
 export const revalidate = 300 // Cache trong 5 phút (300 giây)
+export const dynamic = 'force-dynamic'
 
 const metricsQuerySchema = z.object({
   startDate: z.string().optional(),

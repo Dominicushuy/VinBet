@@ -35,15 +35,13 @@ export async function middleware(req) {
 
 export const config = {
   matcher: [
-    '/',
-    '/profile/:path*',
-    '/games/:path*',
-    '/finance/:path*',
-    '/referrals/:path*',
-    '/admin/:path*',
-    '/login',
-    '/register',
-    '/forgot-password',
-    '/reset-password'
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public directory
+     */
+    '/((?!_next/static|_next/image|favicon.ico|public).*)'
   ]
 }

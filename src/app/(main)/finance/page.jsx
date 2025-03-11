@@ -1,5 +1,6 @@
 // src/app/(main)/finance/page.jsx
 
+import { dynamicConfig } from '@/app/config'
 import Link from 'next/link'
 import {
   ArrowDownRight,
@@ -9,17 +10,10 @@ import {
   DollarSign,
   Download,
   TrendingUp,
-  Wallet,
+  Wallet
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { getSupabaseServer } from '@/lib/supabase/server'
@@ -27,9 +21,12 @@ import { FinancialOverviewChart } from '@/components/finance/FinancialOverviewCh
 import { RecentTransactionsList } from '@/components/finance/RecentTransactionsList'
 import { FinancialSummaryCards } from '@/components/finance/FinancialSummaryCards'
 
+export const dynamic = dynamicConfig.dynamic
+export const revalidate = dynamicConfig.revalidate
+
 export const metadata = {
   title: 'Tài chính - VinBet',
-  description: 'Quản lý tài chính trong tài khoản VinBet của bạn',
+  description: 'Quản lý tài chính trong tài khoản VinBet của bạn'
 }
 
 export default async function FinancePage() {
@@ -44,22 +41,17 @@ export default async function FinancePage() {
     .single()
 
   // Lấy thống kê giao dịch
-  const { data: transactionStats } = await supabase.rpc(
-    'get_transaction_summary',
-    {
-      p_profile_id: profile.user?.id || '',
-      p_start_date: new Date(
-        Date.now() - 30 * 24 * 60 * 60 * 1000
-      ).toISOString(),
-      p_end_date: new Date().toISOString(),
-    }
-  )
+  const { data: transactionStats } = await supabase.rpc('get_transaction_summary', {
+    p_profile_id: profile.user?.id || '',
+    p_start_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    p_end_date: new Date().toISOString()
+  })
 
   // Format currency
-  const formatCurrency = (amount) => {
+  const formatCurrency = amount => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
-      currency: 'VND',
+      currency: 'VND'
     }).format(amount)
   }
 
@@ -76,9 +68,7 @@ export default async function FinancePage() {
       <div className='flex justify-between items-center'>
         <div>
           <h2 className='text-3xl font-bold tracking-tight'>Tài chính</h2>
-          <p className='text-muted-foreground'>
-            Quản lý tài chính và giao dịch trong tài khoản của bạn
-          </p>
+          <p className='text-muted-foreground'>Quản lý tài chính và giao dịch trong tài khoản của bạn</p>
         </div>
         <div className='flex gap-2'>
           <Button variant='outline' size='sm' asChild>
@@ -98,9 +88,7 @@ export default async function FinancePage() {
       <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
         <Card className='col-span-1 md:col-span-2 bg-gradient-to-br from-primary/10 to-primary/5'>
           <CardHeader className='pb-2'>
-            <CardTitle className='text-lg font-medium'>
-              Số dư tài khoản
-            </CardTitle>
+            <CardTitle className='text-lg font-medium'>Số dư tài khoản</CardTitle>
             <CardDescription>Số dư hiện tại của bạn</CardDescription>
           </CardHeader>
           <CardContent>
@@ -136,39 +124,30 @@ export default async function FinancePage() {
         {/* Referral Card */}
         <Card className='col-span-1 bg-muted/50'>
           <CardHeader className='pb-2'>
-            <CardTitle className='text-lg font-medium'>
-              Giới thiệu bạn bè
-            </CardTitle>
+            <CardTitle className='text-lg font-medium'>Giới thiệu bạn bè</CardTitle>
             <CardDescription>Nhận thưởng khi giới thiệu</CardDescription>
           </CardHeader>
           <CardContent className='space-y-4'>
             <div>
-              <p className='text-sm text-muted-foreground mb-2'>
-                Mã giới thiệu của bạn
-              </p>
+              <p className='text-sm text-muted-foreground mb-2'>Mã giới thiệu của bạn</p>
               <div className='flex items-center'>
                 <code className='relative rounded bg-muted px-[0.5rem] py-[0.3rem] font-mono text-lg'>
                   {userData?.referral_code || 'VINBET123'}
                 </code>
                 <Button variant='ghost' size='sm' className='ml-2'>
-                  <svg
-                    width='15'
-                    height='15'
-                    viewBox='0 0 15 15'
-                    fill='none'
-                    xmlns='http://www.w3.org/2000/svg'>
+                  <svg width='15' height='15' viewBox='0 0 15 15' fill='none' xmlns='http://www.w3.org/2000/svg'>
                     <path
                       d='M5 2V1H10V2H5ZM4.5 0C4.22386 0 4 0.223858 4 0.5V2.5C4 2.77614 4.22386 3 4.5 3H10.5C10.7761 3 11 2.77614 11 2.5V0.5C11 0.223858 10.7761 0 10.5 0H4.5ZM2 4.5C2 4.22386 2.22386 4 2.5 4H12.5C12.7761 4 13 4.22386 13 4.5V12.5C13 12.7761 12.7761 13 12.5 13H2.5C2.22386 13 2 12.7761 2 12.5V4.5ZM2.5 3C1.67157 3 1 3.67157 1 4.5V12.5C1 13.3284 1.67157 14 2.5 14H12.5C13.3284 14 14 13.3284 14 12.5V4.5C14 3.67157 13.3284 3 12.5 3H2.5Z'
                       fill='currentColor'
                       fillRule='evenodd'
-                      clipRule='evenodd'></path>
+                      clipRule='evenodd'
+                    ></path>
                   </svg>
                 </Button>
               </div>
             </div>
             <div className='text-sm text-muted-foreground'>
-              Thưởng <span className='font-semibold'>50,000đ</span> cho mỗi
-              người bạn giới thiệu khi họ nạp tiền
+              Thưởng <span className='font-semibold'>50,000đ</span> cho mỗi người bạn giới thiệu khi họ nạp tiền
             </div>
             <Button variant='secondary' asChild className='w-full'>
               <Link href='/referrals'>Xem chi tiết</Link>
@@ -193,39 +172,19 @@ export default async function FinancePage() {
               <TabsTrigger value='wins'>Thắng cược</TabsTrigger>
             </TabsList>
             <TabsContent value='all'>
-              <FinancialOverviewChart
-                userId={profile.user?.id}
-                period='month'
-                filter='all'
-              />
+              <FinancialOverviewChart userId={profile.user?.id} period='month' filter='all' />
             </TabsContent>
             <TabsContent value='deposits'>
-              <FinancialOverviewChart
-                userId={profile.user?.id}
-                period='month'
-                filter='deposit'
-              />
+              <FinancialOverviewChart userId={profile.user?.id} period='month' filter='deposit' />
             </TabsContent>
             <TabsContent value='withdrawals'>
-              <FinancialOverviewChart
-                userId={profile.user?.id}
-                period='month'
-                filter='withdrawal'
-              />
+              <FinancialOverviewChart userId={profile.user?.id} period='month' filter='withdrawal' />
             </TabsContent>
             <TabsContent value='bets'>
-              <FinancialOverviewChart
-                userId={profile.user?.id}
-                period='month'
-                filter='bet'
-              />
+              <FinancialOverviewChart userId={profile.user?.id} period='month' filter='bet' />
             </TabsContent>
             <TabsContent value='wins'>
-              <FinancialOverviewChart
-                userId={profile.user?.id}
-                period='month'
-                filter='win'
-              />
+              <FinancialOverviewChart userId={profile.user?.id} period='month' filter='win' />
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -294,9 +253,7 @@ export default async function FinancePage() {
             </div>
           </CardHeader>
           <CardContent className='pb-2'>
-            <p className='text-sm text-muted-foreground'>
-              Rút tiền về tài khoản ngân hàng hoặc ví điện tử của bạn
-            </p>
+            <p className='text-sm text-muted-foreground'>Rút tiền về tài khoản ngân hàng hoặc ví điện tử của bạn</p>
           </CardContent>
           <CardFooter>
             <Button variant='outline' asChild className='w-full'>
@@ -313,9 +270,7 @@ export default async function FinancePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className='pb-2'>
-            <p className='text-sm text-muted-foreground'>
-              Xem và xuất lịch sử chi tiết tất cả giao dịch của bạn
-            </p>
+            <p className='text-sm text-muted-foreground'>Xem và xuất lịch sử chi tiết tất cả giao dịch của bạn</p>
           </CardContent>
           <CardFooter>
             <Button variant='outline' asChild className='w-full'>
