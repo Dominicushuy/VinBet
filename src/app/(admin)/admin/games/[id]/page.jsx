@@ -1,5 +1,7 @@
-// src/app/(admin)/admin/games/[id]/page.tsx
+// src/app/(admin)/admin/games/[id]/page.jsx
+import { Suspense } from 'react'
 import { AdminGameDetail } from '@/components/admin/AdminGameDetail'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export const metadata = {
   title: 'Chi tiết lượt chơi - Admin - VinBet',
@@ -7,5 +9,35 @@ export const metadata = {
 }
 
 export default function GameDetailPage({ params }) {
-  return <AdminGameDetail gameId={params.id} />
+  return (
+    <div className='space-y-6'>
+      <Suspense fallback={<GameDetailSkeleton />}>
+        <AdminGameDetail gameId={params.id} />
+      </Suspense>
+    </div>
+  )
+}
+
+function GameDetailSkeleton() {
+  return (
+    <div className='space-y-6'>
+      <div className='flex items-center justify-between'>
+        <div className='flex items-center space-x-4'>
+          <Skeleton className='h-10 w-24' />
+          <Skeleton className='h-8 w-64' />
+          <Skeleton className='h-6 w-24' />
+        </div>
+        <div className='flex space-x-2'>
+          <Skeleton className='h-10 w-10 rounded-md' />
+          <Skeleton className='h-10 w-28 rounded-md' />
+          <Skeleton className='h-10 w-28 rounded-md' />
+        </div>
+      </div>
+
+      <div className='grid gap-6 md:grid-cols-3'>
+        <Skeleton className='h-[400px] md:col-span-1 rounded-lg' />
+        <Skeleton className='h-[400px] md:col-span-2 rounded-lg' />
+      </div>
+    </div>
+  )
 }
