@@ -7,25 +7,16 @@ export async function fetcher(url, options) {
     }
   })
 
-  const data = await response.json()
-
   if (!response.ok) {
     throw new Error(data.error || 'API request failed')
   }
+
+  const data = await response.json()
 
   return data
 }
 
 export const apiService = {
-  get: url => fetcher(url),
-  post: (url, data) =>
-    fetcher(url, {
-      method: 'POST',
-      body: data ? JSON.stringify(data) : undefined
-    }),
-  put: (url, data) => fetcher(url, { method: 'PUT', body: JSON.stringify(data) }),
-  delete: url => fetcher(url, { method: 'DELETE' }),
-
   games: {
     getActiveGames: () => fetcher('/api/game-rounds/active'),
     getGameRounds: params => {

@@ -194,38 +194,6 @@ export function useForgotPasswordMutation() {
   })
 }
 
-export function useUpdateProfileMutation() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async data => {
-      const supabase = createSupabase()
-
-      // Kiểm tra session hiện tại
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-      if (sessionError || !sessionData.session) {
-        throw new Error('Không tìm thấy phiên đăng nhập')
-      }
-
-      // Cập nhật profile
-      const { error } = await supabase.from('profiles').update(data).eq('id', sessionData.session.user.id)
-
-      if (error) {
-        throw new Error(error.message || 'Cập nhật thông tin thất bại')
-      }
-
-      return { success: true }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEYS.profile })
-      toast.success('Cập nhật thông tin thành công')
-    },
-    onError: error => {
-      toast.error(error.message || 'Cập nhật thông tin thất bại')
-    }
-  })
-}
-
 export function useNewPasswordMutation() {
   const queryClient = useQueryClient()
   const router = useRouter()

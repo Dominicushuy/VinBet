@@ -352,11 +352,11 @@ export default async function HomePage() {
   } catch (error) {
     console.error('Error loading home page data:', error)
     // Fallback với các giá trị mặc định
-    const jackpotAmount = 100000000
-    const userCount = 5000
-    const totalReward = 50000000000
-    const gameCount = 10000
-    const winRate = 95
+    // const jackpotAmount = 100000000
+    // const userCount = 5000
+    // const totalReward = 50000000000
+    // const gameCount = 10000
+    // const winRate = 95
 
     // Return component với các giá trị mặc định
     return (
