@@ -13,7 +13,7 @@ export const ADMIN_QUERY_KEYS = {
 }
 
 // API functions
-const adminApi = {
+export const adminApi = {
   // Lấy danh sách các payment requests
   getPaymentRequests: async params => {
     const queryParams = new URLSearchParams()

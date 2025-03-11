@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiService } from '@/services/api.service'
 import { toast } from 'react-hot-toast'
+import { adminApi } from './useAdminQueries'
 
 // Query keys
 export const GAME_QUERY_KEYS = {
@@ -53,6 +54,22 @@ export function useGameRoundWinners(id) {
   })
 }
 
+export function useGameRoundResultsQuery(id) {
+  return useQuery({
+    queryKey: GAME_QUERY_KEYS.gameRoundResults(id),
+    queryFn: () => apiService.games.getGameRoundResults(id),
+    enabled: !!id
+  })
+}
+
+export function useGameRoundWinnersQuery(id) {
+  return useQuery({
+    queryKey: GAME_QUERY_KEYS.gameRoundWinners(id),
+    queryFn: () => apiService.games.getGameRoundWinners(id),
+    enabled: !!id
+  })
+}
+
 // Mutations
 export function useCreateGameRoundMutation() {
   const queryClient = useQueryClient()
@@ -85,6 +102,25 @@ export function useUpdateGameRoundMutation() {
     },
     onError: error => {
       toast.error(error.message || 'Không thể cập nhật lượt chơi')
+    }
+  })
+}
+
+export function useSetGameResultMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ gameId, data }) => adminApi.setGameResult(gameId, data),
+    onSuccess: (_, variables) => {
+      toast.success('Kết quả đã được cập nhật thành công')
+      queryClient.invalidateQueries({
+        queryKey: GAME_QUERY_KEYS.gameDetail(variables.gameId)
+      })
+      queryClient.invalidateQueries({ queryKey: GAME_QUERY_KEYS.gamesList() })
+      queryClient.invalidateQueries({ queryKey: GAME_QUERY_KEYS.activeGames })
+    },
+    onError: error => {
+      toast.error(error.message || 'Không thể cập nhật kết quả')
     }
   })
 }
