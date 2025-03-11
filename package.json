@@ -6,8 +6,7 @@
     "dev": "next dev -p 4321",
     "build": "next build",
     "start": "next start -p 1234",
-    "lint": "next lint",
-    "db": "supabase gen types typescript --project-id dygxdswguzjeueuzfgvn > src/types/supabase.ts"
+    "lint": "next lint"
   },
   "dependencies": {
     "@hookform/resolvers": "3.1.0",
@@ -59,15 +58,17 @@
     "zod": "3.21.4"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@types/node": "18.16.0",
-    "@types/react": "18.2.0",
-    "@types/react-dom": "18.2.0",
+    "@eslint/js": "^9.22.0",
+    "@next/eslint-plugin-next": "^15.2.1",
     "autoprefixer": "10.4.14",
-    "eslint": "^9",
-    "eslint-config-next": "15.2.1",
+    "eslint": "^9.22.0",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-unused-imports": "^4.1.4",
+    "globals": "^16.0.0",
     "postcss": "8.4.24",
-    "tailwindcss": "3.3.2",
-    "typescript": "^5"
+    "tailwindcss": "3.3.2"
   }
 }
