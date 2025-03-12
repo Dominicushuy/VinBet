@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { useAdminTransactionsQuery } from '@/hooks/queries/useAdminQueries'
 import { Button } from '@/components/ui/button'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
@@ -10,16 +9,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ArrowUpRight, ArrowDownRight, ExternalLink } from 'lucide-react'
 import { format } from 'date-fns'
 import { useRouter } from 'next/navigation'
+import { formatCurrency } from '@/utils/formatUtils'
 
 export function RecentTransactions() {
   const router = useRouter()
-  const [mounted, setMounted] = useState(false)
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  const { data, isLoading } = useAdminTransactionsQuery({
+  // Sử dụng trực tiếp react-query thay vì state để theo dõi mounted
+  const { data, isLoading, error } = useAdminTransactionsQuery({
     pageSize: 10,
     page: 1,
     sortBy: 'created_at',
@@ -28,11 +24,15 @@ export function RecentTransactions() {
 
   const transactions = data?.transactions || []
 
-  const formatCurrency = amount => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(amount)
+  // Xử lý lỗi nếu có
+  if (error) {
+    return (
+      <div className='rounded-md bg-red-50 p-4 border border-red-200 dark:bg-red-900/20 dark:border-red-800'>
+        <div className='text-sm text-red-700 dark:text-red-400'>
+          Không thể tải dữ liệu giao dịch. Vui lòng thử lại sau.
+        </div>
+      </div>
+    )
   }
 
   const getTransactionIcon = type => {
@@ -63,7 +63,22 @@ export function RecentTransactions() {
     }
   }
 
-  if (!mounted) return null
+  const getTransactionType = type => {
+    switch (type) {
+      case 'deposit':
+        return 'Nạp tiền'
+      case 'withdrawal':
+        return 'Rút tiền'
+      case 'bet':
+        return 'Đặt cược'
+      case 'win':
+        return 'Thắng cược'
+      case 'referral_reward':
+        return 'Thưởng giới thiệu'
+      default:
+        return type
+    }
+  }
 
   if (isLoading) {
     return (
@@ -128,19 +143,7 @@ export function RecentTransactions() {
                 <TableCell>
                   <div className='flex items-center gap-1.5'>
                     {getTransactionIcon(transaction.type)}
-                    <span>
-                      {transaction.type === 'deposit'
-                        ? 'Nạp tiền'
-                        : transaction.type === 'withdrawal'
-                        ? 'Rút tiền'
-                        : transaction.type === 'bet'
-                        ? 'Đặt cược'
-                        : transaction.type === 'win'
-                        ? 'Thắng cược'
-                        : transaction.type === 'referral_reward'
-                        ? 'Thưởng giới thiệu'
-                        : transaction.type}
-                    </span>
+                    <span>{getTransactionType(transaction.type)}</span>
                   </div>
                 </TableCell>
                 <TableCell

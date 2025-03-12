@@ -15,16 +15,9 @@ import {
 } from 'recharts'
 import { format, parseISO } from 'date-fns'
 import { vi } from 'date-fns/locale'
+import { formatCurrency } from '@/utils/formatUtils'
 
 export function MetricsCharts({ data, interval, visibleCharts }) {
-  const formatCurrency = value => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-      maximumFractionDigits: 0
-    }).format(value)
-  }
-
   const formatValue = value => {
     return new Intl.NumberFormat('vi-VN', {
       notation: 'compact',

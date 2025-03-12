@@ -1,7 +1,7 @@
 // src/components/profile/ProfileStats.jsx
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { DollarSign, TrendingDown, TrendingUp, Trophy, User, Clock } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency } from '@/utils/formatUtils'
 
 export function ProfileStats({ stats }) {
   return (

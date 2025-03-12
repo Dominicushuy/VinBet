@@ -4,13 +4,14 @@ import { toast } from 'react-hot-toast'
 import { fetchData, postData, buildQueryString } from '@/utils/fetchUtils'
 import { GAME_QUERY_KEYS } from './useGameQueries'
 
-// Query keys
+// Query keys - theo chuẩn để tránh key conflicts
 export const ADMIN_QUERY_KEYS = {
-  paymentRequests: params => ['admin', 'payment-requests', { ...params }],
-  usersList: params => ['admin', 'users', { ...params }],
+  paymentRequests: params => ['admin', 'payment-requests', params],
+  usersList: params => ['admin', 'users', params],
   dashboard: ['admin', 'dashboard'],
-  metrics: params => ['admin', 'metrics', { ...params }],
-  transactions: ['admin', 'transactions']
+  metrics: params => ['admin', 'metrics', params],
+  transactions: params => ['admin', 'transactions', params],
+  user: id => ['admin', 'user', id]
 }
 
 // API functions
@@ -55,11 +56,6 @@ export const adminApi = {
     return fetchData('/api/admin/dashboard-summary')
   },
 
-  // Lấy thống kê dashboard
-  getDashboardSummary: async () => {
-    return fetchData('/api/admin/dashboard-summary')
-  },
-
   // Lấy metrics theo thời gian
   getMetrics: async params => {
     const queryString = buildQueryString({
@@ -83,113 +79,148 @@ export const adminApi = {
     return postData(`/api/admin/games/${gameId}/results`, data)
   },
 
-  getTransactions: async () => {
-    return fetchData('/api/admin/transactions')
+  getTransactions: async (params = {}) => {
+    const queryString = buildQueryString({
+      type: params?.type,
+      status: params?.status,
+      page: params?.page || 1,
+      pageSize: params?.pageSize || 10,
+      startDate: params?.startDate,
+      endDate: params?.endDate,
+      sortBy: params?.sortBy || 'created_at',
+      sortOrder: params?.sortOrder || 'desc'
+    })
+
+    return fetchData(`/api/admin/transactions${queryString}`)
   }
 }
 
 // Queries
-export function useAdminPaymentRequestsQuery(params) {
+export function useAdminPaymentRequestsQuery(params, options = {}) {
   return useQuery({
     queryKey: ADMIN_QUERY_KEYS.paymentRequests(params),
-    queryFn: () => adminApi.getPaymentRequests(params)
+    queryFn: () => adminApi.getPaymentRequests(params),
+    ...options
   })
 }
 
-export function useAdminUsersQuery(params) {
+export function useAdminUsersQuery(params, options = {}) {
   return useQuery({
     queryKey: ADMIN_QUERY_KEYS.usersList(params),
-    queryFn: () => adminApi.getUsers(params)
+    queryFn: () => adminApi.getUsers(params),
+    ...options
   })
 }
 
-// Mutations
-export function useProcessPaymentRequestMutation(action) {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: ({ id, notes }) => adminApi.processPaymentRequest(id, action, { notes }),
-    onSuccess: () => {
-      toast.success(`Yêu cầu đã được ${action === 'approve' ? 'phê duyệt' : 'từ chối'} thành công`)
-      queryClient.invalidateQueries({
-        queryKey: ADMIN_QUERY_KEYS.paymentRequests()
-      })
-      queryClient.invalidateQueries({
-        queryKey: ADMIN_QUERY_KEYS.dashboard
-      })
-    },
-    onError: error => {
-      toast.error(error.message || `Không thể ${action === 'approve' ? 'phê duyệt' : 'từ chối'} yêu cầu`)
-    }
-  })
-}
-
-// Queries
-export function useAdminDashboardQuery() {
+// Admin Dashboard Query
+export function useAdminDashboardQuery(options = {}) {
   return useQuery({
     queryKey: ADMIN_QUERY_KEYS.dashboard,
-    queryFn: adminApi.getDashboardSummary
+    queryFn: adminApi.getDashboardStats,
+    staleTime: 5 * 60 * 1000, // Cache 5 phút
+    refetchOnWindowFocus: false, // Không refetch khi focus tab
+    ...options
   })
 }
 
-export function useAdminMetricsQuery(params) {
+// Admin Metrics Query
+export function useAdminMetricsQuery(params = {}, options = {}) {
   return useQuery({
     queryKey: ADMIN_QUERY_KEYS.metrics(params),
     queryFn: () => adminApi.getMetrics(params),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000, // Cache 5 phút
     refetchOnWindowFocus: false,
-    refetchInterval: 5 * 60 * 1000
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+    ...options
   })
 }
 
-export function useUserDetailQuery(userId) {
+// User Detail Query
+export function useUserDetailQuery(userId, options = {}) {
   return useQuery({
-    queryKey: ['admin', 'user', userId],
+    queryKey: ADMIN_QUERY_KEYS.user(userId),
     queryFn: () => adminApi.getUserDetail(userId),
-    enabled: !!userId
+    enabled: !!userId,
+    ...options
   })
 }
 
-export function useUpdateUserMutation() {
+// Update User Mutation
+export function useUpdateUserMutation(options = {}) {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: ({ id, data }) => adminApi.updateUser(id, data),
     onSuccess: (_, variables) => {
       toast.success('Thông tin người dùng đã được cập nhật')
+
+      // Invalidate relevant queries
       queryClient.invalidateQueries({
-        queryKey: ['admin', 'user', variables.id]
+        queryKey: ADMIN_QUERY_KEYS.user(variables.id)
       })
-      queryClient.invalidateQueries({ queryKey: ADMIN_QUERY_KEYS.usersList() })
+
+      queryClient.invalidateQueries({
+        queryKey: ['admin', 'users']
+      })
+
+      if (options.onSuccess) {
+        options.onSuccess(_, variables)
+      }
     },
-    onError: error => {
+    onError: (error, variables, context) => {
       toast.error(error.message || 'Không thể cập nhật thông tin người dùng')
-    }
+
+      if (options.onError) {
+        options.onError(error, variables, context)
+      }
+    },
+    ...options
   })
 }
 
-export function useSetGameResultMutation() {
+// Set Game Result Mutation
+export function useSetGameResultMutation(options = {}) {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: ({ gameId, data }) => adminApi.setGameResult(gameId, data),
     onSuccess: (_, variables) => {
       toast.success('Kết quả đã được cập nhật thành công')
+
+      // Invalidate relevant queries
       queryClient.invalidateQueries({
         queryKey: GAME_QUERY_KEYS.gameDetail(variables.gameId)
       })
-      queryClient.invalidateQueries({ queryKey: GAME_QUERY_KEYS.gamesList() })
-      queryClient.invalidateQueries({ queryKey: GAME_QUERY_KEYS.activeGames })
+
+      queryClient.invalidateQueries({
+        queryKey: GAME_QUERY_KEYS.gamesList()
+      })
+
+      queryClient.invalidateQueries({
+        queryKey: GAME_QUERY_KEYS.activeGames
+      })
+
+      if (options.onSuccess) {
+        options.onSuccess(_, variables)
+      }
     },
-    onError: error => {
+    onError: (error, variables, context) => {
       toast.error(error.message || 'Không thể cập nhật kết quả')
-    }
+
+      if (options.onError) {
+        options.onError(error, variables, context)
+      }
+    },
+    ...options
   })
 }
 
-export function useAdminTransactionsQuery() {
+// Admin Transactions Query
+export function useAdminTransactionsQuery(params = {}, options = {}) {
   return useQuery({
-    queryKey: ADMIN_QUERY_KEYS.transactions,
-    queryFn: adminApi.getTransactions
+    queryKey: ADMIN_QUERY_KEYS.transactions(params),
+    queryFn: () => adminApi.getTransactions(params),
+    staleTime: 1 * 60 * 1000, // 1 phút
+    ...options
   })
 }

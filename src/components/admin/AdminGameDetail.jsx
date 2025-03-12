@@ -62,6 +62,7 @@ import {
   Calendar,
   AlertTriangle
 } from 'lucide-react'
+import { formatCurrency } from '@/utils/formatUtils'
 
 // Schema for game result form
 const gameResultSchema = z.object({
@@ -179,13 +180,6 @@ export function AdminGameDetail({ gameId }) {
   }
 
   // Utility functions
-  const formatCurrency = amount => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(amount || 0)
-  }
-
   const formatDate = date => {
     if (!date) return 'N/A'
     return format(new Date(date), 'HH:mm, dd/MM/yyyy', { locale: vi })

@@ -1,4 +1,4 @@
-Tôi đang phát triển dự án VinBet - nền tảng game cá cược sử dụng Next.js và Supabase, với 90% code tạo bởi AI. Tôi đã cung cấp cho bạn toàn bộ code của trang chủ (src/app/(main)/page.jsx) trong Github. Hãy giúp tôi review kỹ lưỡng và tự động chỉnh sửa code để đảm bảo chất lượng tối ưu.
+Tôi đang phát triển dự án VinBet - nền tảng game cá cược sử dụng Next.js và Supabase, với 90% code tạo bởi AI. Tôi đã cung cấp cho bạn toàn bộ code của trang chủ Admin (src/app/(admin)/admin/dashboard/page.jsx) trong Github. Hãy giúp tôi review kỹ lưỡng và tự động chỉnh sửa code để đảm bảo chất lượng tối ưu.
 
 1. **Phân tích tổng quan module**:
 
@@ -32,6 +32,7 @@ Tôi đang phát triển dự án VinBet - nền tảng game cá cược sử d�
    - Bổ sung chức năng thiếu hoặc chưa hoàn thiện
 
 6. **Kiểm tra đặc biệt các file Supabase**:
+   - Chỉ kiểm tra những phần có liên quan, còn không thì bỏ qua.
    - Kiểm tra kỹ `schema.sql` để đảm bảo thiết kế database hợp lý
    - Kiểm tra `trigger_functions.sql` - đặc biệt chú ý đến việc dư thừa hoặc sai logic so với API routes
    - Kiểm tra `policies.sql` để đảm bảo bảo mật và quyền truy cập dữ liệu phù hợp

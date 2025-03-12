@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Award } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency } from '@/utils/formatUtils'
 import { ChevronDown } from 'lucide-react'
 
 export const Sidebar = React.memo(function Sidebar({

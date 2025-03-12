@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useRecentWinnersQuery } from '@/hooks/queries/useHomeQueries'
+import { formatCurrency } from '@/utils/formatUtils'
 
 export function WinnersList({ initialWinners }) {
   const [hasInitialData] = useState(!!initialWinners && initialWinners.length > 0)
@@ -15,14 +16,6 @@ export function WinnersList({ initialWinners }) {
 
   // Sử dụng initialWinners nếu có, nếu không thì sử dụng fetchedWinners
   const winners = hasInitialData ? initialWinners : fetchedWinners
-
-  const formatCurrency = amount => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-      minimumFractionDigits: 0
-    }).format(amount)
-  }
 
   const formatTimeAgo = dateString => {
     const date = new Date(dateString)

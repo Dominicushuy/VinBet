@@ -20,6 +20,7 @@ import { getSupabaseServer } from '@/lib/supabase/server'
 import { FinancialOverviewChart } from '@/components/finance/FinancialOverviewChart'
 import { RecentTransactionsList } from '@/components/finance/RecentTransactionsList'
 import { FinancialSummaryCards } from '@/components/finance/FinancialSummaryCards'
+import { formatCurrency } from '@/utils/formatUtils'
 
 export const dynamic = dynamicConfig.dynamic
 export const revalidate = dynamicConfig.revalidate
@@ -46,14 +47,6 @@ export default async function FinancePage() {
     p_start_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
     p_end_date: new Date().toISOString()
   })
-
-  // Format currency
-  const formatCurrency = amount => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(amount)
-  }
 
   // Lấy 5 giao dịch gần nhất
   const { data: recentTransactions } = await supabase

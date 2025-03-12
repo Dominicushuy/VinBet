@@ -47,6 +47,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'react-hot-toast'
 import { format } from 'date-fns'
+import { formatCurrency } from '@/utils/formatUtils'
 
 export function AdminUserManagement() {
   const router = useRouter()
@@ -152,13 +153,6 @@ export function AdminUserManagement() {
 
   const viewUserDetails = userId => {
     router.push(`/admin/users/${userId}`)
-  }
-
-  const formatCurrency = amount => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(amount)
   }
 
   const getSortIndicator = column => {

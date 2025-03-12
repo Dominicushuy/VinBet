@@ -1,18 +1,10 @@
 // src/components/finance/FinancialSummaryCards.jsx
 'use client'
 
+import { formatCurrency } from '@/utils/formatUtils'
 import { ArrowDown, ArrowUp, TrendingDown, TrendingUp } from 'lucide-react'
 
 export function FinancialSummaryCards({ stats }) {
-  // Format tiền tệ
-  const formatCurrency = amount => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-      maximumFractionDigits: 0
-    }).format(amount)
-  }
-
   return (
     <div className='space-y-8'>
       <div className='space-y-2'>

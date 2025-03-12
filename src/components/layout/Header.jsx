@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Menu, LogOut, User, DollarSign, Users, Settings, HelpCircle } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency } from '@/utils/formatUtils'
 
 export const Header = React.memo(function Header({ openSheet, profile, signOut, navItems, checkIsActive }) {
   return (

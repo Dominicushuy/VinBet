@@ -1,35 +1,17 @@
+// src/app/api/admin/dashboard-summary/route.js
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createAdminApiHandler } from '@/utils/adminAuthHandler'
 import { handleApiError } from '@/utils/errorHandler'
 
-export async function GET() {
+export const GET = createAdminApiHandler(async (request, _, { supabase, user }) => {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
-
-    // Kiểm tra session
-    const { data: sessionData } = await supabase.auth.getSession()
-    if (!sessionData.session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check admin permission
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', sessionData.session.user.id)
-      .single()
-
-    if (!profileData?.is_admin) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 })
-    }
-
     // Get dashboard summary
     const { data: summary, error } = await supabase.rpc('get_admin_dashboard_summary')
 
     if (error) {
+      console.error('Dashboard summary error:', error)
       return handleApiError(error, 'Lỗi khi lấy thông tin dashboard')
     }
 
@@ -40,14 +22,24 @@ export async function GET() {
     })
 
     if (transactionError) {
+      console.error('Transaction summary error:', transactionError)
       return handleApiError(transactionError, 'Lỗi khi lấy thông tin tổng hợp giao dịch')
     }
 
-    return NextResponse.json({
+    // Add some cache headers for better performance
+    const response = NextResponse.json({
       ...summary,
-      transactionSummary: transactionSummary[0] || {}
+      transactionSummary: transactionSummary[0] || {},
+      lastUpdated: new Date().toISOString(),
+      adminId: user.id // Bổ sung thông tin admin để tracking
     })
+
+    // Add cache headers (5 minutes)
+    response.headers.set('Cache-Control', 'private, max-age=300')
+
+    return response
   } catch (error) {
+    console.error('Unhandled dashboard summary error:', error)
     return handleApiError(error, 'Lỗi khi lấy thông tin dashboard')
   }
-}
+})

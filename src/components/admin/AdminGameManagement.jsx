@@ -62,6 +62,7 @@ import {
   useUpdateGameRoundMutation,
   useSetGameResultMutation
 } from '@/hooks/queries/useGameQueries'
+import { formatCurrency } from '@/utils/formatUtils'
 
 // Schema để tạo game round mới
 const createGameRoundSchema = z.object({
@@ -286,14 +287,6 @@ export function AdminGameManagement() {
       default:
         return <Badge variant='outline'>{status}</Badge>
     }
-  }
-
-  // Format currency
-  const formatCurrency = amount => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(amount)
   }
 
   // Kiểm tra game có thể nhập kết quả

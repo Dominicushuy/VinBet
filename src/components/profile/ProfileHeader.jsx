@@ -8,7 +8,7 @@ import { AvatarUploader } from './AvatarUploader'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { DollarSign, Edit, ShieldCheck, Star } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency } from '@/utils/formatUtils'
 
 export function ProfileHeader({ profile }) {
   const [showAvatarUploader, setShowAvatarUploader] = useState(false)

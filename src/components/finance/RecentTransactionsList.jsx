@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { formatCurrency } from '@/utils/formatUtils'
 
 export function RecentTransactionsList({ transactions }) {
   const [selectedTransaction, setSelectedTransaction] = useState(null)
@@ -30,14 +31,6 @@ export function RecentTransactionsList({ transactions }) {
         </Button>
       </div>
     )
-  }
-
-  // Format tiền tệ
-  const formatCurrency = amount => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(amount)
   }
 
   // Lấy icon dựa vào loại giao dịch

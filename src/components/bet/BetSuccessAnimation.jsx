@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle, Share2, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { formatCurrency } from '@/utils/formatUtils'
 
 export default function BetSuccessAnimation({ betId, amount, potentialWin, chosenNumber, onDismiss, gameId }) {
   const [showCard, setShowCard] = useState(false)
@@ -39,13 +40,6 @@ export default function BetSuccessAnimation({ betId, amount, potentialWin, chose
         url: `/games/${gameId}`
       })
     }
-  }
-
-  const formatCurrency = value => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(value)
   }
 
   return (

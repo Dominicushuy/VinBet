@@ -1,14 +1,8 @@
 Directory structure:
 └── dominicushuy-vinbet/
-    ├── components.json
-    ├── eslint.config.mjs
-    ├── jsconfig.json
     ├── middleware.js
-    ├── next.config.mjs
-    ├── package.json
     ├── postcss.config.js
     ├── tailwind.config.js
-    ├── .prettierrc.json
     └── src/
         ├── app/
         │   ├── config.js
@@ -104,11 +98,7 @@ Directory structure:
         │       │   │   └── route.js
         │       │   ├── register/
         │       │   │   └── route.js
-        │       │   ├── reset-password/
-        │       │   │   └── route.js
-        │       │   ├── session/
-        │       │   │   └── route.js
-        │       │   └── verify-email/
+        │       │   └── reset-password/
         │       │       └── route.js
         │       ├── game-rounds/
         │       │   ├── route.js
@@ -193,6 +183,7 @@ Directory structure:
         │           └── summary/
         │               └── route.js
         ├── components/
+        │   ├── ErrorBoundary.jsx
         │   ├── admin/
         │   │   ├── AdminDashboard.jsx
         │   │   ├── AdminGameDetail.jsx
@@ -260,7 +251,11 @@ Directory structure:
         │   │   ├── TestimonialSlider.jsx
         │   │   └── WinnersList.jsx
         │   ├── layout/
-        │   │   └── MainLayout.jsx
+        │   │   ├── Footer.jsx
+        │   │   ├── Header.jsx
+        │   │   ├── MainLayout.jsx
+        │   │   ├── MobileMenu.jsx
+        │   │   └── Sidebar.jsx
         │   ├── notifications/
         │   │   ├── EmptyNotifications.jsx
         │   │   ├── NotificationBadge.jsx
@@ -325,7 +320,7 @@ Directory structure:
         │       └── tooltip.jsx
         ├── hooks/
         │   ├── useAuth.js
-        │   ├── useNotificationListener.jsx
+        │   ├── useNotificationListener.js
         │   ├── useToast.js
         │   └── queries/
         │       ├── useAdminQueries.js
@@ -333,6 +328,7 @@ Directory structure:
         │       ├── useBetQueries.js
         │       ├── useFinanceQueries.js
         │       ├── useGameQueries.js
+        │       ├── useHomeQueries.js
         │       ├── useNotificationQueries.js
         │       ├── useProfileQueries.js
         │       ├── useReferralQueries.js
@@ -349,8 +345,7 @@ Directory structure:
         ├── providers/
         │   ├── ComponentsProvider.jsx
         │   └── QueryProvider.jsx
-        ├── services/
-        │   ├── api.service.js
-        │   └── auth.service.js
         └── utils/
+            ├── errorHandler.js
+            ├── fetchUtils.js
             └── telegram.js

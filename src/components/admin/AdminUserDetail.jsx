@@ -65,6 +65,7 @@ import {
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
+import { formatCurrency } from '@/utils/formatUtils'
 
 // Schema để cập nhật user
 const userUpdateSchema = z.object({
@@ -128,13 +129,6 @@ export function AdminUserDetail({ userId }) {
   const submitUpdate = values => {
     updateUserMutation.mutate({ id: userId, data: values })
     setEditMode(false)
-  }
-
-  const formatCurrency = amount => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(amount)
   }
 
   if (isLoading) {
