@@ -5,9 +5,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { AdminBreadcrumb } from '@/components/admin/layout/AdminBreadcrumb'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
-export const metadata = {
-  title: 'Chi tiết lượt chơi - Admin - VinBet',
-  description: 'Xem và quản lý thông tin chi tiết lượt chơi trên VinBet'
+// Thay metadata tĩnh bằng dynamic metadata
+export async function generateMetadata({ params }) {
+  return {
+    title: `Game #${params.id.substring(0, 8)} - Admin - VinBet`,
+    description: 'Quản lý chi tiết lượt chơi trên nền tảng VinBet'
+  }
 }
 
 export default function GameDetailPage({ params }) {
@@ -17,13 +20,13 @@ export default function GameDetailPage({ params }) {
         items={[
           { label: 'Dashboard', href: '/admin/dashboard' },
           { label: 'Trò chơi', href: '/admin/games' },
-          { label: 'Chi tiết', href: '#' }
+          { label: `Chi tiết #${params.id.substring(0, 8)}`, href: '#' }
         ]}
       />
 
       <ErrorBoundary>
         <Suspense fallback={<GameDetailSkeleton />}>
-          <AdminGameDetail gameId={params.id} />
+          {params.id ? <AdminGameDetail gameId={params.id} /> : <NoGameSelected />}
         </Suspense>
       </ErrorBoundary>
     </div>
@@ -49,6 +52,17 @@ function GameDetailSkeleton() {
       <div className='grid gap-6 md:grid-cols-3'>
         <Skeleton className='h-[400px] md:col-span-1 rounded-lg' />
         <Skeleton className='h-[400px] md:col-span-2 rounded-lg' />
+      </div>
+    </div>
+  )
+}
+
+function NoGameSelected() {
+  return (
+    <div className='flex items-center justify-center h-[400px] border border-dashed rounded-lg'>
+      <div className='text-center'>
+        <h3 className='text-lg font-medium'>Không tìm thấy thông tin lượt chơi</h3>
+        <p className='text-muted-foreground mt-2'>ID lượt chơi không hợp lệ hoặc không tồn tại</p>
       </div>
     </div>
   )

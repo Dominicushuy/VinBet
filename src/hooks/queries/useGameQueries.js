@@ -10,7 +10,8 @@ export const GAME_QUERY_KEYS = {
   gamesList: filters => ['games', 'list', { ...filters }],
   gameDetail: id => ['games', 'detail', id],
   gameRoundResults: id => ['games', 'results', id],
-  gameRoundWinners: id => ['games', 'winners', id]
+  gameRoundWinners: id => ['games', 'winners', id],
+  gameBets: id => ['games', 'bets', id]
 }
 
 // API functions
@@ -59,6 +60,10 @@ const gameApi = {
   // Get game round winners
   getGameRoundWinners: async id => {
     return fetchData(`/api/game-rounds/${id}/winners`)
+  },
+
+  getGameBets: async id => {
+    return fetchData(`/api/game-rounds/${id}/bets`)
   }
 }
 
@@ -176,5 +181,13 @@ export function useSetGameResultMutation() {
     onError: error => {
       toast.error(error.message || 'Không thể cập nhật kết quả')
     }
+  })
+}
+
+export function useGameBetsQuery(id) {
+  return useQuery({
+    queryKey: GAME_QUERY_KEYS.gameBets(id),
+    queryFn: () => gameApi.getGameBets(id),
+    enabled: !!id
   })
 }

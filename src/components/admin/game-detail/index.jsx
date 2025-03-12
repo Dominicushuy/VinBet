@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useGameDetailQuery, useGameRoundResultsQuery, useGameRoundWinnersQuery } from '@/hooks/queries/useGameQueries'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -15,6 +15,7 @@ import { GameDetailTabs } from './GameDetailTabs'
 import { ResultDialog } from './dialogs/ResultDialog'
 import { UpdateGameDialog } from './dialogs/UpdateGameDialog'
 import { CancelGameDialog } from './dialogs/CancelGameDialog'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 export function AdminGameDetail({ gameId }) {
   const router = useRouter()
@@ -39,15 +40,19 @@ export function AdminGameDetail({ gameId }) {
   const { data: resultsData, isLoading: isResultsLoading } = useGameRoundResultsQuery(gameId)
   const { data: winnersData, isLoading: isWinnersLoading } = useGameRoundWinnersQuery(gameId)
 
-  // Lấy dữ liệu từ queries
-  const game = gameData?.gameRound
-  const betStats = resultsData?.betStats || {
-    total_bets: 0,
-    winning_bets: 0,
-    total_bet_amount: 0,
-    total_win_amount: 0
-  }
-  const winners = winnersData?.winners || []
+  // Lấy dữ liệu từ queries với memoization
+  const game = useMemo(() => gameData?.gameRound, [gameData])
+  const betStats = useMemo(
+    () =>
+      resultsData?.betStats || {
+        total_bets: 0,
+        winning_bets: 0,
+        total_bet_amount: 0,
+        total_win_amount: 0
+      },
+    [resultsData]
+  )
+  const winners = useMemo(() => winnersData?.winners || [], [winnersData])
 
   // Custom hooks cho mutations và game conditions
   const { updateGameMutation, setResultMutation, timeInfo } = useGameMutations(game)
@@ -106,9 +111,9 @@ export function AdminGameDetail({ gameId }) {
         <div className='flex items-center space-x-4'>
           <Skeleton className='h-8 w-[300px]' />
         </div>
-        <div className='grid gap-6 md:grid-cols-2'>
+        <div className='grid gap-6 md:grid-cols-3'>
           <Skeleton className='h-[400px]' />
-          <Skeleton className='h-[400px]' />
+          <Skeleton className='h-[400px] md:col-span-2' />
         </div>
       </div>
     )
@@ -154,20 +159,23 @@ export function AdminGameDetail({ gameId }) {
           canSetResult={canSetResult}
         />
 
-        <GameDetailTabs
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          game={game}
-          betStats={betStats}
-          winners={winners}
-          timeInfo={timeInfo}
-          isResultsLoading={isResultsLoading}
-          isWinnersLoading={isWinnersLoading}
-          onSetResult={() => openDialog('result')}
-          onViewUser={userId => router.push(`/admin/users/${userId}`)}
-          onSelectNumber={setSelectedNumber}
-          selectedNumber={selectedNumber}
-        />
+        <ErrorBoundary fallback={<TabErrorState />}>
+          <GameDetailTabs
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            game={game}
+            betStats={betStats}
+            winners={winners}
+            timeInfo={timeInfo}
+            isResultsLoading={isResultsLoading}
+            isWinnersLoading={isWinnersLoading}
+            onSetResult={() => openDialog('result')}
+            onViewUser={userId => router.push(`/admin/users/${userId}`)}
+            onSelectNumber={setSelectedNumber}
+            selectedNumber={selectedNumber}
+            gameId={gameId}
+          />
+        </ErrorBoundary>
       </div>
 
       {/* Dialogs */}
@@ -196,6 +204,15 @@ export function AdminGameDetail({ gameId }) {
         game={game}
         betStats={betStats}
       />
+    </div>
+  )
+}
+
+function TabErrorState() {
+  return (
+    <div className='md:col-span-2 p-6 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg'>
+      <h3 className='text-red-700 dark:text-red-400 font-medium mb-2'>Đã xảy ra lỗi khi tải dữ liệu tab</h3>
+      <p className='text-red-600 dark:text-red-300 text-sm'>Vui lòng thử tải lại trang hoặc liên hệ đội kỹ thuật</p>
     </div>
   )
 }

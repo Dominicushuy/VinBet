@@ -1,7 +1,7 @@
 // src/components/admin/game-detail/tabs/WinnersTab.jsx
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -34,6 +34,35 @@ export function WinnersTab({ game, winners, isLoading, onViewUser }) {
   const totalWinAmount = useMemo(() => {
     return winners.reduce((sum, winner) => sum + (winner.potential_win || 0), 0)
   }, [winners])
+
+  // Thêm hàm xuất danh sách
+  const handleExportWinners = useCallback(() => {
+    if (!winners.length) return
+
+    // Tạo content CSV
+    const headers = ['ID', 'Người chơi', 'Số đã chọn', 'Số tiền đặt', 'Tiền thắng', 'Thời gian']
+    const rows = winners.map(winner => [
+      winner.id,
+      winner.profiles?.display_name || winner.profiles?.username,
+      winner.chosen_number,
+      winner.amount,
+      winner.potential_win,
+      format(new Date(winner.created_at), 'dd/MM/yyyy HH:mm:ss')
+    ])
+
+    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n')
+
+    // Tạo file và download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.setAttribute('href', url)
+    link.setAttribute('download', `winners-${game.id.substring(0, 8)}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }, [winners, game.id])
 
   if (isLoading) {
     return (
@@ -78,13 +107,19 @@ export function WinnersTab({ game, winners, isLoading, onViewUser }) {
           />
         </div>
 
-        <Button variant='outline' size='sm' className='w-full sm:w-auto'>
+        <Button
+          variant='outline'
+          size='sm'
+          className='w-full sm:w-auto'
+          onClick={handleExportWinners}
+          disabled={!winners.length}
+        >
           <Download className='h-4 w-4 mr-2' />
           Xuất danh sách
         </Button>
       </div>
 
-      <div className='rounded-md border'>
+      <div className='rounded-md border overflow-x-auto'>
         <Table>
           <TableHeader>
             <TableRow>

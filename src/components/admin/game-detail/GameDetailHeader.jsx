@@ -35,9 +35,9 @@ export function GameDetailHeader({
   }
 
   return (
-    <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center'>
+    <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0'>
       <div className='flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 mb-4 sm:mb-0 w-full sm:w-auto'>
-        <Button variant='outline' size='sm' onClick={onBack} className='w-full sm:w-auto'>
+        <Button variant='outline' size='sm' onClick={onBack} className='w-auto'>
           <ArrowLeft className='mr-2 h-4 w-4' />
           Quay lại
         </Button>
@@ -45,8 +45,8 @@ export function GameDetailHeader({
         {getStatusBadge(game.status)}
       </div>
 
-      <div className='flex flex-wrap gap-2 mt-4 sm:mt-0 w-full sm:w-auto'>
-        <Button onClick={onRefresh} variant='outline' size='sm' className='w-full sm:w-auto'>
+      <div className='flex flex-wrap gap-2 mt-2 sm:mt-0 w-full sm:w-auto'>
+        <Button onClick={onRefresh} variant='outline' size='sm' className='w-auto'>
           <RefreshCw className='mr-2 h-4 w-4' />
           Làm mới
         </Button>
@@ -55,7 +55,8 @@ export function GameDetailHeader({
           <Button
             onClick={onOpenResultDialog}
             variant='default'
-            className='bg-green-600 hover:bg-green-700 w-full sm:w-auto'
+            size='sm'
+            className='bg-green-600 hover:bg-green-700 w-auto'
           >
             <Trophy className='mr-2 h-4 w-4' />
             Nhập kết quả
@@ -63,7 +64,7 @@ export function GameDetailHeader({
         )}
 
         {canActivate && (
-          <Button onClick={onOpenStatusDialog} variant='default' className='w-full sm:w-auto'>
+          <Button onClick={onOpenStatusDialog} variant='default' size='sm' className='w-auto'>
             <Clock className='mr-2 h-4 w-4' />
             Kích hoạt
           </Button>
@@ -73,7 +74,8 @@ export function GameDetailHeader({
           <Button
             onClick={onOpenCancelDialog}
             variant='outline'
-            className='text-red-500 border-red-300 hover:bg-red-50 w-full sm:w-auto'
+            size='sm'
+            className='text-red-500 border-red-300 hover:bg-red-50 w-auto'
           >
             <XCircle className='mr-2 h-4 w-4' />
             Hủy lượt chơi

@@ -1,7 +1,7 @@
 // src/components/admin/game-detail/tabs/BetsTab.jsx
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -12,30 +12,17 @@ import { Users, Search, Eye, BarChart2, Filter } from 'lucide-react'
 import { format } from 'date-fns'
 import { formatCurrency } from '@/utils/formatUtils'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useGameBetsQuery } from '@/hooks/queries/useGameQueries'
 
-export function BetsTab({ game, betStats, isLoading, onViewUser, onSelectNumber, selectedNumber }) {
+export function BetsTab({ game, gameId, betStats, isLoading, onViewUser, onSelectNumber, selectedNumber }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [bets, setBets] = useState([])
 
-  // Giả lập việc lấy dữ liệu cược từ API
-  useEffect(() => {
-    // Trong thực tế, dữ liệu cược nên được truyền từ API hoặc parent component
-    const placeholderBets = [...Array(10)].map((_, i) => ({
-      id: `bet-${i}`,
-      profile_id: `user-${i}`,
-      username: `Người dùng ${i + 1}`,
-      email: `user${i + 1}@example.com`,
-      avatar_url: null,
-      chosen_number: `${Math.floor(Math.random() * 100)}`,
-      amount: 100000 * (i + 1),
-      potential_win: 900000 * (i + 1),
-      status: game.status === 'completed' ? (i % 3 === 0 ? 'won' : 'lost') : 'pending',
-      created_at: new Date(new Date().getTime() - i * 3600000).toISOString()
-    }))
+  // Fetch real bet data
+  const { data: betsData, isLoading: isBetsLoading } = useGameBetsQuery(gameId)
 
-    setBets(placeholderBets)
-  }, [game.status])
+  // Get real bets data
+  const bets = useMemo(() => betsData?.bets || [], [betsData])
 
   // Lọc danh sách cược dựa trên tìm kiếm và filter
   const filteredBets = useMemo(() => {
@@ -52,9 +39,14 @@ export function BetsTab({ game, betStats, isLoading, onViewUser, onSelectNumber,
 
       // Lọc theo từ khóa tìm kiếm
       if (searchTerm) {
+        const username = bet.profiles?.username || ''
+        const displayName = bet.profiles?.display_name || ''
+        const email = bet.profiles?.email || ''
+
         return (
-          bet.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          bet.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          email.toLowerCase().includes(searchTerm.toLowerCase()) ||
           bet.chosen_number.includes(searchTerm)
         )
       }
@@ -81,7 +73,7 @@ export function BetsTab({ game, betStats, isLoading, onViewUser, onSelectNumber,
     }
   }
 
-  if (isLoading) {
+  if (isLoading || isBetsLoading) {
     return (
       <div className='space-y-2'>
         {[...Array(5)].map((_, i) => (
@@ -139,7 +131,7 @@ export function BetsTab({ game, betStats, isLoading, onViewUser, onSelectNumber,
         </div>
       </div>
 
-      <div className='rounded-md border'>
+      <div className='rounded-md border overflow-x-auto'>
         <Table>
           <TableHeader>
             <TableRow>
@@ -165,12 +157,14 @@ export function BetsTab({ game, betStats, isLoading, onViewUser, onSelectNumber,
                   <TableCell>
                     <div className='flex items-center gap-2'>
                       <Avatar className='h-8 w-8'>
-                        <AvatarImage src={bet.avatar_url} alt={bet.username} />
-                        <AvatarFallback>{bet.username[0].toUpperCase()}</AvatarFallback>
+                        <AvatarImage src={bet.profiles?.avatar_url} alt={bet.profiles?.username} />
+                        <AvatarFallback>
+                          {(bet.profiles?.display_name || bet.profiles?.username || 'U')[0].toUpperCase()}
+                        </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className='text-sm font-medium'>{bet.username}</p>
-                        <p className='text-xs text-muted-foreground'>{bet.email}</p>
+                        <p className='text-sm font-medium'>{bet.profiles?.display_name || bet.profiles?.username}</p>
+                        <p className='text-xs text-muted-foreground'>{bet.profiles?.email}</p>
                       </div>
                     </div>
                   </TableCell>

@@ -16,7 +16,8 @@ export function GameDetailTabs({
   onSetResult,
   onViewUser,
   onSelectNumber,
-  selectedNumber
+  selectedNumber,
+  gameId
 }) {
   return (
     <Card className='md:col-span-2'>
@@ -37,6 +38,7 @@ export function GameDetailTabs({
         <TabsContent value='bets' className='mt-0'>
           <BetsTab
             game={game}
+            gameId={gameId}
             betStats={betStats}
             isLoading={isResultsLoading}
             onViewUser={onViewUser}

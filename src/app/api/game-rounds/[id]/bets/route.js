@@ -86,7 +86,7 @@ export async function GET(request, { params }) {
       .select(
         `
         *,
-        profiles:profile_id(id, username, display_name, avatar_url)
+        profiles:profile_id(id, username, display_name, email, avatar_url)
       `
       )
       .eq('game_round_id', gameRoundId)
