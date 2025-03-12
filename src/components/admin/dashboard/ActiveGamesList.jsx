@@ -4,14 +4,34 @@ import { useActiveGamesQuery } from '@/hooks/queries/useGameQueries'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Clock, PlayCircle, Users } from 'lucide-react'
+import { Clock, PlayCircle, Users, AlertCircle } from 'lucide-react'
 import { format, formatDistanceToNow } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
 
 export function ActiveGamesList() {
   const router = useRouter()
-  const { data, isLoading } = useActiveGamesQuery()
+  const { data, isLoading, error } = useActiveGamesQuery({
+    onError: err => {
+      console.error('Failed to fetch active games:', err)
+    }
+  })
+
+  // Xử lý trường hợp lỗi
+  if (error) {
+    return (
+      <div className='border border-destructive/20 bg-destructive/10 p-4 rounded-md'>
+        <div className='flex items-center text-destructive mb-2'>
+          <AlertCircle className='h-4 w-4 mr-2' />
+          <p className='text-sm font-medium'>Không thể tải dữ liệu</p>
+        </div>
+        <p className='text-sm text-muted-foreground'>Đã xảy ra lỗi khi tải danh sách trò chơi.</p>
+        <Button variant='outline' size='sm' className='mt-2' onClick={() => window.location.reload()}>
+          Thử lại
+        </Button>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -44,6 +64,28 @@ export function ActiveGamesList() {
     )
   }
 
+  // Hàm an toàn để format ngày tháng
+  const safeFormatDistance = dateString => {
+    try {
+      return formatDistanceToNow(new Date(dateString), {
+        addSuffix: true,
+        locale: vi
+      })
+    } catch (err) {
+      console.error('Date parsing error:', err)
+      return 'Không xác định'
+    }
+  }
+
+  const safeFormat = (dateString, formatString) => {
+    try {
+      return format(new Date(dateString), formatString)
+    } catch (err) {
+      console.error('Date formatting error:', err)
+      return 'N/A'
+    }
+  }
+
   return (
     <div className='space-y-3'>
       {activeGames.map(game => (
@@ -53,20 +95,15 @@ export function ActiveGamesList() {
           onClick={() => router.push(`/admin/games/${game.id}`)}
         >
           <div className='flex justify-between items-start mb-1'>
-            <div className='font-medium truncate'>Game #{game.id.substring(0, 8)}</div>
-            <Badge variant='outline' className='bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'>
+            <div className='font-medium truncate'>Game #{game.id ? game.id.substring(0, 8) : 'N/A'}</div>
+            <Badge variant='success' className='bg-success/20 text-success'>
               Đang diễn ra
             </Badge>
           </div>
 
           <div className='flex items-center text-sm text-muted-foreground mb-1'>
             <Clock className='h-3.5 w-3.5 mr-1' />
-            <span>
-              {formatDistanceToNow(new Date(game.end_time), {
-                addSuffix: true,
-                locale: vi
-              })}
-            </span>
+            <span>{game.end_time ? safeFormatDistance(game.end_time) : 'Thời gian không xác định'}</span>
           </div>
 
           <div className='flex justify-between items-center mt-2 text-sm'>
@@ -74,7 +111,9 @@ export function ActiveGamesList() {
               <Users className='h-3.5 w-3.5 mr-1' />
               <span>{(game.bets_count && game.bets_count.count) || 0} lượt cược</span>
             </div>
-            <span className='text-xs font-medium'>{format(new Date(game.start_time), 'HH:mm, dd/MM/yyyy')}</span>
+            <span className='text-xs font-medium'>
+              {game.start_time ? safeFormat(game.start_time, 'HH:mm, dd/MM/yyyy') : 'N/A'}
+            </span>
           </div>
         </div>
       ))}

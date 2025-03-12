@@ -1,5 +1,3 @@
-// src/app/(admin)/layout.jsx
-
 import { redirect } from 'next/navigation'
 import { checkAdminAuth } from '@/middleware/adminAuth'
 import { AdminHeader } from '@/components/admin/layout/AdminHeader'
@@ -25,29 +23,34 @@ function AdminContentLoading() {
 }
 
 export default async function AdminLayout({ children }) {
-  // Sử dụng middleware để kiểm tra quyền admin
-  const { redirect: redirectInfo, userProfile } = await checkAdminAuth()
+  try {
+    // Sử dụng middleware để kiểm tra quyền admin
+    const { redirect: redirectInfo, userProfile } = await checkAdminAuth()
 
-  // Nếu không có quyền, chuyển hướng
-  if (redirectInfo) {
-    redirect(redirectInfo.destination)
-  }
+    // Nếu không có quyền, chuyển hướng
+    if (redirectInfo) {
+      redirect(redirectInfo.destination)
+    }
 
-  // Nếu có userProfile, render layout
-  return (
-    <div className='min-h-screen bg-background flex flex-col'>
-      <AdminHeader userProfile={userProfile} />
-      <div className='flex-1 flex'>
-        <AdminSidebar />
-        <main className='flex-1 p-0 md:p-6 overflow-auto'>
-          <div className='container mx-auto max-w-7xl'>
-            <Suspense fallback={<AdminContentLoading />}>{children}</Suspense>
-          </div>
-        </main>
+    // Nếu có userProfile, render layout
+    return (
+      <div className='min-h-screen bg-background flex flex-col'>
+        <AdminHeader userProfile={userProfile || {}} />
+        <div className='flex-1 flex'>
+          <AdminSidebar />
+          <main className='flex-1 p-0 md:p-6 overflow-auto'>
+            <div className='container mx-auto max-w-7xl'>
+              <Suspense fallback={<AdminContentLoading />}>{children}</Suspense>
+            </div>
+          </main>
+        </div>
+        <AdminFooter />
       </div>
-      <AdminFooter />
-    </div>
-  )
+    )
+  } catch (error) {
+    console.error('Admin layout error:', error)
+    redirect('/login')
+  }
 }
 
 // Loading component cho Next.js App Router

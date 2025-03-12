@@ -6,10 +6,11 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { ArrowUpRight, ArrowDownRight, ExternalLink } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, ExternalLink, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { useRouter } from 'next/navigation'
 import { formatCurrency } from '@/utils/formatUtils'
+import { cn } from '@/lib/utils'
 
 export function RecentTransactions() {
   const router = useRouter()
@@ -19,7 +20,10 @@ export function RecentTransactions() {
     pageSize: 10,
     page: 1,
     sortBy: 'created_at',
-    sortOrder: 'desc'
+    sortOrder: 'desc',
+    onError: err => {
+      console.error('Failed to fetch transactions:', err)
+    }
   })
 
   const transactions = data?.transactions || []
@@ -27,9 +31,10 @@ export function RecentTransactions() {
   // Xử lý lỗi nếu có
   if (error) {
     return (
-      <div className='rounded-md bg-red-50 p-4 border border-red-200 dark:bg-red-900/20 dark:border-red-800'>
-        <div className='text-sm text-red-700 dark:text-red-400'>
-          Không thể tải dữ liệu giao dịch. Vui lòng thử lại sau.
+      <div className='rounded-md bg-destructive/10 p-4 border border-destructive/20'>
+        <div className='flex items-center'>
+          <AlertCircle className='h-4 w-4 mr-2 text-destructive' />
+          <div className='text-sm text-destructive'>Không thể tải dữ liệu giao dịch. Vui lòng thử lại sau.</div>
         </div>
       </div>
     )
@@ -38,9 +43,9 @@ export function RecentTransactions() {
   const getTransactionIcon = type => {
     switch (type) {
       case 'deposit':
-        return <ArrowUpRight className='h-4 w-4 text-green-500' />
+        return <ArrowUpRight className='h-4 w-4 text-success' />
       case 'withdrawal':
-        return <ArrowDownRight className='h-4 w-4 text-red-500' />
+        return <ArrowDownRight className='h-4 w-4 text-destructive' />
       default:
         return null
     }
@@ -49,10 +54,10 @@ export function RecentTransactions() {
   const getTransactionStatusBadge = status => {
     switch (status) {
       case 'completed':
-        return <Badge className='bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'>Hoàn thành</Badge>
+        return <Badge variant='success'>Hoàn thành</Badge>
       case 'pending':
         return (
-          <Badge variant='outline' className='bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'>
+          <Badge variant='outline' className='bg-warning/20 text-warning'>
             Đang xử lý
           </Badge>
         )
@@ -76,7 +81,39 @@ export function RecentTransactions() {
       case 'referral_reward':
         return 'Thưởng giới thiệu'
       default:
-        return type
+        return type || 'Không xác định'
+    }
+  }
+
+  // Hàm format an toàn cho ngày tháng
+  const safeFormat = (dateString, formatString = 'HH:mm, dd/MM/yyyy') => {
+    try {
+      return format(new Date(dateString), formatString)
+    } catch (err) {
+      console.error('Date formatting error:', err, dateString)
+      return 'N/A'
+    }
+  }
+
+  // Hàm format an toàn cho tiền tệ
+  const safeFormatCurrency = amount => {
+    try {
+      const numAmount = Number(amount)
+      if (isNaN(numAmount)) return '0 ₫'
+      return formatCurrency(Math.abs(numAmount))
+    } catch (err) {
+      console.error('Currency formatting error:', err)
+      return '0 ₫'
+    }
+  }
+
+  // Hàm an toàn lấy ID profile
+  const getProfileIdDisplay = profileId => {
+    if (!profileId) return 'N/A'
+    try {
+      return `ID: ${profileId.substring(0, 8)}...`
+    } catch (err) {
+      return 'ID: N/A'
     }
   }
 
@@ -99,7 +136,7 @@ export function RecentTransactions() {
     )
   }
 
-  if (transactions.length === 0) {
+  if (!transactions || transactions.length === 0) {
     return (
       <div className='flex flex-col items-center justify-center h-[200px] bg-muted/20 rounded-md'>
         <p className='text-muted-foreground text-center'>Không có giao dịch nào gần đây</p>
@@ -109,7 +146,7 @@ export function RecentTransactions() {
 
   return (
     <div>
-      <div className='rounded-md border'>
+      <div className='rounded-md border overflow-x-auto'>
         <Table>
           <TableHeader>
             <TableRow>
@@ -135,7 +172,7 @@ export function RecentTransactions() {
                         {transaction.display_name || transaction.username || 'Người dùng'}
                       </span>
                       <span className='text-xs text-muted-foreground'>
-                        ID: {transaction.profile_id.substring(0, 8)}...
+                        {getProfileIdDisplay(transaction.profile_id)}
                       </span>
                     </div>
                   </div>
@@ -147,28 +184,32 @@ export function RecentTransactions() {
                   </div>
                 </TableCell>
                 <TableCell
-                  className={
+                  className={cn(
+                    'font-medium',
                     transaction.type === 'deposit' ||
-                    transaction.type === 'win' ||
-                    transaction.type === 'referral_reward'
-                      ? 'text-green-600 font-medium'
-                      : 'text-red-600 font-medium'
-                  }
+                      transaction.type === 'win' ||
+                      transaction.type === 'referral_reward'
+                      ? 'text-success'
+                      : 'text-destructive'
+                  )}
                 >
                   {transaction.type === 'deposit' ||
                   transaction.type === 'win' ||
                   transaction.type === 'referral_reward'
                     ? '+'
                     : '-'}
-                  {formatCurrency(Math.abs(transaction.amount))}
+                  {safeFormatCurrency(transaction.amount)}
                 </TableCell>
                 <TableCell>{getTransactionStatusBadge(transaction.status)}</TableCell>
-                <TableCell>{format(new Date(transaction.created_at), 'HH:mm, dd/MM/yyyy')}</TableCell>
+                <TableCell>{safeFormat(transaction.created_at)}</TableCell>
                 <TableCell className='text-right'>
                   <Button
                     variant='ghost'
                     size='sm'
-                    onClick={() => router.push(`/admin/transactions/${transaction.id}`)}
+                    onClick={e => {
+                      e.stopPropagation()
+                      router.push(`/admin/transactions/${transaction.id}`)
+                    }}
                   >
                     <ExternalLink className='h-4 w-4' />
                   </Button>
