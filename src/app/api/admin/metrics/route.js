@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
+import { handleApiError } from '@/utils/errorHandler'
 
 // Cache response for metrics API
 export const revalidate = 300 // Cache trong 5 phút (300 giây)
@@ -60,8 +61,7 @@ export async function GET(request) {
     })
 
     if (error) {
-      console.error('Error fetching admin metrics:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Lỗi khi lấy dữ liệu metrics')
     }
 
     const response = NextResponse.json({ metrics: metrics || [] })
@@ -71,12 +71,6 @@ export async function GET(request) {
 
     return response
   } catch (error) {
-    console.error('Admin metrics request error:', error)
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
-    }
-
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Lỗi khi lấy dữ liệu metrics')
   }
 }

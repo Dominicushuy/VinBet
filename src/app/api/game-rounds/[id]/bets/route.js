@@ -1,9 +1,10 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
+import { handleApiError } from '@/utils/errorHandler'
 
 // Đặt cược mới
 export async function POST(request, { params }) {
@@ -39,27 +40,19 @@ export async function POST(request, { params }) {
     })
 
     if (error) {
-      console.error('Error placing bet:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Lỗi khi đặt cược')
     }
 
     // Fetch bet details
     const { data: betData, error: betError } = await supabase.from('bets').select('*').eq('id', data).single()
 
     if (betError) {
-      console.error('Error fetching bet data:', betError)
-      return NextResponse.json({ error: betError.message }, { status: 500 })
+      return handleApiError(betError, 'Lỗi khi lấy thông tin cược')
     }
 
     return NextResponse.json({ bet: betData }, { status: 201 })
   } catch (error) {
-    console.error('Place bet error:', error)
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
-    }
-
-    return NextResponse.json({ error: 'Đặt cược thất bại' }, { status: 500 })
+    return handleApiError(error, 'Đặt cược thất bại')
   }
 }
 
@@ -100,13 +93,11 @@ export async function GET(request, { params }) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Error fetching bets:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Lỗi khi lấy danh sách cược')
     }
 
     return NextResponse.json({ bets }, { status: 200 })
   } catch (error) {
-    console.error('Fetch bets error:', error)
-    return NextResponse.json({ error: 'Không thể lấy danh sách cược' }, { status: 500 })
+    return handleApiError(error, 'Không thể lấy danh sách cược')
   }
 }

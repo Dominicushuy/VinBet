@@ -1,10 +1,11 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { handleApiError } from '@/utils/errorHandler'
 
 const updateUserSchema = z.object({
   display_name: z.string().optional(),
@@ -44,8 +45,7 @@ export async function GET(request, { params }) {
     const { data: user, error: userError } = await supabase.from('profiles').select('*').eq('id', userId).single()
 
     if (userError) {
-      console.error('Error fetching user:', userError)
-      return NextResponse.json({ error: userError.message }, { status: 500 })
+      return handleApiError(userError, 'Lỗi khi lấy thông tin người dùng')
     }
 
     if (!user) {
@@ -56,8 +56,7 @@ export async function GET(request, { params }) {
     const { data: stats, error: statsError } = await supabase.rpc('get_user_admin_stats', { p_user_id: userId })
 
     if (statsError) {
-      console.error('Error fetching user stats:', statsError)
-      return NextResponse.json({ error: statsError.message }, { status: 500 })
+      return handleApiError(statsError, 'Lỗi khi lấy thống kê người dùng')
     }
 
     // Fetch recent bets
@@ -69,8 +68,7 @@ export async function GET(request, { params }) {
       .limit(5)
 
     if (betsError) {
-      console.error('Error fetching user bets:', betsError)
-      return NextResponse.json({ error: betsError.message }, { status: 500 })
+      return handleApiError(betsError, 'Lỗi khi lấy lịch sử đặt cược')
     }
 
     // Fetch recent transactions
@@ -82,8 +80,7 @@ export async function GET(request, { params }) {
       .limit(5)
 
     if (transactionsError) {
-      console.error('Error fetching user transactions:', transactionsError)
-      return NextResponse.json({ error: transactionsError.message }, { status: 500 })
+      return handleApiError(transactionsError, 'Lỗi khi lấy lịch sử giao dịch')
     }
 
     return NextResponse.json({
@@ -93,8 +90,7 @@ export async function GET(request, { params }) {
       recentTransactions: recentTransactions || []
     })
   } catch (error) {
-    console.error('Admin user detail fetch error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Lỗi khi lấy thông tin người dùng')
   }
 }
 
@@ -140,8 +136,7 @@ export async function PUT(request, { params }) {
       .single()
 
     if (error) {
-      console.error('Error updating user:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Lỗi khi cập nhật thông tin người dùng')
     }
 
     // If blocking user, we should log them out by invalidating their sessions
@@ -151,12 +146,6 @@ export async function PUT(request, { params }) {
 
     return NextResponse.json({ user })
   } catch (error) {
-    console.error('Admin user update error:', error)
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
-    }
-
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Lỗi khi cập nhật thông tin người dùng')
   }
 }

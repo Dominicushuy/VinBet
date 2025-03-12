@@ -1,8 +1,9 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { handleApiError } from '@/utils/errorHandler'
 
 export async function GET() {
   try {
@@ -29,8 +30,7 @@ export async function GET() {
     const { data: summary, error } = await supabase.rpc('get_admin_dashboard_summary')
 
     if (error) {
-      console.error('Error fetching dashboard summary:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Lỗi khi lấy thông tin dashboard')
     }
 
     // Get transaction summary (last 30 days)
@@ -40,8 +40,7 @@ export async function GET() {
     })
 
     if (transactionError) {
-      console.error('Error fetching transaction summary:', transactionError)
-      return NextResponse.json({ error: transactionError.message }, { status: 500 })
+      return handleApiError(transactionError, 'Lỗi khi lấy thông tin tổng hợp giao dịch')
     }
 
     return NextResponse.json({
@@ -49,7 +48,6 @@ export async function GET() {
       transactionSummary: transactionSummary[0] || {}
     })
   } catch (error) {
-    console.error('Dashboard summary request error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Lỗi khi lấy thông tin dashboard')
   }
 }

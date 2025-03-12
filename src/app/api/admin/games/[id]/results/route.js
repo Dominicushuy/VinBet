@@ -1,9 +1,10 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
+import { handleApiError } from '@/utils/errorHandler'
 
 const gameResultSchema = z.object({
   result: z.string().min(1, 'Kết quả là bắt buộc'),
@@ -41,8 +42,7 @@ export async function POST(request, { params }) {
       .single()
 
     if (gameError || !game) {
-      console.error('Error fetching game:', gameError)
-      return NextResponse.json({ error: gameError?.message || 'Game not found' }, { status: 404 })
+      return handleApiError(gameError, 'Game not found')
     }
 
     if (game.status !== 'active') {
@@ -61,8 +61,7 @@ export async function POST(request, { params }) {
     })
 
     if (error) {
-      console.error('Error setting game result:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Lỗi khi cập nhật kết quả trò chơi')
     }
 
     // Create admin log entry
@@ -83,12 +82,6 @@ export async function POST(request, { params }) {
       game: data[0]
     })
   } catch (error) {
-    console.error('Set game result error:', error)
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
-    }
-
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Lỗi khi thiết lập kết quả trò chơi')
   }
 }

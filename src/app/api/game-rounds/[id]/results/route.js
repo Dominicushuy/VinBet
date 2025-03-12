@@ -1,8 +1,9 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { handleApiError } from '@/utils/errorHandler'
 
 export async function GET(request, { params }) {
   try {
@@ -24,8 +25,7 @@ export async function GET(request, { params }) {
       .single()
 
     if (error) {
-      console.error('Error fetching game round:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Lỗi khi lấy thông tin lượt chơi')
     }
 
     if (!gameRound) {
@@ -43,8 +43,7 @@ export async function GET(request, { params }) {
     })
 
     if (betStatsError) {
-      console.error('Error fetching bet statistics:', betStatsError)
-      return NextResponse.json({ error: betStatsError.message }, { status: 500 })
+      return handleApiError(betStatsError, 'Lỗi khi lấy thống kê cược')
     }
 
     return NextResponse.json({
@@ -57,8 +56,7 @@ export async function GET(request, { params }) {
       }
     })
   } catch (error) {
-    console.error('Game round results request error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Lỗi khi lấy kết quả lượt chơi')
   }
 }
 

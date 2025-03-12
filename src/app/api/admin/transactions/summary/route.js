@@ -1,9 +1,10 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
+import { handleApiError } from '@/utils/errorHandler'
 
 const getSummarySchema = z.object({
   startDate: z.string().optional(),
@@ -47,18 +48,11 @@ export async function GET(request) {
     })
 
     if (error) {
-      console.error('Error fetching admin transaction summary:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Lỗi khi lấy thông tin tổng hợp giao dịch')
     }
 
     return NextResponse.json({ summary: summary[0] || {} })
   } catch (error) {
-    console.error('Admin transaction summary request error:', error)
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
-    }
-
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Lỗi khi lấy thông tin tổng hợp giao dịch')
   }
 }

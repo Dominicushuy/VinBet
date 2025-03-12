@@ -1,9 +1,10 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
+import { handleApiError } from '@/utils/errorHandler'
 
 const getUsersSchema = z.object({
   query: z.string().optional(),
@@ -64,8 +65,7 @@ export async function GET(request) {
     const { data: users, error, count } = await query
 
     if (error) {
-      console.error('Error fetching users:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Lỗi khi lấy danh sách người dùng')
     }
 
     return NextResponse.json({
@@ -78,7 +78,6 @@ export async function GET(request) {
       }
     })
   } catch (error) {
-    console.error('Admin users fetch error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Lỗi khi lấy danh sách người dùng')
   }
 }

@@ -1,9 +1,10 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
+import { handleApiError } from '@/utils/errorHandler'
 
 // GET: Lấy thông tin chi tiết của một game round
 export async function GET(request, { params }) {
@@ -32,8 +33,7 @@ export async function GET(request, { params }) {
       .single()
 
     if (error) {
-      console.error('Error fetching game round:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Lỗi khi lấy thông tin game round')
     }
 
     if (!gameRound) {
@@ -42,8 +42,7 @@ export async function GET(request, { params }) {
 
     return NextResponse.json({ gameRound }, { status: 200 })
   } catch (error) {
-    console.error('Game round request error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Lỗi khi lấy thông tin game round')
   }
 }
 
@@ -90,8 +89,7 @@ export async function PATCH(request, { params }) {
     })
 
     if (error) {
-      console.error('Error updating game round:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Lỗi khi cập nhật game round')
     }
 
     return NextResponse.json(
@@ -102,12 +100,6 @@ export async function PATCH(request, { params }) {
       { status: 200 }
     )
   } catch (error) {
-    console.error('Update game round error:', error)
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
-    }
-
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Lỗi khi cập nhật game round')
   }
 }

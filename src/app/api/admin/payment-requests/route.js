@@ -1,10 +1,10 @@
-// src/app/api/admin/payment-requests/route.ts (update)
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
+import { handleApiError } from '@/utils/errorHandler'
 
 const getPaymentRequestsSchema = z.object({
   type: z.enum(['deposit', 'withdrawal']).optional(),
@@ -98,8 +98,7 @@ export async function GET(request) {
     const { data: paymentRequests, error, count } = await query
 
     if (error) {
-      console.error('Error fetching payment requests:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Lỗi khi lấy danh sách yêu cầu thanh toán')
     }
 
     return NextResponse.json({
@@ -112,12 +111,6 @@ export async function GET(request) {
       }
     })
   } catch (error) {
-    console.error('Payment requests fetch error:', error)
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
-    }
-
-    return NextResponse.json({ error: 'Không thể lấy danh sách yêu cầu' }, { status: 500 })
+    return handleApiError(error, 'Không thể lấy danh sách yêu cầu thanh toán')
   }
 }

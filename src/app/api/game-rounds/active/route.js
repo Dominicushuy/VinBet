@@ -1,8 +1,9 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { handleApiError } from '@/utils/errorHandler'
 
 export async function GET() {
   try {
@@ -27,8 +28,7 @@ export async function GET() {
       .limit(5)
 
     if (activeError) {
-      console.error('Error fetching active game rounds:', activeError)
-      return NextResponse.json({ error: activeError.message }, { status: 500 })
+      return handleApiError(activeError, 'Lỗi khi lấy lượt chơi đang diễn ra')
     }
 
     // Lấy các game rounds sắp diễn ra
@@ -41,8 +41,7 @@ export async function GET() {
       .limit(5)
 
     if (upcomingError) {
-      console.error('Error fetching upcoming game rounds:', upcomingError)
-      return NextResponse.json({ error: upcomingError.message }, { status: 500 })
+      return handleApiError(upcomingError, 'Lỗi khi lấy lượt chơi sắp diễn ra')
     }
 
     return NextResponse.json(
@@ -53,7 +52,6 @@ export async function GET() {
       { status: 200 }
     )
   } catch (error) {
-    console.error('Active game rounds request error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Lỗi khi lấy danh sách lượt chơi')
   }
 }

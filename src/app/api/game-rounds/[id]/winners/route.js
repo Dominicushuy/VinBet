@@ -1,8 +1,9 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { handleApiError } from '@/utils/errorHandler'
 
 export async function GET(request, { params }) {
   try {
@@ -24,8 +25,7 @@ export async function GET(request, { params }) {
       .single()
 
     if (gameError) {
-      console.error('Error fetching game round:', gameError)
-      return NextResponse.json({ error: gameError.message }, { status: 500 })
+      return handleApiError(gameError, 'Lỗi khi lấy thông tin lượt chơi')
     }
 
     if (!gameRound) {
@@ -60,8 +60,7 @@ export async function GET(request, { params }) {
       .order('potential_win', { ascending: false })
 
     if (winnersError) {
-      console.error('Error fetching winners:', winnersError)
-      return NextResponse.json({ error: winnersError.message }, { status: 500 })
+      return handleApiError(winnersError, 'Lỗi khi lấy danh sách người thắng cuộc')
     }
 
     return NextResponse.json({
@@ -69,8 +68,7 @@ export async function GET(request, { params }) {
       winners: winners || []
     })
   } catch (error) {
-    console.error('Game round winners request error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Lỗi khi lấy danh sách người thắng cuộc')
   }
 }
 

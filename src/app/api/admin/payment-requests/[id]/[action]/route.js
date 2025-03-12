@@ -1,9 +1,10 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
+import { handleApiError } from '@/utils/errorHandler'
 
 const actionSchema = z.object({
   notes: z.string().optional()
@@ -74,18 +75,14 @@ export async function POST(request, { params }) {
     }
 
     if (result.error) {
-      console.error(`Error ${action}ing payment request:`, result.error)
-      return NextResponse.json({ error: result.error.message }, { status: 500 })
+      return handleApiError(
+        result.error,
+        `Lỗi khi ${action === 'approve' ? 'phê duyệt' : 'từ chối'} yêu cầu thanh toán`
+      )
     }
 
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (error) {
-    console.error('Payment request action error:', error)
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
-    }
-
-    return NextResponse.json({ error: 'Không thể xử lý yêu cầu thanh toán' }, { status: 500 })
+    return handleApiError(error, 'Không thể xử lý yêu cầu thanh toán')
   }
 }

@@ -1,10 +1,11 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { sendTelegramMessage } from '@/utils/telegram'
+import { handleApiError } from '@/utils/errorHandler'
 
 const sendNotificationSchema = z.object({
   title: z.string().min(1, 'Tiêu đề không được để trống'),
@@ -48,8 +49,7 @@ export async function POST(request) {
         .select('id, telegram_id, notification_settings')
 
       if (usersError) {
-        console.error('Error fetching users:', usersError)
-        return NextResponse.json({ error: usersError.message }, { status: 500 })
+        return handleApiError(usersError, 'Lỗi khi lấy danh sách người dùng')
       }
 
       // Gửi thông báo cho từng người dùng
@@ -94,8 +94,7 @@ export async function POST(request) {
         .single()
 
       if (userError) {
-        console.error('Error fetching user:', userError)
-        return NextResponse.json({ error: 'Người dùng không tồn tại' }, { status: 404 })
+        return handleApiError(userError, 'Người dùng không tồn tại')
       }
 
       // Gửi thông báo cho người dùng cụ thể
@@ -133,12 +132,6 @@ export async function POST(request) {
 
     return NextResponse.json({ success: true, count })
   } catch (error) {
-    console.error('Send notification error:', error)
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
-    }
-
-    return NextResponse.json({ error: 'Không thể gửi thông báo' }, { status: 500 })
+    return handleApiError(error, 'Không thể gửi thông báo')
   }
 }

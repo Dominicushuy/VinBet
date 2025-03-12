@@ -1,8 +1,9 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { handleApiError } from '@/utils/errorHandler'
 
 export async function GET(request, { params }) {
   try {
@@ -26,13 +27,11 @@ export async function GET(request, { params }) {
     })
 
     if (error) {
-      console.error('Error fetching user bets:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Lỗi khi lấy danh sách cược của bạn')
     }
 
     return NextResponse.json({ bets: data || [] }, { status: 200 })
   } catch (error) {
-    console.error('Fetch user bets error:', error)
-    return NextResponse.json({ error: 'Không thể lấy danh sách cược của bạn' }, { status: 500 })
+    return handleApiError(error, 'Không thể lấy danh sách cược của bạn')
   }
 }
