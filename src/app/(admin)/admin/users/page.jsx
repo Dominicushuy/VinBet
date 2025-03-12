@@ -2,6 +2,7 @@
 import { Suspense } from 'react'
 import { AdminUserManagement } from '@/components/admin/user'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AdminBreadcrumb } from '@/components/admin/layout/AdminBreadcrumb'
 
 export const metadata = {
   title: 'Quản lý người dùng - Admin - VinBet',
@@ -11,6 +12,7 @@ export const metadata = {
 export default function AdminUsersPage() {
   return (
     <div className='space-y-6'>
+      <AdminBreadcrumb />
       <Suspense fallback={<UserManagementSkeleton />}>
         <AdminUserManagement />
       </Suspense>

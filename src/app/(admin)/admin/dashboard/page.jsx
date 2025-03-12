@@ -2,6 +2,7 @@
 import { Suspense } from 'react'
 import { AdminDashboard } from '@/components/admin/dashboard'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AdminBreadcrumb } from '@/components/admin/layout/AdminBreadcrumb'
 
 export const metadata = {
   title: 'Admin Dashboard - VinBet',
@@ -11,6 +12,8 @@ export const metadata = {
 export default function AdminDashboardPage() {
   return (
     <div className='space-y-6'>
+      <AdminBreadcrumb />
+
       <Suspense fallback={<DashboardSkeleton />}>
         <AdminDashboard />
       </Suspense>

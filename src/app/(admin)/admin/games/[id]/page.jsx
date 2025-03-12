@@ -2,6 +2,7 @@
 import { Suspense } from 'react'
 import { AdminGameDetail } from '@/components/admin/game-detail'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AdminBreadcrumb } from '@/components/admin/layout/AdminBreadcrumb'
 
 export const metadata = {
   title: 'Chi tiết lượt chơi - Admin - VinBet',
@@ -11,6 +12,7 @@ export const metadata = {
 export default function GameDetailPage({ params }) {
   return (
     <div className='space-y-6'>
+      <AdminBreadcrumb />
       <Suspense fallback={<GameDetailSkeleton />}>
         <AdminGameDetail gameId={params.id} />
       </Suspense>

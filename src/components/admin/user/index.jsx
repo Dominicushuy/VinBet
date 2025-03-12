@@ -336,11 +336,6 @@ export function AdminUserManagement() {
   return (
     <div className='space-y-6'>
       <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4'>
-        <div>
-          <h2 className='text-2xl font-bold tracking-tight'>Quản lý người dùng</h2>
-          <p className='text-muted-foreground'>Quản lý danh sách người dùng trên hệ thống VinBet</p>
-        </div>
-
         <div className='flex flex-wrap gap-2'>
           <Button onClick={() => refetch()} variant='outline' size='sm'>
             <RefreshCw className='mr-2 h-4 w-4' />

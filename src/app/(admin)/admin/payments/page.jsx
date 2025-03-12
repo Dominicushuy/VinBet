@@ -2,6 +2,7 @@
 import { Suspense } from 'react'
 import { PaymentRequestsManagement } from '@/components/admin/payment-request'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AdminBreadcrumb } from '@/components/admin/layout/AdminBreadcrumb'
 
 export const metadata = {
   title: 'Quản lý thanh toán - Admin - VinBet',
@@ -11,6 +12,7 @@ export const metadata = {
 export default function AdminPaymentsPage() {
   return (
     <div className='space-y-6'>
+      <AdminBreadcrumb />
       <Suspense fallback={<PaymentRequestsSkeleton />}>
         <PaymentRequestsManagement />
       </Suspense>

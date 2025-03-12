@@ -2,6 +2,7 @@
 import { Suspense } from 'react'
 import { AdminUserDetail } from '@/components/admin/user-detail'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AdminBreadcrumb } from '@/components/admin/layout/AdminBreadcrumb'
 
 export const metadata = {
   title: 'Chi tiết người dùng - Admin - VinBet',
@@ -11,6 +12,7 @@ export const metadata = {
 export default function AdminUserDetailPage({ params }) {
   return (
     <div className='space-y-6'>
+      <AdminBreadcrumb />
       <Suspense fallback={<UserDetailSkeleton />}>
         <AdminUserDetail userId={params.id} />
       </Suspense>

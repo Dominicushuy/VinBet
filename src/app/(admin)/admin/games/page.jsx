@@ -2,6 +2,7 @@
 import { Suspense } from 'react'
 import { AdminGameManagement } from '@/components/admin/game'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AdminBreadcrumb } from '@/components/admin/layout/AdminBreadcrumb'
 
 export const metadata = {
   title: 'Quản lý trò chơi - Admin - VinBet',
@@ -11,6 +12,7 @@ export const metadata = {
 export default function AdminGamesPage() {
   return (
     <div className='space-y-6'>
+      <AdminBreadcrumb />
       <Suspense fallback={<GameManagementSkeleton />}>
         <AdminGameManagement />
       </Suspense>
