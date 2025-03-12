@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useCallback } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Bell, Sun, Moon, Search, User, LogOut, Settings } from 'lucide-react'
@@ -17,50 +17,38 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { toast } from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
-import { ResponsiveAdminMenu } from './ResponsiveAdminMenu' // Import ResponsiveAdminMenu
+import { ResponsiveAdminMenu } from './ResponsiveAdminMenu'
 import { useAuth } from '@/hooks/useAuth'
 
 export function AdminHeader({ userProfile }) {
   const { theme, setTheme } = useTheme()
   const { signOut } = useAuth()
   const router = useRouter()
-  const [mounted, setMounted] = useState(false)
 
-  // Xử lý mounted để tránh hydration error
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  const toggleTheme = () => {
+  // Sử dụng useCallback để tránh tạo hàm mới mỗi lần render
+  const toggleTheme = useCallback(() => {
     setTheme(theme === 'dark' ? 'light' : 'dark')
-  }
+  }, [theme, setTheme])
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       await signOut()
       router.push('/login')
       toast.success('Đăng xuất thành công')
     } catch (error) {
+      console.error('Logout error:', error)
       toast.error('Có lỗi xảy ra khi đăng xuất')
     }
-  }
+  }, [signOut, router])
 
-  // Chỉ render khi đã mounted để tránh hydration error
-  if (!mounted) {
-    return (
-      <header className='sticky top-0 z-40 border-b bg-background'>
-        <div className='container flex h-16 items-center justify-between px-4 md:px-6'>
-          {/* Placeholder skeleton */}
-        </div>
-      </header>
-    )
-  }
+  // Kiểm tra hydration bằng cách kiểm tra DOM, tránh state/effect
+  const isClient = typeof window !== 'undefined'
+  const currentTheme = isClient ? theme : 'light'
 
   return (
     <header className='sticky top-0 z-40 border-b bg-background'>
       <div className='container flex h-16 items-center justify-between px-4 md:px-6'>
         <div className='flex items-center gap-4'>
-          {/* Thay thế nút toggle bằng component ResponsiveAdminMenu */}
           <ResponsiveAdminMenu />
 
           <Link href='/admin/dashboard' className='flex items-center gap-2'>
@@ -72,27 +60,37 @@ export function AdminHeader({ userProfile }) {
         <div className='hidden md:flex items-center gap-2 md:gap-4 lg:gap-6'>
           <div className='relative w-full max-w-[300px]'>
             <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
-            <Input type='search' placeholder='Tìm kiếm...' className='w-full pl-8 rounded-full bg-muted' />
+            <Input
+              type='search'
+              placeholder='Tìm kiếm...'
+              className='w-full pl-8 rounded-full bg-muted'
+              aria-label='Tìm kiếm'
+            />
           </div>
         </div>
 
         <div className='flex items-center gap-2'>
-          <Button variant='ghost' size='icon'>
+          <Button variant='ghost' size='icon' aria-label='Thông báo'>
             <Bell size={20} />
-            <span className='sr-only'>Thông báo</span>
             <span className='absolute top-1 right-1 flex h-2 w-2 rounded-full bg-red-600'></span>
           </Button>
 
-          <Button variant='ghost' size='icon' onClick={toggleTheme}>
-            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-            <span className='sr-only'>Chuyển chế độ</span>
-          </Button>
+          {isClient && (
+            <Button
+              variant='ghost'
+              size='icon'
+              onClick={toggleTheme}
+              aria-label={`Chuyển sang chế độ ${currentTheme === 'dark' ? 'sáng' : 'tối'}`}
+            >
+              {currentTheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            </Button>
+          )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant='ghost' size='icon' className='rounded-full h-8 w-8 overflow-hidden'>
                 <Avatar className='h-8 w-8'>
-                  <AvatarImage src={userProfile?.avatar} />
+                  <AvatarImage src={userProfile?.avatar} alt={userProfile?.name || 'Avatar'} />
                   <AvatarFallback>{userProfile?.name?.charAt(0).toUpperCase() || 'A'}</AvatarFallback>
                 </Avatar>
               </Button>
