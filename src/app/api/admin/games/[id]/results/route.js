@@ -1,3 +1,4 @@
+// src/app/api/admin/games/[id]/results/route.js
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
@@ -11,8 +12,17 @@ const gameResultSchema = z.object({
   notes: z.string().optional()
 })
 
+// UUID validation regex
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function POST(request, { params }) {
   try {
+    // Validate gameId format
+    const gameId = params.id
+    if (!gameId || !uuidRegex.test(gameId)) {
+      return NextResponse.json({ error: 'Invalid game ID format' }, { status: 400 })
+    }
+
     const supabase = createRouteHandlerClient({ cookies })
 
     // Kiểm tra session
@@ -32,12 +42,10 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 })
     }
 
-    const gameId = params.id
-
     // Validate game exists and can be completed
     const { data: game, error: gameError } = await supabase
       .from('game_rounds')
-      .select('id, status')
+      .select('id, status, end_time')
       .eq('id', gameId)
       .single()
 
@@ -49,9 +57,35 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Only active games can be completed with results' }, { status: 400 })
     }
 
-    // Parse request body
-    const body = await request.json()
-    const validatedData = gameResultSchema.parse(body)
+    // Check if game has ended
+    const now = new Date()
+    const endTime = new Date(game.end_time)
+    if (now < endTime) {
+      return NextResponse.json(
+        {
+          error: 'Game has not ended yet. Results can only be set after the end time.'
+        },
+        { status: 400 }
+      )
+    }
+
+    // Parse and validate request body
+    let validatedData
+    try {
+      const body = await request.json()
+      validatedData = gameResultSchema.parse(body)
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(
+          {
+            error: 'Invalid input data',
+            details: error.errors
+          },
+          { status: 400 }
+        )
+      }
+      throw error
+    }
 
     // Update game round status with result
     const { data, error } = await supabase.rpc('update_game_round_status', {
@@ -72,7 +106,8 @@ export async function POST(request, { params }) {
       entity_id: gameId,
       details: {
         result: validatedData.result,
-        notes: validatedData.notes
+        notes: validatedData.notes,
+        timestamp: new Date().toISOString()
       }
     })
 
