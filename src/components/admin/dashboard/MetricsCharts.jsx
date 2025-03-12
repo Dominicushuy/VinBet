@@ -1,8 +1,6 @@
-import { useMemo } from 'react'
+import React, { useMemo, useCallback } from 'react'
 import {
-  LineChart,
   Line,
-  BarChart,
   Bar,
   XAxis,
   YAxis,
@@ -17,14 +15,16 @@ import { format, parseISO } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import { formatCurrency } from '@/utils/formatUtils'
 
-export function MetricsCharts({ data, interval, visibleCharts }) {
-  const formatValue = value => {
+export const MetricsCharts = React.memo(function MetricsCharts({ data, interval, visibleCharts }) {
+  // Format function memoized to avoid recreation on every render
+  const formatValue = useCallback(value => {
     return new Intl.NumberFormat('vi-VN', {
       notation: 'compact',
       compactDisplay: 'short'
     }).format(value)
-  }
+  }, [])
 
+  // Memoize data processing to avoid expensive operations on re-renders
   const processedData = useMemo(() => {
     return data.map(item => ({
       ...item,
@@ -131,4 +131,4 @@ export function MetricsCharts({ data, interval, visibleCharts }) {
       </ComposedChart>
     </ResponsiveContainer>
   )
-}
+})

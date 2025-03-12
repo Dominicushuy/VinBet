@@ -5,6 +5,13 @@ import { z } from 'zod'
 import { handleApiError } from '@/utils/errorHandler'
 import { createAdminApiHandler } from '@/utils/adminAuthHandler'
 
+// Helper function to sanitize search queries and prevent SQL injection
+function sanitizeSearchQuery(query) {
+  if (!query) return ''
+  // Remove special characters and brackets that could be used for SQL injection
+  return query.replace(/[;'"\\{}()]/g, '').trim()
+}
+
 const getUsersSchema = z.object({
   query: z.string().optional(),
   page: z.string().optional(),
@@ -25,7 +32,10 @@ export const GET = createAdminApiHandler(async (request, _, { supabase }) => {
     const page = Number(validatedParams.page) || 1
     const pageSize = Number(validatedParams.pageSize) || 10
     const offset = (page - 1) * pageSize
-    const searchQuery = validatedParams.query?.trim().toLowerCase() || ''
+
+    // Sanitize search query to prevent SQL injection
+    const searchQuery = sanitizeSearchQuery(validatedParams.query?.trim().toLowerCase()) || ''
+
     const sortBy = validatedParams.sortBy || 'created_at'
     const sortOrder = validatedParams.sortOrder === 'asc' ? 'asc' : 'desc'
     const status = validatedParams.status || 'all'
@@ -33,7 +43,7 @@ export const GET = createAdminApiHandler(async (request, _, { supabase }) => {
     // Build query
     let query = supabase.from('profiles').select('*', { count: 'exact' })
 
-    // Apply search filter if provided - FIX SQL INJECTION
+    // Apply search filter with sanitized input
     if (searchQuery) {
       query = query.or([
         { username: { ilike: `%${searchQuery}%` } },

@@ -1,3 +1,5 @@
+// src/app/(admin)/layout.jsx
+
 import { redirect } from 'next/navigation'
 import { checkAdminAuth } from '@/middleware/adminAuth'
 import { AdminHeader } from '@/components/admin/layout/AdminHeader'

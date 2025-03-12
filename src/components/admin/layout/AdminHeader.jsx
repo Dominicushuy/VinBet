@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Bell, Sun, Moon, Search, User, LogOut, Settings } from 'lucide-react'
@@ -24,6 +24,12 @@ export function AdminHeader({ userProfile }) {
   const { theme, setTheme } = useTheme()
   const { signOut } = useAuth()
   const router = useRouter()
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Handle client-side mounting
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Sử dụng useCallback để tránh tạo hàm mới mỗi lần render
   const toggleTheme = useCallback(() => {
@@ -41,9 +47,21 @@ export function AdminHeader({ userProfile }) {
     }
   }, [signOut, router])
 
-  // Kiểm tra hydration bằng cách kiểm tra DOM, tránh state/effect
-  const isClient = typeof window !== 'undefined'
-  const currentTheme = isClient ? theme : 'light'
+  // Render theme toggle chỉ ở client-side
+  const renderThemeToggle = () => {
+    if (!isMounted) return null
+
+    return (
+      <Button
+        variant='ghost'
+        size='icon'
+        onClick={toggleTheme}
+        aria-label={`Chuyển sang chế độ ${theme === 'dark' ? 'sáng' : 'tối'}`}
+      >
+        {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+      </Button>
+    )
+  }
 
   return (
     <header className='sticky top-0 z-40 border-b bg-background'>
@@ -75,16 +93,7 @@ export function AdminHeader({ userProfile }) {
             <span className='absolute top-1 right-1 flex h-2 w-2 rounded-full bg-red-600'></span>
           </Button>
 
-          {isClient && (
-            <Button
-              variant='ghost'
-              size='icon'
-              onClick={toggleTheme}
-              aria-label={`Chuyển sang chế độ ${currentTheme === 'dark' ? 'sáng' : 'tối'}`}
-            >
-              {currentTheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-            </Button>
-          )}
+          {renderThemeToggle()}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

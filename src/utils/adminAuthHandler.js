@@ -16,12 +16,8 @@ export function createAdminApiHandler(handler) {
 
       // Kiểm tra session
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-      if (sessionError) {
-        console.error('Session error:', sessionError)
-        return NextResponse.json({ error: 'Authentication error' }, { status: 401 })
-      }
-
-      if (!sessionData.session) {
+      if (sessionError || !sessionData.session) {
+        console.error('Authentication error:', sessionError)
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
 
@@ -32,16 +28,12 @@ export function createAdminApiHandler(handler) {
         .eq('id', sessionData.session.user.id)
         .single()
 
-      if (profileError) {
-        console.error('Profile fetch error:', profileError)
-        return handleApiError(profileError, 'Lỗi khi kiểm tra quyền')
-      }
-
-      if (!profileData?.is_admin) {
+      if (profileError || !profileData?.is_admin) {
+        console.error('Permission error:', profileError)
         return NextResponse.json({ error: 'Permission denied' }, { status: 403 })
       }
 
-      // Gọi handler chính với supabase client và user
+      // Gọi handler chính
       return await handler(request, context, {
         supabase,
         user: sessionData.session.user
