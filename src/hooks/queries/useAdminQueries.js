@@ -5,7 +5,6 @@ import { fetchData, postData, buildQueryString } from '@/utils/fetchUtils'
 import { GAME_QUERY_KEYS } from './useGameQueries'
 
 // Query keys - theo chuẩn để tránh key conflicts
-// Removed useCallback memoization as requested
 export const ADMIN_QUERY_KEYS = {
   paymentRequests: params => ['admin', 'payment-requests', params],
   usersList: params => ['admin', 'users', params],
@@ -15,8 +14,33 @@ export const ADMIN_QUERY_KEYS = {
   user: id => ['admin', 'user', id]
 }
 
-// Timeout chung cho tất cả API requests
-const API_TIMEOUT = 30000 // 30 giây
+// Timeout settings for different types of operations
+const TIMEOUTS = {
+  default: 10000, // 10s
+  dashboard: 20000, // 20s
+  userDetail: 15000, // 15s
+  longOperation: 30000, // 30s
+  export: 40000, // 40s
+  payment: 15000 // 15s
+}
+
+// Hàm helper với timeout theo loại
+const withTimeout = async (promise, timeoutMs = TIMEOUTS.default) => {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    const result = await promise(controller.signal)
+    clearTimeout(timeoutId)
+    return result
+  } catch (error) {
+    clearTimeout(timeoutId)
+    if (error.name === 'AbortError') {
+      throw new Error('Yêu cầu bị hủy do quá thời gian')
+    }
+    throw error
+  }
+}
 
 // API functions
 export const adminApi = {
@@ -34,42 +58,15 @@ export const adminApi = {
       sortOrder: params?.sortOrder
     })
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT)
-
-    try {
-      const result = await fetchData(`/api/admin/payment-requests${queryString}`, {
-        signal: controller.signal
-      })
-      clearTimeout(timeoutId)
-      return result
-    } catch (error) {
-      clearTimeout(timeoutId)
-      if (error.name === 'AbortError') {
-        throw new Error('Yêu cầu bị hủy do quá thời gian')
-      }
-      throw error
-    }
+    return withTimeout(signal => fetchData(`/api/admin/payment-requests${queryString}`, { signal }), TIMEOUTS.payment)
   },
 
   // Phê duyệt/từ chối payment request
   processPaymentRequest: async (id, action, data) => {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT)
-
-    try {
-      const result = await postData(`/api/admin/payment-requests/${id}/${action}`, data, {
-        signal: controller.signal
-      })
-      clearTimeout(timeoutId)
-      return result
-    } catch (error) {
-      clearTimeout(timeoutId)
-      if (error.name === 'AbortError') {
-        throw new Error('Yêu cầu bị hủy do quá thời gian')
-      }
-      throw error
-    }
+    return withTimeout(
+      signal => postData(`/api/admin/payment-requests/${id}/${action}`, data, { signal }),
+      TIMEOUTS.payment
+    )
   },
 
   // Lấy danh sách người dùng
@@ -83,42 +80,12 @@ export const adminApi = {
       status: params?.status
     })
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT)
-
-    try {
-      const result = await fetchData(`/api/admin/users${queryString}`, {
-        signal: controller.signal
-      })
-      clearTimeout(timeoutId)
-      return result
-    } catch (error) {
-      clearTimeout(timeoutId)
-      if (error.name === 'AbortError') {
-        throw new Error('Yêu cầu bị hủy do quá thời gian')
-      }
-      throw error
-    }
+    return withTimeout(signal => fetchData(`/api/admin/users${queryString}`, { signal }), TIMEOUTS.default)
   },
 
   // Lấy thống kê dashboard
   getDashboardStats: async () => {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT)
-
-    try {
-      const result = await fetchData('/api/admin/dashboard-summary', {
-        signal: controller.signal
-      })
-      clearTimeout(timeoutId)
-      return result
-    } catch (error) {
-      clearTimeout(timeoutId)
-      if (error.name === 'AbortError') {
-        throw new Error('Yêu cầu bị hủy do quá thời gian')
-      }
-      throw error
-    }
+    return withTimeout(signal => fetchData('/api/admin/dashboard-summary', { signal }), TIMEOUTS.dashboard)
   },
 
   // Lấy metrics theo thời gian
@@ -129,112 +96,68 @@ export const adminApi = {
       interval: params?.interval
     })
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT)
-
-    try {
-      const result = await fetchData(`/api/admin/metrics${queryString}`, {
-        signal: controller.signal
-      })
-      clearTimeout(timeoutId)
-      return result
-    } catch (error) {
-      clearTimeout(timeoutId)
-      if (error.name === 'AbortError') {
-        throw new Error('Yêu cầu bị hủy do quá thời gian')
-      }
-      throw error
-    }
+    return withTimeout(signal => fetchData(`/api/admin/metrics${queryString}`, { signal }), TIMEOUTS.dashboard)
   },
 
   getUserDetail: async userId => {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT)
-
-    try {
-      const result = await fetchData(`/api/admin/users/${userId}`, {
-        signal: controller.signal
-      })
-      clearTimeout(timeoutId)
-      return result
-    } catch (error) {
-      clearTimeout(timeoutId)
-      if (error.name === 'AbortError') {
-        throw new Error('Yêu cầu bị hủy do quá thời gian')
-      }
-      throw error
-    }
+    return withTimeout(signal => fetchData(`/api/admin/users/${userId}`, { signal }), TIMEOUTS.userDetail)
   },
 
   // Improved error handling for updateUser
   updateUser: async (userId, data) => {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT)
-
-    try {
-      if (!userId) {
-        throw new Error('ID người dùng không hợp lệ')
-      }
-
-      const result = await postData(`/api/admin/users/${userId}`, data, {
-        method: 'PUT',
-        signal: controller.signal
-      })
-      clearTimeout(timeoutId)
-      return result
-    } catch (error) {
-      clearTimeout(timeoutId)
-      if (error.name === 'AbortError') {
-        throw new Error('Cập nhật thông tin bị hủy do quá thời gian')
-      }
-      // Enhanced error handling
-      if (error.status === 404) {
-        throw new Error('Không tìm thấy người dùng')
-      } else if (error.status === 403) {
-        throw new Error('Bạn không có quyền cập nhật thông tin người dùng này')
-      } else if (error.status === 400) {
-        throw new Error(error.message || 'Dữ liệu không hợp lệ')
-      }
-      throw error
+    if (!userId) {
+      throw new Error('ID người dùng không hợp lệ')
     }
+
+    return withTimeout(async signal => {
+      try {
+        const result = await postData(`/api/admin/users/${userId}`, data, {
+          method: 'PUT',
+          signal
+        })
+        return result
+      } catch (error) {
+        // Enhanced error handling
+        if (error.status === 404) {
+          throw new Error('Không tìm thấy người dùng')
+        } else if (error.status === 403) {
+          throw new Error('Bạn không có quyền cập nhật thông tin người dùng này')
+        } else if (error.status === 400) {
+          throw new Error(error.message || 'Dữ liệu không hợp lệ')
+        }
+        throw error
+      }
+    }, TIMEOUTS.longOperation)
   },
 
   // Improved error handling for setGameResult
   setGameResult: async (gameId, data) => {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT)
-
-    try {
-      if (!gameId) {
-        throw new Error('ID trận đấu không hợp lệ')
-      }
-
-      if (!data || !data.result) {
-        throw new Error('Thiếu thông tin kết quả trận đấu')
-      }
-
-      const result = await postData(`/api/admin/games/${gameId}/results`, data, {
-        signal: controller.signal
-      })
-      clearTimeout(timeoutId)
-      return result
-    } catch (error) {
-      clearTimeout(timeoutId)
-      if (error.name === 'AbortError') {
-        throw new Error('Cập nhật kết quả bị hủy do quá thời gian')
-      }
-      // Enhanced error handling
-      if (error.status === 404) {
-        throw new Error('Không tìm thấy trận đấu')
-      } else if (error.status === 403) {
-        throw new Error('Bạn không có quyền cập nhật kết quả trận đấu này')
-      } else if (error.status === 400) {
-        throw new Error(error.message || 'Dữ liệu kết quả không hợp lệ')
-      } else if (error.status === 409) {
-        throw new Error('Trận đấu đã có kết quả và không thể cập nhật lại')
-      }
-      throw error
+    if (!gameId) {
+      throw new Error('ID trận đấu không hợp lệ')
     }
+
+    if (!data || !data.result) {
+      throw new Error('Thiếu thông tin kết quả trận đấu')
+    }
+
+    return withTimeout(async signal => {
+      try {
+        const result = await postData(`/api/admin/games/${gameId}/results`, data, { signal })
+        return result
+      } catch (error) {
+        // Enhanced error handling
+        if (error.status === 404) {
+          throw new Error('Không tìm thấy trận đấu')
+        } else if (error.status === 403) {
+          throw new Error('Bạn không có quyền cập nhật kết quả trận đấu này')
+        } else if (error.status === 400) {
+          throw new Error(error.message || 'Dữ liệu kết quả không hợp lệ')
+        } else if (error.status === 409) {
+          throw new Error('Trận đấu đã có kết quả và không thể cập nhật lại')
+        }
+        throw error
+      }
+    }, TIMEOUTS.longOperation)
   },
 
   getTransactions: async (params = {}) => {
@@ -249,48 +172,29 @@ export const adminApi = {
       sortOrder: params?.sortOrder || 'desc'
     })
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT)
-
-    try {
-      const result = await fetchData(`/api/admin/transactions${queryString}`, {
-        signal: controller.signal
-      })
-      clearTimeout(timeoutId)
-      return result
-    } catch (error) {
-      clearTimeout(timeoutId)
-      if (error.name === 'AbortError') {
-        throw new Error('Yêu cầu bị hủy do quá thời gian')
-      }
-      throw error
-    }
+    return withTimeout(signal => fetchData(`/api/admin/transactions${queryString}`, { signal }), TIMEOUTS.default)
   },
-  // Bổ sung vào adminApi object trong useAdminQueries.js
 
   exportUsers: async params => {
     const queryString = buildQueryString(params)
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT)
 
-    try {
-      const response = await fetch(`/api/admin/users/export${queryString}`, {
-        signal: controller.signal
-      })
+    return withTimeout(
+      async signal => {
+        const response = await fetch(`/api/admin/users/export${queryString}`, { signal })
+        if (!response.ok) {
+          throw new Error('Không thể xuất dữ liệu người dùng')
+        }
+        return response
+      },
+      TIMEOUTS.export // Long timeout for export operations
+    )
+  },
 
-      if (!response.ok) {
-        throw new Error('Không thể xuất dữ liệu người dùng')
-      }
-
-      clearTimeout(timeoutId)
-      return response
-    } catch (error) {
-      clearTimeout(timeoutId)
-      if (error.name === 'AbortError') {
-        throw new Error('Yêu cầu bị hủy do quá thời gian')
-      }
-      throw error
-    }
+  resetUserPassword: async userId => {
+    return withTimeout(
+      signal => postData(`/api/admin/users/${userId}/reset-password`, {}, { signal }),
+      TIMEOUTS.default
+    )
   }
 }
 
@@ -449,5 +353,23 @@ export function useProcessPaymentRequestMutation(options = {}) {
       }
     },
     ...options
+  })
+}
+
+export function useResetPasswordMutation(options = {}) {
+  return useMutation({
+    mutationFn: userId => adminApi.resetUserPassword(userId),
+    onSuccess: () => {
+      toast.success('Đã gửi email reset mật khẩu thành công')
+      if (options.onSuccess) {
+        options.onSuccess()
+      }
+    },
+    onError: error => {
+      toast.error(error.message || 'Không thể gửi reset mật khẩu')
+      if (options.onError) {
+        options.onError(error)
+      }
+    }
   })
 }

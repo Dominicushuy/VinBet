@@ -22,6 +22,12 @@ export async function GET(request, { params }) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
+    // Thêm validation userId
+    const userId = params.id
+    if (!userId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+      return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 })
+    }
+
     // Kiểm tra session
     const { data: sessionData } = await supabase.auth.getSession()
     if (!sessionData.session) {
@@ -38,8 +44,6 @@ export async function GET(request, { params }) {
     if (!profileData?.is_admin) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 })
     }
-
-    const userId = params.id
 
     // Fetch user profile
     const { data: user, error: userError } = await supabase.from('profiles').select('*').eq('id', userId).single()
@@ -98,6 +102,12 @@ export async function PUT(request, { params }) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
+    // Thêm validation userId - áp dụng cùng cách kiểm tra như trong GET
+    const userId = params.id
+    if (!userId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+      return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 })
+    }
+
     // Kiểm tra session
     const { data: sessionData } = await supabase.auth.getSession()
     if (!sessionData.session) {
@@ -115,7 +125,6 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 })
     }
 
-    const userId = params.id
     const body = await request.json()
     const validatedData = updateUserSchema.parse(body)
 
