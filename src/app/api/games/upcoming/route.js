@@ -1,8 +1,8 @@
+export const dynamic = 'force-dynamic'
+
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-
-export const dynamic = 'force-dynamic'
 
 export async function GET(request) {
   try {
@@ -12,10 +12,10 @@ export async function GET(request) {
     const url = new URL(request.url)
     const limit = parseInt(url.searchParams.get('limit') || '6')
 
-    // Lấy thời gian hiện tại
+    // Get current time
     const now = new Date().toISOString()
 
-    // Lấy các game rounds sắp diễn ra
+    // Get upcoming game rounds
     const { data, error } = await supabase
       .from('game_rounds')
       .select('*')

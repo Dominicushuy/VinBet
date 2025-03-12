@@ -1,14 +1,15 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { handleApiError } from '@/utils/errorHandler'
 
 export async function POST(request) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    // Kiểm tra session
+    // Check session
     const { data: sessionData } = await supabase.auth.getSession()
     if (!sessionData.session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -16,7 +17,7 @@ export async function POST(request) {
 
     const userId = sessionData.session.user.id
 
-    // Lấy form data từ request
+    // Get form data from request
     const formData = await request.formData()
     const file = formData.get('proof')
     const requestId = formData.get('requestId')
@@ -29,17 +30,17 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Request ID is required' }, { status: 400 })
     }
 
-    // Kiểm tra kiểu file
+    // Check file type
     if (!file.type.startsWith('image/')) {
       return NextResponse.json({ error: 'Only image files are allowed' }, { status: 400 })
     }
 
-    // Giới hạn kích thước file (2MB)
+    // Limit file size (2MB)
     if (file.size > 2 * 1024 * 1024) {
       return NextResponse.json({ error: 'File size must be less than 2MB' }, { status: 400 })
     }
 
-    // Kiểm tra payment request có tồn tại và thuộc về user không
+    // Check payment request exists and belongs to user
     const { data: paymentRequest, error: checkError } = await supabase
       .from('payment_requests')
       .select('id, status')
@@ -55,38 +56,40 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Can only upload proof for pending requests' }, { status: 400 })
     }
 
-    // Tạo tên file duy nhất
+    // Create unique file name
     const fileExt = file.name.split('.').pop()
     const fileName = `${requestId}-${Date.now()}.${fileExt}`
 
-    // Upload file lên Supabase Storage
+    // Upload file to Supabase Storage
     const { data, error } = await supabase.storage.from('payment_proofs').upload(fileName, file, {
       cacheControl: '3600',
       upsert: true
     })
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'File upload failed')
     }
 
-    // Lấy public URL của file
+    // Get public URL of the file
     const { data: publicUrlData } = supabase.storage.from('payment_proofs').getPublicUrl(fileName)
 
     const proofUrl = publicUrlData.publicUrl
 
-    // Cập nhật proof_url trong payment_request
+    // Update proof_url in payment_request
     const { error: updateError } = await supabase
       .from('payment_requests')
-      .update({ proof_url: proofUrl, updated_at: new Date().toISOString() })
+      .update({
+        proof_url: proofUrl,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', requestId)
 
     if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 })
+      return handleApiError(updateError, 'Error updating payment request')
     }
 
     return NextResponse.json({ success: true, proofUrl }, { status: 200 })
   } catch (error) {
-    console.error('Proof upload error:', error)
-    return NextResponse.json({ error: 'Proof upload failed' }, { status: 500 })
+    return handleApiError(error, 'Proof upload failed')
   }
 }

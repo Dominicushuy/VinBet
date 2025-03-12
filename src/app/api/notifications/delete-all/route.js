@@ -1,14 +1,15 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { handleApiError } from '@/utils/errorHandler'
 
 export async function DELETE(request) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    // Kiểm tra session
+    // Check session
     const { data: sessionData } = await supabase.auth.getSession()
     if (!sessionData.session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -32,13 +33,11 @@ export async function DELETE(request) {
     const { error } = await query
 
     if (error) {
-      console.error('Error deleting all notifications:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Error deleting all notifications')
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Delete all notifications error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Delete all notifications error')
   }
 }

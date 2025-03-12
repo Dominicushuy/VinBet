@@ -1,15 +1,15 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
-// src/app/api/notifications/count/route.ts
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { handleApiError } from '@/utils/errorHandler'
 
 export async function GET() {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    // Kiểm tra session
+    // Check session
     const { data: sessionData } = await supabase.auth.getSession()
     if (!sessionData.session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -23,13 +23,11 @@ export async function GET() {
     })
 
     if (error) {
-      console.error('Error fetching notification count:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Error fetching notification count')
     }
 
     return NextResponse.json({ count })
   } catch (error) {
-    console.error('Notification count request error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Notification count request error')
   }
 }

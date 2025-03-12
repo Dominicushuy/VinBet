@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
@@ -8,18 +8,12 @@ export async function GET() {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    // Kiểm tra session
-    const { data: sessionData } = await supabase.auth.getSession()
-
-    // Lấy jackpot hiện tại từ database
+    // Check current jackpot calculation from database function
     const { data, error } = await supabase.rpc('calculate_current_jackpot')
 
     if (error) {
       console.error('Error calculating jackpot:', error)
-      return NextResponse.json(
-        { error: error.message, jackpotAmount: 100000000 },
-        { status: 200 } // Vẫn trả về 200 nhưng với giá trị mặc định
-      )
+      return NextResponse.json({ error: error.message, jackpotAmount: 100000000 }, { status: 200 })
     }
 
     return NextResponse.json({
@@ -27,9 +21,6 @@ export async function GET() {
     })
   } catch (error) {
     console.error('Jackpot calculation error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', jackpotAmount: 100000000 },
-      { status: 200 } // Vẫn trả về 200 nhưng với giá trị mặc định
-    )
+    return NextResponse.json({ error: 'Internal server error', jackpotAmount: 100000000 }, { status: 200 })
   }
 }

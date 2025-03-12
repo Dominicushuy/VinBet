@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
@@ -8,7 +8,7 @@ export async function GET() {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    // Lấy danh sách người thắng gần đây
+    // Get recent winners
     const { data: winners, error } = await supabase
       .from('bets')
       .select(

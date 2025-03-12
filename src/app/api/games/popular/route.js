@@ -1,8 +1,8 @@
+export const dynamic = 'force-dynamic'
+
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-
-export const dynamic = 'force-dynamic'
 
 export async function GET(request) {
   try {
@@ -12,7 +12,7 @@ export async function GET(request) {
     const url = new URL(request.url)
     const limit = parseInt(url.searchParams.get('limit') || '6')
 
-    // Lấy danh sách game rounds phổ biến dựa vào số lượng bets
+    // Get popular game rounds based on bet count
     const { data, error } = await supabase
       .from('game_rounds')
       .select(
@@ -22,7 +22,7 @@ export async function GET(request) {
         end_time, 
         status, 
         result,
-        bets:bets(count)
+        bets(count)
       `
       )
       .eq('status', 'active')
@@ -34,7 +34,7 @@ export async function GET(request) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Format data để trả về
+    // Format data to return
     const gameRounds = data.map(game => ({
       id: game.id,
       start_time: game.start_time,

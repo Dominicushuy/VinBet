@@ -1,9 +1,10 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
+import { handleApiError } from '@/utils/errorHandler'
 
 const settingsSchema = z.object({
   email_notifications: z.boolean().default(true),
@@ -23,7 +24,7 @@ export async function GET() {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    // Kiểm tra session
+    // Check session
     const { data: sessionData } = await supabase.auth.getSession()
     if (!sessionData.session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -39,8 +40,7 @@ export async function GET() {
       .single()
 
     if (error) {
-      console.error('Error fetching notification settings:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Error fetching notification settings')
     }
 
     // Default settings if none exist
@@ -62,8 +62,7 @@ export async function GET() {
 
     return NextResponse.json({ settings })
   } catch (error) {
-    console.error('Notification settings request error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Notification settings request error')
   }
 }
 
@@ -72,7 +71,7 @@ export async function PUT(request) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    // Kiểm tra session
+    // Check session
     const { data: sessionData } = await supabase.auth.getSession()
     if (!sessionData.session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -96,18 +95,11 @@ export async function PUT(request) {
       .single()
 
     if (error) {
-      console.error('Error updating notification settings:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Error updating notification settings')
     }
 
     return NextResponse.json({ settings: data.notification_settings })
   } catch (error) {
-    console.error('Update notification settings error:', error)
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
-    }
-
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error)
   }
 }

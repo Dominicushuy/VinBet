@@ -1,14 +1,15 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { handleApiError } from '@/utils/errorHandler'
 
 export async function POST() {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    // Kiểm tra session
+    // Check session
     const { data: sessionData } = await supabase.auth.getSession()
     if (!sessionData.session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -22,13 +23,11 @@ export async function POST() {
     })
 
     if (error) {
-      console.error('Error marking all notifications as read:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Error marking all notifications as read')
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Mark all notifications read error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Mark all notifications read error')
   }
 }

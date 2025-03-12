@@ -1,16 +1,17 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
+import { handleApiError } from '@/utils/errorHandler'
 
 const createWithdrawalSchema = z.object({
   amount: z
     .number()
-    .positive('Số tiền phải lớn hơn 0')
-    .min(50000, 'Số tiền tối thiểu là 50,000 VND')
-    .max(50000000, 'Số tiền tối đa là 50,000,000 VND'),
+    .positive('Amount must be positive')
+    .min(50000, 'Minimum withdrawal is 50,000 VND')
+    .max(50000000, 'Maximum withdrawal is 50,000,000 VND'),
   paymentMethod: z.string(),
   paymentDetails: z.record(z.any()).optional()
 })
@@ -19,7 +20,7 @@ export async function POST(request) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    // Kiểm tra session
+    // Check session
     const { data: sessionData } = await supabase.auth.getSession()
     if (!sessionData.session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -27,23 +28,23 @@ export async function POST(request) {
 
     const userId = sessionData.session.user.id
 
-    // Lấy thông tin user
+    // Get user's balance
     const { data: user } = await supabase.from('profiles').select('balance').eq('id', userId).single()
 
     if (!user) {
-      return NextResponse.json({ error: 'Không tìm thấy thông tin người dùng' }, { status: 404 })
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Parse và validate body request
+    // Parse and validate body
     const body = await request.json()
     const validatedData = createWithdrawalSchema.parse(body)
 
-    // Kiểm tra số dư
+    // Check balance
     if (user.balance < validatedData.amount) {
-      return NextResponse.json({ error: 'Số dư không đủ để thực hiện giao dịch này' }, { status: 400 })
+      return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 })
     }
 
-    // Tạo yêu cầu rút tiền
+    // Create withdrawal request
     const { data: withdrawalRequest, error } = await supabase.rpc('create_payment_request', {
       p_profile_id: userId,
       p_amount: validatedData.amount,
@@ -53,22 +54,15 @@ export async function POST(request) {
     })
 
     if (error) {
-      console.error('Error creating withdrawal request:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Error creating withdrawal request')
     }
 
     return NextResponse.json({
       requestId: withdrawalRequest,
-      message: 'Yêu cầu rút tiền đã được tạo thành công'
+      message: 'Withdrawal request created successfully'
     })
   } catch (error) {
-    console.error('Withdrawal request error:', error)
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
-    }
-
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error)
   }
 }
 
@@ -76,7 +70,7 @@ export async function GET(request) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    // Kiểm tra session
+    // Check session
     const { data: sessionData } = await supabase.auth.getSession()
     if (!sessionData.session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -112,8 +106,7 @@ export async function GET(request) {
     const { data: paymentRequests, error, count } = await query
 
     if (error) {
-      console.error('Error fetching withdrawal requests:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Error fetching withdrawal requests')
     }
 
     return NextResponse.json({
@@ -126,7 +119,6 @@ export async function GET(request) {
       }
     })
   } catch (error) {
-    console.error('Withdrawal requests fetch error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error)
   }
 }
