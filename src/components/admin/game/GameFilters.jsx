@@ -26,7 +26,7 @@ export function GameFilters({ onSearch, onDateFilter, onPageSizeChange, pageSize
       <div className='flex flex-wrap items-center gap-2 w-full md:w-auto'>
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant='outline' size='sm'>
+            <Button variant='outline' size='sm' className='w-full sm:w-auto'>
               <Filter className='mr-2 h-4 w-4' />
               <span className='hidden sm:inline'>Bộ lọc</span>
               <ChevronDown className='ml-2 h-4 w-4' />
@@ -112,7 +112,7 @@ export function GameFilters({ onSearch, onDateFilter, onPageSizeChange, pageSize
           </PopoverContent>
         </Popover>
 
-        <form onSubmit={handleSearchSubmit} className='flex items-center space-x-1'>
+        <form onSubmit={handleSearchSubmit} className='flex items-center space-x-1 flex-1 sm:flex-auto'>
           <Input
             placeholder='Tìm kiếm...'
             className='w-full sm:w-[150px] h-8'
@@ -121,13 +121,14 @@ export function GameFilters({ onSearch, onDateFilter, onPageSizeChange, pageSize
           />
           <Button type='submit' variant='ghost' size='icon' className='h-8 w-8'>
             <Search className='h-4 w-4' />
+            <span className='sr-only'>Tìm kiếm</span>
           </Button>
         </form>
       </div>
 
       <div className='flex items-center space-x-2 w-full md:w-auto'>
         <Select value={pageSize.toString()} onValueChange={onPageSizeChange}>
-          <SelectTrigger className='w-[120px] h-8'>
+          <SelectTrigger className='w-full sm:w-[120px] h-8'>
             <SelectValue placeholder='10 mỗi trang' />
           </SelectTrigger>
           <SelectContent>

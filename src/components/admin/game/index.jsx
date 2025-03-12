@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -37,6 +37,7 @@ export function AdminGameManagement() {
   const [selectedGame, setSelectedGame] = useState(null)
   const [sortField, setSortField] = useState('created_at')
   const [sortDirection, setSortDirection] = useState('desc')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Custom hooks
   const { dialogs, openDialog, closeDialog } = useDialogState()
@@ -78,6 +79,13 @@ export function AdminGameManagement() {
       },
     [data, filters.page, filters.pageSize]
   )
+
+  // Reset submitting state when mutations are done
+  useEffect(() => {
+    if (!createGameRoundMutation.isLoading && !updateGameRoundMutation.isLoading && !setGameResultMutation.isLoading) {
+      setIsSubmitting(false)
+    }
+  }, [createGameRoundMutation.isLoading, updateGameRoundMutation.isLoading, setGameResultMutation.isLoading])
 
   // Xử lý khi thay đổi tab
   const handleTabChange = useCallback(
@@ -126,9 +134,13 @@ export function AdminGameManagement() {
   // Xử lý tạo game round
   const handleCreateGameRound = useCallback(
     data => {
+      setIsSubmitting(true)
       createGameRoundMutation.mutate(data, {
         onSuccess: () => {
           closeDialog('create')
+        },
+        onError: () => {
+          setIsSubmitting(false)
         }
       })
     },
@@ -140,6 +152,7 @@ export function AdminGameManagement() {
     data => {
       if (!selectedGame) return
 
+      setIsSubmitting(true)
       updateGameRoundMutation.mutate(
         {
           id: selectedGame.id,
@@ -151,6 +164,9 @@ export function AdminGameManagement() {
         {
           onSuccess: () => {
             closeDialog('update')
+          },
+          onError: () => {
+            setIsSubmitting(false)
           }
         }
       )
@@ -163,6 +179,7 @@ export function AdminGameManagement() {
     data => {
       if (!selectedGame) return
 
+      setIsSubmitting(true)
       setGameResultMutation.mutate(
         {
           gameId: selectedGame.id,
@@ -174,12 +191,22 @@ export function AdminGameManagement() {
         {
           onSuccess: () => {
             closeDialog('result')
+          },
+          onError: () => {
+            setIsSubmitting(false)
           }
         }
       )
     },
     [selectedGame, setGameResultMutation, closeDialog]
   )
+
+  // Determine if any operation is in progress
+  const isOperationInProgress =
+    isSubmitting ||
+    createGameRoundMutation.isLoading ||
+    updateGameRoundMutation.isLoading ||
+    setGameResultMutation.isLoading
 
   return (
     <div className='space-y-6'>
@@ -191,11 +218,16 @@ export function AdminGameManagement() {
 
         <div className='flex flex-wrap gap-2 w-full sm:w-auto'>
           <Button onClick={refetch} variant='outline' size='sm' className='w-full sm:w-auto'>
-            <RefreshCw className='mr-2 h-4 w-4' />
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             Làm mới
           </Button>
 
-          <Button onClick={() => openDialog('create')} size='sm' className='w-full sm:w-auto'>
+          <Button
+            onClick={() => openDialog('create')}
+            size='sm'
+            className='w-full sm:w-auto'
+            disabled={isOperationInProgress}
+          >
             <Plus className='mr-2 h-4 w-4' />
             Tạo lượt chơi mới
           </Button>
@@ -268,14 +300,14 @@ export function AdminGameManagement() {
         open={dialogs.create}
         onClose={() => closeDialog('create')}
         onSubmit={handleCreateGameRound}
-        isLoading={createGameRoundMutation.isLoading}
+        isLoading={createGameRoundMutation.isLoading || isSubmitting}
       />
 
       <UpdateGameDialog
         open={dialogs.update}
         onClose={() => closeDialog('update')}
         onSubmit={handleUpdateGameRound}
-        isLoading={updateGameRoundMutation.isLoading}
+        isLoading={updateGameRoundMutation.isLoading || isSubmitting}
         game={selectedGame}
       />
 
@@ -283,7 +315,7 @@ export function AdminGameManagement() {
         open={dialogs.result}
         onClose={() => closeDialog('result')}
         onSubmit={handleSubmitResult}
-        isLoading={setGameResultMutation.isLoading}
+        isLoading={setGameResultMutation.isLoading || isSubmitting}
         game={selectedGame}
       />
     </div>

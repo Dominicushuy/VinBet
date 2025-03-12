@@ -35,7 +35,7 @@ export function GameTable({ gameRounds, pagination, onPageChange, onSort, onView
 
   return (
     <div>
-      <div className='rounded-md border'>
+      <div className='rounded-md border overflow-x-auto'>
         <Table>
           <TableHeader>
             <TableRow>
@@ -45,13 +45,13 @@ export function GameTable({ gameRounds, pagination, onPageChange, onSort, onView
                   <ArrowUpDown className='h-3 w-3' />
                 </div>
               </TableHead>
-              <TableHead>
+              <TableHead className='hidden md:table-cell'>
                 <div className='flex items-center space-x-1 cursor-pointer' onClick={() => onSort('start_time')}>
                   <span>Bắt đầu</span>
                   <ArrowUpDown className='h-3 w-3' />
                 </div>
               </TableHead>
-              <TableHead>
+              <TableHead className='hidden md:table-cell'>
                 <div className='flex items-center space-x-1 cursor-pointer' onClick={() => onSort('end_time')}>
                   <span>Kết thúc</span>
                   <ArrowUpDown className='h-3 w-3' />
@@ -59,7 +59,7 @@ export function GameTable({ gameRounds, pagination, onPageChange, onSort, onView
               </TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead>Kết quả</TableHead>
-              <TableHead>Thống kê</TableHead>
+              <TableHead className='hidden md:table-cell'>Thống kê</TableHead>
               <TableHead className='text-right'>Thao tác</TableHead>
             </TableRow>
           </TableHeader>
@@ -75,8 +75,13 @@ export function GameTable({ gameRounds, pagination, onPageChange, onSort, onView
                       <p className='text-xs font-mono'>{game.id}</p>
                     </HoverCardContent>
                   </HoverCard>
+                  <div className='block md:hidden mt-1'>
+                    <span className='text-xs text-muted-foreground'>
+                      {format(new Date(game.start_time), 'dd/MM HH:mm')}
+                    </span>
+                  </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className='hidden md:table-cell'>
                   <div className='flex flex-col'>
                     <span>{format(new Date(game.start_time), 'HH:mm')}</span>
                     <span className='text-xs text-muted-foreground'>
@@ -84,7 +89,7 @@ export function GameTable({ gameRounds, pagination, onPageChange, onSort, onView
                     </span>
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className='hidden md:table-cell'>
                   <div className='flex flex-col'>
                     <span>{format(new Date(game.end_time), 'HH:mm')}</span>
                     <span className='text-xs text-muted-foreground'>
@@ -103,7 +108,7 @@ export function GameTable({ gameRounds, pagination, onPageChange, onSort, onView
                     <span className='text-muted-foreground text-sm'>-</span>
                   )}
                 </TableCell>
-                <TableCell>
+                <TableCell className='hidden md:table-cell'>
                   <div className='flex flex-col'>
                     <div className='flex items-center'>
                       <Users className='h-3 w-3 mr-1 text-blue-500' />
@@ -117,24 +122,39 @@ export function GameTable({ gameRounds, pagination, onPageChange, onSort, onView
                 </TableCell>
                 <TableCell className='text-right'>
                   <div className='flex items-center justify-end space-x-1'>
-                    <Button variant='outline' size='sm' onClick={() => onView(game.id)} aria-label='Xem chi tiết'>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => onView(game.id)}
+                      aria-label='Xem chi tiết'
+                      className='h-8 w-8 p-0'
+                    >
                       <Eye className='h-4 w-4' />
+                      <span className='sr-only'>Xem</span>
                     </Button>
 
                     {canEnterResult(game) && (
                       <Button
                         variant='outline'
                         size='sm'
-                        className='bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
+                        className='bg-green-50 text-green-600 border-green-200 hover:bg-green-100 h-8 w-8 p-0'
                         onClick={() => onResult(game)}
                         aria-label='Nhập kết quả'
                       >
                         <Award className='h-4 w-4' />
+                        <span className='sr-only'>Kết quả</span>
                       </Button>
                     )}
 
-                    <Button variant='outline' size='sm' onClick={() => onUpdate(game)} aria-label='Chỉnh sửa'>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => onUpdate(game)}
+                      aria-label='Chỉnh sửa'
+                      className='h-8 w-8 p-0'
+                    >
                       <Edit className='h-4 w-4' />
+                      <span className='sr-only'>Chỉnh sửa</span>
                     </Button>
                   </div>
                 </TableCell>

@@ -30,6 +30,19 @@ const createGameRoundSchema = z
     message: 'Thời gian kết thúc phải sau thời gian bắt đầu',
     path: ['endTime']
   })
+  .refine(
+    data => {
+      const startTime = new Date(data.startTime)
+      const endTime = new Date(data.endTime)
+      const diffMs = endTime - startTime
+      const diffMinutes = diffMs / (1000 * 60)
+      return diffMinutes >= 10 // Tối thiểu 10 phút
+    },
+    {
+      message: 'Thời gian giữa bắt đầu và kết thúc phải ít nhất 10 phút',
+      path: ['endTime']
+    }
+  )
 
 export function CreateGameDialog({ open, onClose, onSubmit, isLoading }) {
   const form = useForm({
@@ -44,9 +57,16 @@ export function CreateGameDialog({ open, onClose, onSubmit, isLoading }) {
     onSubmit(data)
   }
 
+  const handleClose = () => {
+    if (!isLoading) {
+      form.reset()
+      onClose()
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className='sm:max-w-md'>
         <DialogHeader>
           <DialogTitle>Tạo lượt chơi mới</DialogTitle>
           <DialogDescription>Thiết lập thông tin cho lượt chơi mới</DialogDescription>
@@ -85,6 +105,9 @@ export function CreateGameDialog({ open, onClose, onSubmit, isLoading }) {
             />
 
             <DialogFooter>
+              <Button type='button' variant='outline' onClick={handleClose} disabled={isLoading}>
+                Hủy
+              </Button>
               <Button type='submit' disabled={isLoading}>
                 {isLoading ? (
                   <>

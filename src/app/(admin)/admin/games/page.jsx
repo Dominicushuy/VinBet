@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 import { AdminGameManagement } from '@/components/admin/game'
 import { AdminBreadcrumb } from '@/components/admin/layout/AdminBreadcrumb'
 import { GameManagementSkeleton } from '@/components/admin/game/GameManagementSkeleton'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 export const metadata = {
   title: 'Quản lý trò chơi - Admin - VinBet',
@@ -12,10 +13,17 @@ export const metadata = {
 export default function AdminGamesPage() {
   return (
     <div className='space-y-6'>
-      <AdminBreadcrumb />
-      <Suspense fallback={<GameManagementSkeleton />}>
-        <AdminGameManagement />
-      </Suspense>
+      <AdminBreadcrumb
+        items={[
+          { label: 'Dashboard', href: '/admin/dashboard' },
+          { label: 'Trò chơi', href: '/admin/games' }
+        ]}
+      />
+      <ErrorBoundary>
+        <Suspense fallback={<GameManagementSkeleton />}>
+          <AdminGameManagement />
+        </Suspense>
+      </ErrorBoundary>
     </div>
   )
 }

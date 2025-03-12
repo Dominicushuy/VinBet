@@ -67,7 +67,8 @@ export function useGameDetailQuery(id) {
   return useQuery({
     queryKey: GAME_QUERY_KEYS.gameDetail(id),
     queryFn: () => gameApi.getGameRound(id),
-    enabled: !!id
+    enabled: !!id,
+    staleTime: 30000 // 30 seconds
   })
 }
 
@@ -75,7 +76,8 @@ export function useActiveGamesQuery() {
   return useQuery({
     queryKey: GAME_QUERY_KEYS.activeGames,
     queryFn: () => gameApi.getActiveGames(),
-    refetchInterval: 60000 // 1 minute
+    refetchInterval: 60000, // 1 minute
+    staleTime: 30000 // 30 seconds
   })
 }
 
@@ -83,7 +85,10 @@ export function useGameRoundsQuery(params) {
   return useQuery({
     queryKey: GAME_QUERY_KEYS.gamesList(params),
     queryFn: () => gameApi.getGameRounds(params),
-    keepPreviousData: true
+    keepPreviousData: true,
+    staleTime: 30000, // Cache 30 seconds
+    refetchOnWindowFocus: false, // Tránh refetch khi focus lại window
+    retry: 1 // Chỉ retry 1 lần nếu lỗi
   })
 }
 
