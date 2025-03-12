@@ -265,6 +265,32 @@ export const adminApi = {
       }
       throw error
     }
+  },
+  // Bổ sung vào adminApi object trong useAdminQueries.js
+
+  exportUsers: async params => {
+    const queryString = buildQueryString(params)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT)
+
+    try {
+      const response = await fetch(`/api/admin/users/export${queryString}`, {
+        signal: controller.signal
+      })
+
+      if (!response.ok) {
+        throw new Error('Không thể xuất dữ liệu người dùng')
+      }
+
+      clearTimeout(timeoutId)
+      return response
+    } catch (error) {
+      clearTimeout(timeoutId)
+      if (error.name === 'AbortError') {
+        throw new Error('Yêu cầu bị hủy do quá thời gian')
+      }
+      throw error
+    }
   }
 }
 
