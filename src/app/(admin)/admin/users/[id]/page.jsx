@@ -1,6 +1,6 @@
 // src/app/(admin)/admin/users/[id]/page.jsx
 import { Suspense } from 'react'
-import { AdminUserDetail } from '@/components/admin/AdminUserDetail'
+import { AdminUserDetail } from '@/components/admin/user-detail'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export const metadata = {

@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Pagination } from '@/components/ui/pagination'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -49,13 +49,10 @@ import {
   Users,
   DollarSign,
   Award,
-  CircleDollarSign,
-  Activity,
   Search,
   Edit
 } from 'lucide-react'
-import { format, addHours, formatDistanceToNow, isAfter, isBefore } from 'date-fns'
-import { vi } from 'date-fns/locale'
+import { format, addHours, isAfter } from 'date-fns'
 import {
   useGameRoundsQuery,
   useCreateGameRoundMutation,

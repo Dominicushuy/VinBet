@@ -1,6 +1,6 @@
 // src/app/(admin)/admin/dashboard/page.jsx
 import { Suspense } from 'react'
-import { AdminDashboard } from '@/components/admin/AdminDashboard'
+import { AdminDashboard } from '@/components/admin/dashboard'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export const metadata = {

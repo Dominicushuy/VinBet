@@ -1,6 +1,6 @@
 // src/app/(admin)/admin/payments/page.tsx
 import { Suspense } from 'react'
-import { PaymentRequestsManagement } from '@/components/admin/PaymentRequestsManagement'
+import { PaymentRequestsManagement } from '@/components/admin/payment-request'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export const metadata = {

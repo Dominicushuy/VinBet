@@ -10,16 +10,13 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Label } from '@/components/ui/label'
 import { useProcessPaymentRequestMutation } from '@/hooks/queries/useAdminQueries'
 import { useRouter } from 'next/navigation'
 import {
-  ExternalLink,
   Clock,
   FileText,
   CreditCard,
-  DollarSign,
   CheckCircle,
   XCircle,
   Loader2,

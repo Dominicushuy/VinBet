@@ -1,6 +1,6 @@
 // src/app/(admin)/admin/games/page.jsx
 import { Suspense } from 'react'
-import { AdminGameManagement } from '@/components/admin/AdminGameManagement'
+import { AdminGameManagement } from '@/components/admin/game'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export const metadata = {

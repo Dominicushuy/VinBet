@@ -423,3 +423,31 @@ export function useAdminTransactionsQuery(params = {}, options = {}) {
     ...options
   })
 }
+
+export function useProcessPaymentRequestMutation(options = {}) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, action, data }) => adminApi.processPaymentRequest(id, action, data),
+    onSuccess: (_, variables) => {
+      toast.success('Yêu cầu thanh toán đã được xử lý')
+
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({
+        queryKey: ADMIN_QUERY_KEYS.paymentRequests(variables)
+      })
+
+      if (options.onSuccess) {
+        options.onSuccess(_, variables)
+      }
+    },
+    onError: (error, variables, context) => {
+      toast.error(error.message || 'Không thể xử lý yêu cầu thanh toán')
+
+      if (options.onError) {
+        options.onError(error, variables, context)
+      }
+    },
+    ...options
+  })
+}
