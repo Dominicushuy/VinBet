@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
-import { handleApiError } from '@/lib/auth/api/error-handler'
+import { handleApiError } from '@/utils/errorHandler.js'
 
 // Schema validation for password reset
 const resetPasswordSchema = z.object({

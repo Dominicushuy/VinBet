@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { handleApiError } from '@/lib/auth/api/error-handler'
+import { handleApiError } from '@/utils/errorHandler.js'
 
 export async function POST(request) {
   try {

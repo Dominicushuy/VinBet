@@ -6,7 +6,7 @@ import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { nanoid } from 'nanoid'
 import { supabaseAdmin } from '@/lib/supabase/admin'
-import { handleApiError } from '@/lib/auth/api/error-handler'
+import { handleApiError } from '@/utils/errorHandler.js'
 
 const registerSchema = z.object({
   email: z.string().email(),
