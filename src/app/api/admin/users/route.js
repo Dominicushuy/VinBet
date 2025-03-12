@@ -18,7 +18,7 @@ const getUsersSchema = z.object({
   pageSize: z.string().optional(),
   sortBy: z.string().optional(),
   sortOrder: z.string().optional(),
-  status: z.enum(['all', 'active', 'blocked', 'admin']).optional()
+  status: z.enum(['', 'active', 'blocked', 'admin']).optional()
 })
 
 export const GET = createAdminApiHandler(async (request, _, { supabase }) => {
