@@ -1,4 +1,4 @@
-Tôi đang phát triển dự án VinBet - nền tảng game cá cược sử dụng Next.js và Supabase, với 90% code tạo bởi AI. Tôi đã cung cấp cho bạn toàn bộ code của trang chủ Admin (src/app/(admin)/admin/dashboard/page.jsx) trong Github. Hãy giúp tôi review kỹ lưỡng và tự động chỉnh sửa code để đảm bảo chất lượng tối ưu.
+Tôi đang phát triển dự án VinBet - nền tảng game cá cược sử dụng Next.js và Supabase, với 90% code tạo bởi AI. Tôi đã cung cấp cho bạn toàn bộ code của trang **Quản lý danh sách và chi tiết người dùng** (`src/app/(admin)/admin/user/page.jsx`, `src/app/(admin)/admin/users/[id]/page.jsx`) trong Github. Hãy giúp tôi review kỹ lưỡng và tự động chỉnh sửa code để đảm bảo chất lượng tối ưu.
 
 1. **Phân tích tổng quan module**:
 
@@ -44,17 +44,11 @@ Tôi đang phát triển dự án VinBet - nền tảng game cá cược sử d�
 - Nếu phát hiện thấy code đã hoàn thiện, chất lượng tốt, hãy đánh giá và ghi chú "Code đã hoàn thiện" mà không cần chỉnh sửa.
 - Tập trung vào những vấn đề nghiêm trọng, ưu tiên theo mức độ ảnh hưởng đến hiệu suất và bảo mật.
 - Cung cấp đánh giá tổng thể về module theo thang điểm 1-10 về tính hoàn thiện, hiệu suất, bảo mật và khả năng mở rộng.
-- Đưa ra checklist manual testing kèm với các test case cụ thể.
 - Đặc biệt chú ý đến sự đồng bộ giữa business logic trong API routes và trigger functions ở Supabase - đây là nơi dễ xảy ra mâu thuẫn.
 
 ## Định dạng phản hồi
 
 Hãy trả lời với format sau:
-
-1. **Tổng quan module**: Đánh giá chung và thang điểm
-2. **Vấn đề và giải pháp**: Liệt kê vấn đề theo mức độ nghiêm trọng kèm code đã sửa
-3. **Code cải tiến**: Đề xuất phiên bản cải tiến nếu cần
-4. **Đánh giá SQL files**: Nhận xét về schema, triggers và policies
-5. **Checklist testing**: Danh sách các điểm cần kiểm tra
+**Code cải tiến**: Đề xuất phiên bản cải tiến nếu cần.
 
 Trả lời bằng tiếng Việt và cung cấp code cụ thể đã được chỉnh sửa hoặc cải tiến.

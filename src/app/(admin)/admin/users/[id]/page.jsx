@@ -1,6 +1,6 @@
 // src/app/(admin)/admin/users/[id]/page.jsx
 import { Suspense } from 'react'
-import { UserDetail } from '@/components/admin/AdminUserDetail'
+import { AdminUserDetail } from '@/components/admin/AdminUserDetail'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export const metadata = {
@@ -12,7 +12,7 @@ export default function AdminUserDetailPage({ params }) {
   return (
     <div className='space-y-6'>
       <Suspense fallback={<UserDetailSkeleton />}>
-        <UserDetail userId={params.id} />
+        <AdminUserDetail userId={params.id} />
       </Suspense>
     </div>
   )

@@ -1,40 +1,21 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { handleApiError } from '@/utils/errorHandler'
+import { createAdminApiHandler } from '@/utils/adminAuthHandler'
 
 const getUsersSchema = z.object({
   query: z.string().optional(),
   page: z.string().optional(),
   pageSize: z.string().optional(),
   sortBy: z.string().optional(),
-  sortOrder: z.string().optional()
+  sortOrder: z.string().optional(),
+  status: z.enum(['all', 'active', 'blocked', 'admin']).optional()
 })
 
-export async function GET(request) {
+export const GET = createAdminApiHandler(async (request, _, { supabase }) => {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
-
-    // Kiểm tra session
-    const { data: sessionData } = await supabase.auth.getSession()
-    if (!sessionData.session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Kiểm tra quyền admin
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', sessionData.session.user.id)
-      .single()
-
-    if (!profileData?.is_admin) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 })
-    }
-
     // Parse query parameters
     const url = new URL(request.url)
     const queryParams = Object.fromEntries(url.searchParams)
@@ -47,15 +28,27 @@ export async function GET(request) {
     const searchQuery = validatedParams.query?.trim().toLowerCase() || ''
     const sortBy = validatedParams.sortBy || 'created_at'
     const sortOrder = validatedParams.sortOrder === 'asc' ? 'asc' : 'desc'
+    const status = validatedParams.status || 'all'
 
     // Build query
     let query = supabase.from('profiles').select('*', { count: 'exact' })
 
-    // Apply search filter if provided
+    // Apply search filter if provided - FIX SQL INJECTION
     if (searchQuery) {
-      query = query.or(
-        `username.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`
-      )
+      query = query.or([
+        { username: { ilike: `%${searchQuery}%` } },
+        { email: { ilike: `%${searchQuery}%` } },
+        { display_name: { ilike: `%${searchQuery}%` } }
+      ])
+    }
+
+    // Apply status filter
+    if (status === 'blocked') {
+      query = query.eq('is_blocked', true)
+    } else if (status === 'admin') {
+      query = query.eq('is_admin', true)
+    } else if (status === 'active') {
+      query = query.eq('is_blocked', false)
     }
 
     // Apply sorting and pagination
@@ -75,9 +68,15 @@ export async function GET(request) {
         page,
         pageSize,
         totalPages: Math.ceil((count || 0) / pageSize)
+      },
+      filters: {
+        searchQuery,
+        sortBy,
+        sortOrder,
+        status
       }
     })
   } catch (error) {
     return handleApiError(error, 'Lỗi khi lấy danh sách người dùng')
   }
-}
+})

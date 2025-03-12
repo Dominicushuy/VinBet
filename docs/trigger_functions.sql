@@ -423,6 +423,11 @@ BEGIN
     RAISE EXCEPTION 'Số điện thoại chỉ được chứa số và dấu +';
   END IF;
   
+  -- Không cho phép un-admin chính mình
+  IF OLD.is_admin = TRUE AND NEW.is_admin = FALSE AND auth.uid() = NEW.id THEN
+    RAISE EXCEPTION 'Không thể tự bỏ quyền admin của chính mình';
+  END IF;
+  
   -- Cập nhật updated_at
   NEW.updated_at := NOW();
   
@@ -1391,32 +1396,6 @@ BEGIN
     'total_withdrawals', total_withdrawals,
     'last_login', last_login
   );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Cập nhật function validate_user_profile để kiểm tra is_blocked
-CREATE OR REPLACE FUNCTION validate_user_profile()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- Validation cho username (không chứa ký tự đặc biệt)
-  IF NEW.username ~ '[^a-zA-Z0-9_]' THEN
-    RAISE EXCEPTION 'Username chỉ được chứa chữ cái, số và dấu gạch dưới';
-  END IF;
-  
-  -- Validation cho phone_number (chỉ chứa số)
-  IF NEW.phone_number IS NOT NULL AND NEW.phone_number ~ '[^0-9+]' THEN
-    RAISE EXCEPTION 'Số điện thoại chỉ được chứa số và dấu +';
-  END IF;
-  
-  -- Không cho phép un-admin chính mình
-  IF OLD.is_admin = TRUE AND NEW.is_admin = FALSE AND auth.uid() = NEW.id THEN
-    RAISE EXCEPTION 'Không thể tự bỏ quyền admin của chính mình';
-  END IF;
-  
-  -- Cập nhật updated_at
-  NEW.updated_at := NOW();
-  
-  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

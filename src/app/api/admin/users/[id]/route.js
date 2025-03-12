@@ -139,12 +139,36 @@ export async function PUT(request, { params }) {
       return handleApiError(error, 'Lỗi khi cập nhật thông tin người dùng')
     }
 
-    // If blocking user, we should log them out by invalidating their sessions
+    // If blocking user, invalidate sessions instead of deleting user
     if (validatedData.is_blocked === true) {
-      await supabaseAdmin.auth.admin.deleteUser(userId)
+      try {
+        await supabaseAdmin.auth.admin.signOut({
+          userId: userId,
+          scope: 'global'
+        })
+
+        // Log hành động vào admin_logs
+        await supabase.from('admin_logs').insert({
+          admin_id: sessionData.session.user.id,
+          action: 'BLOCK_USER',
+          entity_type: 'profiles',
+          entity_id: userId,
+          details: {
+            reason: validatedData.block_reason || 'Người dùng bị khóa bởi admin'
+          }
+        })
+      } catch (sessionError) {
+        console.error('Error invalidating sessions:', sessionError)
+        // Không throw lỗi, vì profile đã được update thành công
+      }
     }
 
-    return NextResponse.json({ user })
+    return NextResponse.json({
+      user,
+      message: validatedData.is_blocked
+        ? 'Người dùng đã bị khóa và đăng xuất khỏi tất cả thiết bị'
+        : 'Thông tin người dùng đã được cập nhật'
+    })
   } catch (error) {
     return handleApiError(error, 'Lỗi khi cập nhật thông tin người dùng')
   }
