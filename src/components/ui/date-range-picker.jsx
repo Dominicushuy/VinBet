@@ -1,3 +1,4 @@
+// src/components/ui/date-range-picker.jsx
 'use client'
 
 import * as React from 'react'
@@ -10,27 +11,36 @@ import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
-export function DateRangePicker({ className, initialDateFrom, initialDateTo, onUpdate, ...props }) {
-  const [date, setDate] = React.useState({
-    from: initialDateFrom,
-    to: initialDateTo
-  })
-
-  // Update parent component when date changes
-  React.useEffect(() => {
-    if (date?.from || date?.to) {
-      onUpdate(date)
+export function DateRangePicker({ className, dateRange, onChange }) {
+  const [date, setDate] = React.useState(
+    dateRange || {
+      from: undefined,
+      to: undefined
     }
-  }, [date, onUpdate])
+  )
+
+  // Update local state when the props change
+  React.useEffect(() => {
+    if (dateRange?.from !== date?.from || dateRange?.to !== date?.to) {
+      setDate(dateRange || { from: undefined, to: undefined })
+    }
+  }, [dateRange, date])
+
+  const handleSelect = newDate => {
+    setDate(newDate)
+    if (onChange && newDate.from && newDate.to) {
+      onChange(newDate)
+    }
+  }
 
   return (
-    <div className={cn('grid gap-2', className)} {...props}>
+    <div className={cn('grid gap-2', className)}>
       <Popover>
         <PopoverTrigger asChild>
           <Button
             id='date'
-            variant='outline'
-            className={cn('w-full justify-start text-left font-normal', !date && 'text-muted-foreground')}
+            variant={'outline'}
+            className={cn('w-full justify-start text-left font-normal', !date?.from && 'text-muted-foreground')}
           >
             <CalendarIcon className='mr-2 h-4 w-4' />
             {date?.from ? (
@@ -52,7 +62,7 @@ export function DateRangePicker({ className, initialDateFrom, initialDateTo, onU
             mode='range'
             defaultMonth={date?.from}
             selected={date}
-            onSelect={setDate}
+            onSelect={handleSelect}
             numberOfMonths={2}
             locale={vi}
           />

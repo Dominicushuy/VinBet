@@ -775,7 +775,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function để phê duyệt payment request
+-- Function để phê duyệt payment request với transaction
 CREATE OR REPLACE FUNCTION approve_payment_request(
   p_request_id UUID,
   p_admin_id UUID,
@@ -784,33 +784,82 @@ CREATE OR REPLACE FUNCTION approve_payment_request(
 DECLARE
   v_request_type TEXT;
   v_profile_id UUID;
+  v_amount DECIMAL(15, 2);
 BEGIN
-  -- Check if request exists and is pending
-  SELECT type, profile_id INTO v_request_type, v_profile_id
-  FROM payment_requests
-  WHERE id = p_request_id AND status = 'pending';
-  
-  IF v_request_type IS NULL THEN
-    RAISE EXCEPTION 'Payment request not found or not in pending status';
-  END IF;
-  
-  -- Update payment request status
-  UPDATE payment_requests
-  SET 
-    status = 'approved',
-    approved_by = p_admin_id,
-    approved_at = NOW(),
-    notes = p_notes,
-    updated_at = NOW()
-  WHERE id = p_request_id;
-  
-  -- The handle_payment_request_approval trigger will handle the rest
-  
-  RETURN TRUE;
+  -- Sử dụng transaction để đảm bảo tính nhất quán
+  BEGIN
+    -- Khóa row để tránh race condition
+    SELECT type, profile_id, amount INTO v_request_type, v_profile_id, v_amount
+    FROM payment_requests
+    WHERE id = p_request_id AND status = 'pending'
+    FOR UPDATE;
+    
+    IF v_request_type IS NULL THEN
+      RAISE EXCEPTION 'Payment request not found or not in pending status';
+    END IF;
+    
+    -- Update payment request status
+    UPDATE payment_requests
+    SET 
+      status = 'approved',
+      approved_by = p_admin_id,
+      approved_at = NOW(),
+      notes = p_notes,
+      updated_at = NOW()
+    WHERE id = p_request_id;
+    
+    -- Cập nhật số dư nếu là deposit, withdrawal được handle bởi trigger
+    IF v_request_type = 'deposit' THEN
+      UPDATE profiles
+      SET 
+        balance = balance + v_amount,
+        updated_at = NOW()
+      WHERE id = v_profile_id;
+      
+      -- Tạo giao dịch
+      INSERT INTO transactions (
+        profile_id,
+        amount,
+        type,
+        status,
+        payment_request_id,
+        description
+      ) VALUES (
+        v_profile_id,
+        v_amount,
+        'deposit',
+        'completed',
+        p_request_id,
+        'Deposit approved'
+      );
+      
+      -- Tạo thông báo
+      INSERT INTO notifications (
+        profile_id,
+        title,
+        content,
+        type,
+        reference_id
+      ) VALUES (
+        v_profile_id,
+        'Nạp tiền thành công',
+        'Yêu cầu nạp ' || v_amount || ' đã được phê duyệt.',
+        'transaction',
+        p_request_id
+      );
+    END IF;
+    
+    -- Commit transaction tự động nếu không có lỗi
+    
+    RETURN TRUE;
+  EXCEPTION WHEN OTHERS THEN
+    -- Rollback tự động
+    RAISE;
+  END;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function để từ chối payment request
+-- Function để từ chối payment request với transaction
 CREATE OR REPLACE FUNCTION reject_payment_request(
   p_request_id UUID,
   p_admin_id UUID,
@@ -819,29 +868,73 @@ CREATE OR REPLACE FUNCTION reject_payment_request(
 DECLARE
   v_request_type TEXT;
   v_profile_id UUID;
+  v_amount DECIMAL(15, 2);
 BEGIN
-  -- Check if request exists and is pending
-  SELECT type, profile_id INTO v_request_type, v_profile_id
-  FROM payment_requests
-  WHERE id = p_request_id AND status = 'pending';
-  
-  IF v_request_type IS NULL THEN
-    RAISE EXCEPTION 'Payment request not found or not in pending status';
-  END IF;
-  
-  -- Update payment request status
-  UPDATE payment_requests
-  SET 
-    status = 'rejected',
-    approved_by = p_admin_id,
-    approved_at = NOW(),
-    notes = p_notes,
-    updated_at = NOW()
-  WHERE id = p_request_id;
-  
-  -- The handle_payment_request_approval trigger will handle the rest
-  
-  RETURN TRUE;
+  -- Sử dụng transaction
+  BEGIN
+    -- Khóa row để tránh race condition
+    SELECT type, profile_id, amount INTO v_request_type, v_profile_id, v_amount
+    FROM payment_requests
+    WHERE id = p_request_id AND status = 'pending'
+    FOR UPDATE;
+    
+    IF v_request_type IS NULL THEN
+      RAISE EXCEPTION 'Payment request not found or not in pending status';
+    END IF;
+    
+    -- Update payment request status
+    UPDATE payment_requests
+    SET 
+      status = 'rejected',
+      approved_by = p_admin_id,
+      approved_at = NOW(),
+      notes = p_notes,
+      updated_at = NOW()
+    WHERE id = p_request_id;
+    
+    -- Hoàn lại tiền cho user nếu là withdrawal
+    IF v_request_type = 'withdrawal' THEN
+      UPDATE profiles
+      SET 
+        balance = balance + v_amount,
+        updated_at = NOW()
+      WHERE id = v_profile_id;
+      
+      -- Tạo thông báo
+      INSERT INTO notifications (
+        profile_id,
+        title,
+        content,
+        type,
+        reference_id
+      ) VALUES (
+        v_profile_id,
+        'Yêu cầu rút tiền bị từ chối',
+        'Yêu cầu rút ' || v_amount || ' đã bị từ chối. Số tiền đã được hoàn lại. Lý do: ' || COALESCE(p_notes, 'Không có lý do được cung cấp'),
+        'transaction',
+        p_request_id
+      );
+    ELSE
+      -- Tạo thông báo cho deposit
+      INSERT INTO notifications (
+        profile_id,
+        title,
+        content,
+        type,
+        reference_id
+      ) VALUES (
+        v_profile_id,
+        'Yêu cầu nạp tiền bị từ chối',
+        'Yêu cầu nạp ' || v_amount || ' đã bị từ chối. Lý do: ' || COALESCE(p_notes, 'Không có lý do được cung cấp'),
+        'transaction',
+        p_request_id
+      );
+    END IF;
+    
+    RETURN TRUE;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE;
+  END;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

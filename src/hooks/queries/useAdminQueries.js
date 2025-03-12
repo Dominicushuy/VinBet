@@ -62,7 +62,16 @@ export const adminApi = {
   },
 
   // Phê duyệt/từ chối payment request
-  processPaymentRequest: async (id, action, data) => {
+  processPaymentRequest: async ({ id, action, data }) => {
+    // Validate UUID format
+    if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      throw new Error('ID yêu cầu không hợp lệ')
+    }
+
+    if (!['approve', 'reject'].includes(action)) {
+      throw new Error('Hành động không hợp lệ')
+    }
+
     return withTimeout(
       signal => postData(`/api/admin/payment-requests/${id}/${action}`, data, { signal }),
       TIMEOUTS.payment
@@ -203,6 +212,9 @@ export function useAdminPaymentRequestsQuery(params, options = {}) {
   return useQuery({
     queryKey: ADMIN_QUERY_KEYS.paymentRequests(params),
     queryFn: () => adminApi.getPaymentRequests(params),
+    staleTime: 30 * 1000, // 30 seconds
+    cacheTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
     ...options
   })
 }
@@ -332,13 +344,21 @@ export function useProcessPaymentRequestMutation(options = {}) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, action, data }) => adminApi.processPaymentRequest(id, action, data),
+    mutationFn: ({ id, action, data }) => adminApi.processPaymentRequest({ id, action, data }),
     onSuccess: (_, variables) => {
-      toast.success('Yêu cầu thanh toán đã được xử lý')
+      const successMessage =
+        variables.action === 'approve' ? 'Yêu cầu thanh toán đã được phê duyệt' : 'Yêu cầu thanh toán đã bị từ chối'
+
+      toast.success(successMessage)
 
       // Invalidate relevant queries
       queryClient.invalidateQueries({
-        queryKey: ADMIN_QUERY_KEYS.paymentRequests(variables)
+        queryKey: ADMIN_QUERY_KEYS.paymentRequests()
+      })
+
+      // Invalidate user balance if approving deposit/withdrawal
+      queryClient.invalidateQueries({
+        queryKey: ['profile']
       })
 
       if (options.onSuccess) {

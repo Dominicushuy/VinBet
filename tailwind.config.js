@@ -7,7 +7,7 @@ module.exports = {
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}'
   ],
   theme: {
     extend: {
@@ -39,18 +39,21 @@ module.exports = {
         // Tùy chỉnh cho Vinbet
         win: 'hsl(var(--win))',
         loss: 'hsl(var(--loss))',
-        jackpot: 'hsl(var(--jackpot))',
+        jackpot: 'hsl(var(--jackpot))'
       },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        sm: 'calc(var(--radius) - 4px)'
       },
       fontFamily: {
         sans: ['var(--font-sans)', ...fontFamily.sans],
-        heading: ['var(--font-heading)', ...fontFamily.sans],
+        heading: ['var(--font-heading)', ...fontFamily.sans]
       },
-    },
+      screens: {
+        xs: '480px'
+      }
+    }
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [require('tailwindcss-animate')]
 }

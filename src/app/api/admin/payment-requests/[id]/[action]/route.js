@@ -1,3 +1,5 @@
+// src/app/api/admin/payment-requests/[id]/[action]/route.js
+
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
@@ -10,9 +12,24 @@ const actionSchema = z.object({
   notes: z.string().optional()
 })
 
+// UUID validation regex
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function POST(request, { params }) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
+
+    // Validate requestId format
+    const requestId = params.id
+    if (!requestId || !uuidRegex.test(requestId)) {
+      return NextResponse.json({ error: 'Invalid request ID format' }, { status: 400 })
+    }
+
+    // Validate action
+    const action = params.action
+    if (!['approve', 'reject'].includes(action)) {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+    }
 
     // Kiểm tra session và quyền admin
     const { data: sessionData } = await supabase.auth.getSession()
@@ -31,21 +48,30 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 })
     }
 
-    const requestId = params.id
-    const action = params.action
-
-    if (!['approve', 'reject'].includes(action)) {
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
-    }
-
     // Parse request body
-    const body = await request.json()
-    const validatedData = actionSchema.parse(body)
+    let body
+    let validatedData
+
+    try {
+      body = await request.json()
+      validatedData = actionSchema.parse(body)
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(
+          {
+            error: 'Invalid input data',
+            details: error.errors
+          },
+          { status: 400 }
+        )
+      }
+      throw error
+    }
 
     // Kiểm tra payment request có tồn tại không
     const { data: paymentRequest, error: checkError } = await supabase
       .from('payment_requests')
-      .select('id, status')
+      .select('id, status, type, amount, profile_id')
       .eq('id', requestId)
       .single()
 
@@ -57,16 +83,15 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Can only process pending requests' }, { status: 400 })
     }
 
+    // Gọi function với transaction để phê duyệt hoặc từ chối payment request
     let result
     if (action === 'approve') {
-      // Gọi function để phê duyệt payment request
       result = await supabase.rpc('approve_payment_request', {
         p_request_id: requestId,
         p_admin_id: sessionData.session.user.id,
         p_notes: validatedData.notes || null
       })
     } else {
-      // Gọi function để từ chối payment request
       result = await supabase.rpc('reject_payment_request', {
         p_request_id: requestId,
         p_admin_id: sessionData.session.user.id,
@@ -81,7 +106,28 @@ export async function POST(request, { params }) {
       )
     }
 
-    return NextResponse.json({ success: true }, { status: 200 })
+    // Create admin log
+    await supabase.from('admin_logs').insert({
+      admin_id: sessionData.session.user.id,
+      action: action === 'approve' ? 'APPROVE_PAYMENT' : 'REJECT_PAYMENT',
+      entity_type: 'payment_requests',
+      entity_id: requestId,
+      details: {
+        payment_type: paymentRequest.type,
+        amount: paymentRequest.amount,
+        profile_id: paymentRequest.profile_id,
+        notes: validatedData.notes,
+        timestamp: new Date().toISOString()
+      }
+    })
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: action === 'approve' ? 'Yêu cầu đã được phê duyệt' : 'Yêu cầu đã bị từ chối'
+      },
+      { status: 200 }
+    )
   } catch (error) {
     return handleApiError(error, 'Không thể xử lý yêu cầu thanh toán')
   }
