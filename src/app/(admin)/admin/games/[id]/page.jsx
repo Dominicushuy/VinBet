@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 import { AdminGameDetail } from '@/components/admin/game-detail'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AdminBreadcrumb } from '@/components/admin/layout/AdminBreadcrumb'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 export const metadata = {
   title: 'Chi tiết lượt chơi - Admin - VinBet',
@@ -12,10 +13,19 @@ export const metadata = {
 export default function GameDetailPage({ params }) {
   return (
     <div className='space-y-6'>
-      <AdminBreadcrumb />
-      <Suspense fallback={<GameDetailSkeleton />}>
-        <AdminGameDetail gameId={params.id} />
-      </Suspense>
+      <AdminBreadcrumb
+        items={[
+          { label: 'Dashboard', href: '/admin/dashboard' },
+          { label: 'Trò chơi', href: '/admin/games' },
+          { label: 'Chi tiết', href: '#' }
+        ]}
+      />
+
+      <ErrorBoundary>
+        <Suspense fallback={<GameDetailSkeleton />}>
+          <AdminGameDetail gameId={params.id} />
+        </Suspense>
+      </ErrorBoundary>
     </div>
   )
 }
@@ -23,13 +33,13 @@ export default function GameDetailPage({ params }) {
 function GameDetailSkeleton() {
   return (
     <div className='space-y-6'>
-      <div className='flex items-center justify-between'>
-        <div className='flex items-center space-x-4'>
+      <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between'>
+        <div className='flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4'>
           <Skeleton className='h-10 w-24' />
           <Skeleton className='h-8 w-64' />
           <Skeleton className='h-6 w-24' />
         </div>
-        <div className='flex space-x-2'>
+        <div className='flex flex-wrap gap-2 mt-4 sm:mt-0'>
           <Skeleton className='h-10 w-10 rounded-md' />
           <Skeleton className='h-10 w-28 rounded-md' />
           <Skeleton className='h-10 w-28 rounded-md' />
