@@ -1,8 +1,9 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { handleApiError } from '@/utils/errorHandler'
 
 export async function GET() {
   try {
@@ -23,8 +24,7 @@ export async function GET() {
       .eq('referrer_id', userId)
 
     if (countError) {
-      console.error('Error counting referrals:', countError)
-      return NextResponse.json({ error: countError.message }, { status: 500 })
+      return handleApiError(countError, 'Lỗi khi đếm người giới thiệu')
     }
 
     // Lấy số người đã hoàn thành (status = 'completed')
@@ -35,8 +35,7 @@ export async function GET() {
       .eq('status', 'completed')
 
     if (completedError) {
-      console.error('Error counting completed referrals:', completedError)
-      return NextResponse.json({ error: completedError.message }, { status: 500 })
+      return handleApiError(completedError, 'Lỗi khi đếm người giới thiệu hoàn thành')
     }
 
     // Lấy tổng tiền thưởng
@@ -48,8 +47,7 @@ export async function GET() {
       .eq('status', 'completed')
 
     if (rewardError) {
-      console.error('Error calculating total rewards:', rewardError)
-      return NextResponse.json({ error: rewardError.message }, { status: 500 })
+      return handleApiError(rewardError, 'Lỗi khi tính tổng tiền thưởng')
     }
 
     const totalRewards = rewardTransactions?.reduce((sum, tx) => sum + tx.amount, 0) || 0
@@ -65,8 +63,7 @@ export async function GET() {
       .limit(5)
 
     if (recentError) {
-      console.error('Error fetching recent rewards:', recentError)
-      return NextResponse.json({ error: recentError.message }, { status: 500 })
+      return handleApiError(recentError, 'Lỗi khi lấy thưởng gần đây')
     }
 
     return NextResponse.json({
@@ -75,11 +72,11 @@ export async function GET() {
         completedReferrals: completedReferrals || 0,
         pendingReferrals: (totalReferrals || 0) - (completedReferrals || 0),
         totalRewards,
+        averageReward: totalRewards / (completedReferrals || 1),
         recentRewards: recentRewards || []
       }
     })
   } catch (error) {
-    console.error('Referral stats request error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Lỗi khi lấy thống kê giới thiệu')
   }
 }

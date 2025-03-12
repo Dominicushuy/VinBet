@@ -1,8 +1,9 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { handleApiError } from '@/utils/errorHandler'
 
 export async function GET() {
   try {
@@ -16,6 +17,7 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // Trả về dữ liệu hoặc giá trị mặc định nếu không có
     return NextResponse.json(
       data || {
         user_count: 0,
@@ -26,6 +28,6 @@ export async function GET() {
     )
   } catch (error) {
     console.error('Platform statistics request error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Lỗi khi lấy thống kê nền tảng')
   }
 }

@@ -1,9 +1,10 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { nanoid } from 'nanoid'
+import { handleApiError } from '@/utils/errorHandler'
 
 export async function GET() {
   try {
@@ -21,8 +22,7 @@ export async function GET() {
     const { data: profile, error } = await supabase.from('profiles').select('referral_code').eq('id', userId).single()
 
     if (error) {
-      console.error('Error fetching referral code:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Lỗi khi lấy mã giới thiệu')
     }
 
     let referralCode = profile.referral_code
@@ -50,8 +50,7 @@ export async function GET() {
         .eq('id', userId)
 
       if (updateError) {
-        console.error('Error updating referral code:', updateError)
-        return NextResponse.json({ error: updateError.message }, { status: 500 })
+        return handleApiError(updateError, 'Lỗi khi cập nhật mã giới thiệu')
       }
     }
 
@@ -60,7 +59,6 @@ export async function GET() {
       shareUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/register?ref=${referralCode}`
     })
   } catch (error) {
-    console.error('Referral code request error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Lỗi khi xử lý mã giới thiệu')
   }
 }

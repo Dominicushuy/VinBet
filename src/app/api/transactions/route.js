@@ -1,9 +1,10 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
+import { handleApiError } from '@/utils/errorHandler'
 
 const getTransactionsSchema = z.object({
   type: z.string().optional(),
@@ -51,8 +52,7 @@ export async function GET(request) {
     })
 
     if (error) {
-      console.error('Error fetching transactions:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Lỗi khi lấy lịch sử giao dịch')
     }
 
     // Extract total count from results for pagination
@@ -68,12 +68,15 @@ export async function GET(request) {
       }
     })
   } catch (error) {
-    console.error('Transaction request error:', error)
-
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      return NextResponse.json(
+        {
+          error: error.errors,
+          message: 'Lỗi validate dữ liệu'
+        },
+        { status: 400 }
+      )
     }
-
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Lỗi khi lấy lịch sử giao dịch')
   }
 }

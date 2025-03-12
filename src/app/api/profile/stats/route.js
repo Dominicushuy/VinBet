@@ -1,8 +1,9 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { handleApiError } from '@/utils/errorHandler'
 
 export async function GET() {
   try {
@@ -24,7 +25,7 @@ export async function GET() {
       .single()
 
     if (profileError) {
-      return NextResponse.json({ error: profileError.message }, { status: 500 })
+      return handleApiError(profileError, 'Lỗi khi lấy thông tin profile')
     }
 
     // Lấy tổng số tiền đặt cược
@@ -34,7 +35,7 @@ export async function GET() {
       .eq('profile_id', userId)
 
     if (betError) {
-      return NextResponse.json({ error: betError.message }, { status: 500 })
+      return handleApiError(betError, 'Lỗi khi lấy dữ liệu cược')
     }
 
     // Lấy các giao dịch thắng
@@ -43,9 +44,23 @@ export async function GET() {
       .select('amount')
       .eq('profile_id', userId)
       .eq('type', 'win')
+      .eq('status', 'completed')
 
+    // Lấy các giao dịch tham chiếu
+    const { data: referralData, error: referralError } = await supabase
+      .from('transactions')
+      .select('amount')
+      .eq('profile_id', userId)
+      .eq('type', 'referral_reward')
+      .eq('status', 'completed')
+
+    // Kiểm tra lỗi
     if (winError) {
-      return NextResponse.json({ error: winError.message }, { status: 500 })
+      return handleApiError(winError, 'Lỗi khi lấy dữ liệu thắng')
+    }
+
+    if (referralError) {
+      return handleApiError(referralError, 'Lỗi khi lấy dữ liệu giới thiệu')
     }
 
     // Tính toán thống kê
@@ -56,21 +71,21 @@ export async function GET() {
 
     const totalBetAmount = betData?.reduce((sum, bet) => sum + bet.amount, 0) || 0
     const totalWinAmount = winData?.reduce((sum, tx) => sum + tx.amount, 0) || 0
-    const netProfit = totalWinAmount - totalBetAmount
+    const totalReferralAmount = referralData?.reduce((sum, tx) => sum + tx.amount, 0) || 0
+    const netProfit = totalWinAmount + totalReferralAmount - totalBetAmount
 
     return NextResponse.json({
       balance: profile?.balance || 0,
-      totalGames: 0, // Có thể tính từ game_rounds nếu cần
       totalBets,
       wins,
       losses,
-      winRate,
+      winRate: Number(winRate.toFixed(2)),
       totalWinAmount,
       totalBetAmount,
+      totalReferralAmount,
       netProfit
     })
   } catch (error) {
-    console.error('Error fetching user stats:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Lỗi khi lấy thống kê người dùng')
   }
 }

@@ -1,74 +1,82 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { nanoid } from 'nanoid'
+import { handleApiError } from '@/utils/errorHandler'
 
 // Schema cho việc cập nhật profile
 const profileUpdateSchema = z.object({
   username: z
     .string()
-    .min(3)
-    .max(20)
-    .regex(/^[a-zA-Z0-9_]+$/)
+    .min(3, 'Username phải có ít nhất 3 ký tự')
+    .max(20, 'Username không được vượt quá 20 ký tự')
+    .regex(/^[a-zA-Z0-9_]+$/, 'Username chỉ chứa chữ cái, số và dấu gạch dưới')
     .optional(),
-  display_name: z.string().min(2).max(50).optional(),
+  display_name: z
+    .string()
+    .min(2, 'Tên hiển thị phải có ít nhất 2 ký tự')
+    .max(50, 'Tên hiển thị không được vượt quá 50 ký tự')
+    .optional(),
   phone_number: z
     .string()
-    .regex(/^[0-9+]+$/)
+    .regex(/^[0-9+]+$/, 'Số điện thoại chỉ chứa số và dấu +')
     .optional()
     .nullable(),
-  avatar_url: z.string().url().optional().nullable()
+  avatar_url: z.string().url('URL không hợp lệ').optional().nullable()
 })
 
 // GET: Lấy thông tin profile
 export async function GET() {
   const supabase = createRouteHandlerClient({ cookies })
 
-  // Kiểm tra session
-  const { data: sessionData } = await supabase.auth.getSession()
-  if (!sessionData.session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const userId = sessionData.session.user.id
-
-  // Lấy profile từ database
-  const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', userId)
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  // Kiểm tra nếu không có profile và tạo profile mới
-  if (!profile || profile.length === 0) {
-    // Tạo profile mặc định
-    const { data: newProfile, error: createError } = await supabase
-      .from('profiles')
-      .insert({
-        id: userId,
-        email: sessionData.session.user.email,
-        username: generateUsername(sessionData.session.user.email || ''),
-        referral_code: nanoid(8),
-        balance: 0,
-        is_admin: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single()
-
-    if (createError) {
-      return NextResponse.json({ error: createError.message }, { status: 500 })
+  try {
+    // Kiểm tra session
+    const { data: sessionData } = await supabase.auth.getSession()
+    if (!sessionData.session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    return NextResponse.json({ profile: newProfile }, { status: 200 })
-  }
+    const userId = sessionData.session.user.id
 
-  // Trả về profile đầu tiên
-  return NextResponse.json({ profile: profile[0] }, { status: 200 })
+    // Lấy profile từ database
+    const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
+
+    if (error) {
+      return handleApiError(error, 'Lỗi khi lấy thông tin profile')
+    }
+
+    // Kiểm tra nếu không có profile và tạo profile mới
+    if (!profile) {
+      // Tạo profile mặc định
+      const { data: newProfile, error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          email: sessionData.session.user.email,
+          username: generateUsername(sessionData.session.user.email || ''),
+          referral_code: nanoid(8),
+          balance: 0,
+          is_admin: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+
+      if (createError) {
+        return handleApiError(createError, 'Lỗi khi tạo profile')
+      }
+
+      return NextResponse.json({ profile: newProfile })
+    }
+
+    return NextResponse.json({ profile })
+  } catch (error) {
+    return handleApiError(error)
+  }
 }
 
 // PUT: Cập nhật thông tin profile
@@ -91,21 +99,33 @@ export async function PUT(request) {
     // Cập nhật profile
     const { data: profile, error } = await supabase
       .from('profiles')
-      .update(validatedData)
+      .update({
+        ...validatedData,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', userId)
       .select()
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Lỗi khi cập nhật thông tin profile')
     }
 
-    return NextResponse.json({ profile }, { status: 200 })
+    return NextResponse.json({ profile })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      return NextResponse.json(
+        {
+          error: 'Validation Error',
+          details: error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        },
+        { status: 400 }
+      )
     }
-    return NextResponse.json({ error: 'Lỗi server' }, { status: 500 })
+    return handleApiError(error)
   }
 }
 

@@ -1,8 +1,13 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { handleApiError } from '@/utils/errorHandler'
+
+// Hằng số cấu hình upload
+const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
+const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 export async function POST(request) {
   try {
@@ -25,13 +30,25 @@ export async function POST(request) {
     }
 
     // Kiểm tra kiểu file
-    if (!file.type.startsWith('image/')) {
-      return NextResponse.json({ error: 'Only image files are allowed' }, { status: 400 })
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      return NextResponse.json(
+        {
+          error: 'Invalid file type',
+          allowedTypes: ALLOWED_FILE_TYPES
+        },
+        { status: 400 }
+      )
     }
 
-    // Giới hạn kích thước file (2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      return NextResponse.json({ error: 'File size must be less than 2MB' }, { status: 400 })
+    // Kiểm tra kích thước file
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        {
+          error: 'File size must be less than 2MB',
+          maxSize: MAX_FILE_SIZE
+        },
+        { status: 400 }
+      )
     }
 
     // Tạo tên file duy nhất
@@ -45,7 +62,7 @@ export async function POST(request) {
     })
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Avatar upload failed')
     }
 
     // Lấy public URL của file
@@ -56,16 +73,22 @@ export async function POST(request) {
     // Cập nhật avatar_url trong profile
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+      .update({
+        avatar_url: avatarUrl,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', userId)
 
     if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 })
+      return handleApiError(updateError, 'Error updating profile avatar')
     }
 
-    return NextResponse.json({ success: true, avatarUrl }, { status: 200 })
+    return NextResponse.json({
+      success: true,
+      avatarUrl,
+      message: 'Avatar uploaded successfully'
+    })
   } catch (error) {
-    console.error('Avatar upload error:', error)
-    return NextResponse.json({ error: 'Avatar upload failed' }, { status: 500 })
+    return handleApiError(error, 'Avatar upload error')
   }
 }

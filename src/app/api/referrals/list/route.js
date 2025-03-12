@@ -1,8 +1,17 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { z } from 'zod'
+import { handleApiError } from '@/utils/errorHandler'
+
+// Skema validasi query parameter
+const referralListSchema = z.object({
+  status: z.enum(['pending', 'completed']).optional(),
+  page: z.string().optional(),
+  pageSize: z.string().optional()
+})
 
 export async function GET(request) {
   try {
@@ -18,12 +27,15 @@ export async function GET(request) {
 
     // Parse query parameters
     const url = new URL(request.url)
-    const status = url.searchParams.get('status')
-    const page = parseInt(url.searchParams.get('page') || '1')
-    const pageSize = parseInt(url.searchParams.get('pageSize') || '10')
+    const queryParams = Object.fromEntries(url.searchParams)
+    const validatedParams = referralListSchema.parse(queryParams)
+
+    // Thiết lập phân trang
+    const page = Number(validatedParams.page) || 1
+    const pageSize = Number(validatedParams.pageSize) || 10
     const offset = (page - 1) * pageSize
 
-    // Build query
+    // Xây dựng truy vấn
     let query = supabase
       .from('referrals')
       .select(
@@ -33,7 +45,7 @@ export async function GET(request) {
         reward_amount,
         created_at,
         updated_at,
-        referred:referred_id(
+        referred:referred_id (
           id,
           username,
           display_name,
@@ -47,17 +59,16 @@ export async function GET(request) {
       .order('created_at', { ascending: false })
       .range(offset, offset + pageSize - 1)
 
-    // Apply status filter if provided
-    if (status) {
-      query = query.eq('status', status)
+    // Áp dụng bộ lọc trạng thái nếu được cung cấp
+    if (validatedParams.status) {
+      query = query.eq('status', validatedParams.status)
     }
 
-    // Execute query
+    // Thực thi truy vấn
     const { data: referrals, error, count } = await query
 
     if (error) {
-      console.error('Error fetching referrals list:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Lỗi khi lấy danh sách giới thiệu')
     }
 
     return NextResponse.json({
@@ -70,7 +81,18 @@ export async function GET(request) {
       }
     })
   } catch (error) {
-    console.error('Referrals list request error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Lỗi validation',
+          details: error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        },
+        { status: 400 }
+      )
+    }
+    return handleApiError(error, 'Lỗi khi xử lý danh sách giới thiệu')
   }
 }

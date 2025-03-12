@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
@@ -7,84 +7,7 @@ import * as XLSX from 'xlsx'
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
-
-export async function GET(request) {
-  try {
-    const supabase = createRouteHandlerClient({ cookies })
-
-    // Kiểm tra session
-    const { data: sessionData } = await supabase.auth.getSession()
-    if (!sessionData.session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const userId = sessionData.session.user.id
-
-    // Parse query parameters
-    const url = new URL(request.url)
-    const type = url.searchParams.get('type')
-    const status = url.searchParams.get('status')
-    const startDate = url.searchParams.get('startDate')
-    const endDate = url.searchParams.get('endDate')
-    const minAmount = url.searchParams.get('minAmount')
-    const maxAmount = url.searchParams.get('maxAmount')
-    const exportFormat = url.searchParams.get('format') || 'csv'
-
-    // Build query
-    let query = supabase
-      .from('transactions')
-      .select('*')
-      .eq('profile_id', userId)
-      .order('created_at', { ascending: false })
-
-    // Apply filters
-    if (type) query = query.eq('type', type)
-    if (status) query = query.eq('status', status)
-    if (startDate) query = query.gte('created_at', new Date(startDate).toISOString())
-    if (endDate) query = query.lte('created_at', new Date(endDate).toISOString())
-    if (minAmount) query = query.gte('amount', minAmount)
-    if (maxAmount) query = query.lte('amount', maxAmount)
-
-    // Execute query
-    const { data: transactions, error } = await query
-    if (error) {
-      console.error('Error fetching transactions for export:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    // Get user info
-    const { data: userProfile } = await supabase.from('profiles').select('*').eq('id', userId).single()
-
-    // Transform data for export
-    const exportData =
-      transactions?.map(transaction => {
-        return {
-          'Mã giao dịch': transaction.id,
-          'Thời gian': format(new Date(transaction.created_at), 'HH:mm:ss, dd/MM/yyyy', { locale: vi }),
-          'Loại giao dịch': getTransactionTypeName(transaction.type),
-          'Số tiền': formatAmountWithPrefix(transaction.amount, transaction.type),
-          'Trạng thái': getStatusName(transaction.status),
-          'Mô tả': transaction.description || '',
-          'Mã tham chiếu': transaction.reference_id || ''
-        }
-      }) || []
-
-    // Export based on format
-    switch (exportFormat) {
-      case 'csv':
-        return exportToCSV(exportData)
-      case 'excel':
-        return exportToExcel(exportData, userProfile)
-      case 'pdf':
-        return exportToPDF(exportData, userProfile)
-      default:
-        return NextResponse.json({ error: 'Unsupported format' }, { status: 400 })
-    }
-  } catch (error) {
-    console.error('Export error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+import { handleApiError } from '@/utils/errorHandler'
 
 // Helper functions
 function getTransactionTypeName(type) {
@@ -123,6 +46,81 @@ function formatAmountWithPrefix(amount, type) {
   const isPositive = type === 'deposit' || type === 'win' || type === 'referral_reward'
   const prefix = isPositive ? '+' : '-'
   return `${prefix} ${amount.toLocaleString('vi-VN')} VND`
+}
+
+export async function GET(request) {
+  try {
+    const supabase = createRouteHandlerClient({ cookies })
+
+    // Kiểm tra session
+    const { data: sessionData } = await supabase.auth.getSession()
+    if (!sessionData.session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const userId = sessionData.session.user.id
+
+    // Parse query parameters
+    const url = new URL(request.url)
+    const type = url.searchParams.get('type')
+    const status = url.searchParams.get('status')
+    const startDate = url.searchParams.get('startDate')
+    const endDate = url.searchParams.get('endDate')
+    const minAmount = url.searchParams.get('minAmount')
+    const maxAmount = url.searchParams.get('maxAmount')
+    const exportFormat = url.searchParams.get('format') || 'csv'
+
+    // Build query
+    let query = supabase
+      .from('transactions')
+      .select('*')
+      .eq('profile_id', userId)
+      .order('created_at', { ascending: false })
+
+    // Apply filters
+    if (type) query = query.eq('type', type)
+    if (status) query = query.eq('status', status)
+    if (startDate) query = query.gte('created_at', new Date(startDate).toISOString())
+    if (endDate) query = query.lte('created_at', new Date(endDate).toISOString())
+    if (minAmount) query = query.gte('amount', parseFloat(minAmount))
+    if (maxAmount) query = query.lte('amount', parseFloat(maxAmount))
+
+    // Execute query
+    const { data: transactions, error } = await query
+
+    if (error) {
+      return handleApiError(error, 'Lỗi khi lấy giao dịch để xuất')
+    }
+
+    // Get user info
+    const { data: userProfile } = await supabase.from('profiles').select('*').eq('id', userId).single()
+
+    // Transform data for export
+    const exportData =
+      transactions?.map(transaction => ({
+        'Mã giao dịch': transaction.id,
+        'Thời gian': format(new Date(transaction.created_at), 'HH:mm:ss, dd/MM/yyyy', { locale: vi }),
+        'Loại giao dịch': getTransactionTypeName(transaction.type),
+        'Số tiền': formatAmountWithPrefix(transaction.amount, transaction.type),
+        'Trạng thái': getStatusName(transaction.status),
+        'Mô tả': transaction.description || '',
+        'Mã tham chiếu': transaction.reference_id || ''
+      })) || []
+
+    // Export based on format
+    switch (exportFormat) {
+      case 'csv':
+        return exportToCSV(exportData)
+      case 'excel':
+        return exportToExcel(exportData, userProfile)
+      case 'pdf':
+        return exportToPDF(exportData, userProfile)
+      default:
+        return NextResponse.json({ error: 'Unsupported format' }, { status: 400 })
+    }
+  } catch (error) {
+    return handleApiError(error, 'Lỗi khi xuất giao dịch')
+  }
 }
 
 // Export to CSV
