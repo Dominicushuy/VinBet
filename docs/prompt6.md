@@ -1,32 +1,27 @@
-Tôi đang phát triển dự án VinBet - nền tảng game cá cược sử dụng Next.js và Supabase, với 90% code tạo bởi AI. Tôi đã cung cấp cho bạn toàn bộ code của trang **Chi tiết người dùng** (`src/app/(admin)/admin/users/[id]/page.jsx`) trong Github. Hãy giúp tôi review kỹ lưỡng và tự động chỉnh sửa code để đảm bảo chất lượng tối ưu.
+Tôi đang phát triển dự án VinBet - nền tảng game cá cược sử dụng Next.js và Supabase, với 90% code tạo bởi AI. Tôi đã cung cấp cho bạn toàn bộ code của trang **Danh sách game** (`src/app/(admin)/admin/games/page.jsx`) trong Github. Hãy giúp tôi review kỹ lưỡng và tự động chỉnh sửa code để đảm bảo chất lượng tối ưu.
 
 1. **Phân tích tổng quan module**:
-
    - Liệt kê các components/API routes và mối quan hệ giữa chúng
    - Phân tích luồng hoạt động của module
    - Đánh giá sơ bộ về chất lượng code của module
 
 2. **Tìm và sửa lỗi tự động**:
-
    - Phát hiện lỗi logic, validation, null/undefined
    - Phát hiện lỗi bảo mật (XSS, CSRF, SQL Injection)
    - Tự động chỉnh sửa các lỗi tìm được bằng cách cung cấp code đã được sửa
 
 3. **Kiểm tra và tối ưu hiệu suất**:
-
-   - Phát hiện code dư thừa, lặp lại
+   - Phát hiện code dư thừa, lặp lại, sử dụng hooks, utils đã được build trước đó (nếu phù hợp)
    - Tối ưu queries và API calls
    - Tối ưu logic xử lý và re-renders không cần thiết
    - Tất cả UI Components đều phải đáp ứng được Responsive trên màn hình điện thoại, iPad
 
 4. **Đánh giá về SOLID & DRY**:
-
    - Kiểm tra tuân thủ nguyên tắc SOLID và DRY
    - Tự động chỉnh sửa hoặc đề xuất cải tiến
    - Phát hiện các components quá phức tạp cần tách nhỏ
 
 5. **Tự động cải tiến code**:
-
    - Cung cấp phiên bản code được cải tiến
    - Gợi ý pattern phù hợp hơn cho module
    - Bổ sung chức năng thiếu hoặc chưa hoàn thiện
@@ -49,5 +44,3 @@ Tôi đang phát triển dự án VinBet - nền tảng game cá cược sử d�
 Hãy trả lời với format sau:
 1. Vấn đề và giải pháp: Liệt kê vấn đề theo mức độ nghiêm trọng kèm code đã sửa
 2. Đề xuất phiên bản cải tiến nếu cần.
-
-Trả lời bằng tiếng Việt và cung cấp code cụ thể đã được chỉnh sửa hoặc cải tiến.
