@@ -1,9 +1,9 @@
+// src/components/home/JackpotCounter.jsx
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { cn } from '@/lib/utils'
-import { useQuery } from '@tanstack/react-query'
-import { apiService } from '@/services/api.service'
+import { useJackpotQuery } from '@/hooks/queries/useHomeQueries'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export function JackpotCounter({ initialValue, className, animationSpeed = 'normal' }) {
@@ -33,21 +33,8 @@ export function JackpotCounter({ initialValue, className, animationSpeed = 'norm
     return Math.floor(Math.random() * 10000) + 5000
   }, [])
 
-  // Lấy jackpot mới mỗi phút
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['jackpot'],
-    queryFn: async () => {
-      try {
-        const response = await apiService.games.getJackpotAmount()
-        return response.jackpotAmount
-      } catch (error) {
-        console.error('Error fetching jackpot:', error)
-        return null
-      }
-    },
-    refetchInterval: 60000, // Refetch mỗi phút
-    enabled: true
-  })
+  // Use custom hook instead of direct API call
+  const { data, isLoading, isError } = useJackpotQuery(initialValue)
 
   // Cập nhật giá trị thật khi có dữ liệu mới từ API
   useEffect(() => {

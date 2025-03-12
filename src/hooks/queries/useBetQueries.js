@@ -1,6 +1,7 @@
 // src/hooks/queries/useBetQueries.js
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'react-hot-toast'
+import { fetchData, postData, buildQueryString } from '@/utils/fetchUtils'
 
 // Query keys
 export const BET_QUERY_KEYS = {
@@ -12,40 +13,21 @@ export const BET_QUERY_KEYS = {
 const betApi = {
   // Đặt cược mới
   placeBet: async ({ gameRoundId, chosenNumber, amount }) => {
-    const response = await fetch(`/api/game-rounds/${gameRoundId}/bets`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        chosenNumber,
-        amount
-      })
+    return postData(`/api/game-rounds/${gameRoundId}/bets`, {
+      chosenNumber,
+      amount
     })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Đặt cược thất bại')
-    }
-
-    return response.json()
   },
 
   // Lấy cược của người dùng hiện tại
   getUserBets: async params => {
-    let url = params && params.gameRoundId ? `/api/game-rounds/${params.gameRoundId}/my-bets` : '/api/bets'
-
-    if (params && params.status) {
-      url += `?status=${params.status}`
+    if (params && params.gameRoundId) {
+      const queryString = params.status ? buildQueryString({ status: params.status }) : ''
+      return fetchData(`/api/game-rounds/${params.gameRoundId}/my-bets${queryString}`)
+    } else {
+      const queryString = params?.status ? buildQueryString({ status: params.status }) : ''
+      return fetchData(`/api/bets${queryString}`)
     }
-
-    const response = await fetch(url)
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể lấy danh sách cược')
-    }
-
-    return response.json()
   }
 }
 

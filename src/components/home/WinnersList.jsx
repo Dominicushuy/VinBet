@@ -1,31 +1,17 @@
+// src/components/home/WinnersList.jsx
 'use client'
 
 import { useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useQuery } from '@tanstack/react-query'
-import { apiService } from '@/services/api.service'
+import { useRecentWinnersQuery } from '@/hooks/queries/useHomeQueries'
 
 export function WinnersList({ initialWinners }) {
   const [hasInitialData] = useState(!!initialWinners && initialWinners.length > 0)
 
-  // Sử dụng React Query để lấy dữ liệu nếu không có initialWinners
-  const { data: fetchedWinners, isLoading } = useQuery({
-    queryKey: ['winners', 'recent'],
-    queryFn: async () => {
-      if (hasInitialData) return []
-      try {
-        const response = await apiService.games.getRecentWinners()
-        return response.winners
-      } catch (error) {
-        console.error('Error fetching winners:', error)
-        return []
-      }
-    },
-    enabled: !hasInitialData,
-    refetchInterval: 300000 // Refetch mỗi 5 phút
-  })
+  // Use custom hook instead of direct API call
+  const { data: fetchedWinners, isLoading } = useRecentWinnersQuery(initialWinners)
 
   // Sử dụng initialWinners nếu có, nếu không thì sử dụng fetchedWinners
   const winners = hasInitialData ? initialWinners : fetchedWinners

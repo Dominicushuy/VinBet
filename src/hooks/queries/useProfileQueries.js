@@ -1,6 +1,7 @@
 // src/hooks/queries/useProfileQueries.js
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'react-hot-toast'
+import { fetchData, putData, postData } from '@/utils/fetchUtils'
 import { AUTH_QUERY_KEYS } from './useAuthQueries'
 
 // Query keys
@@ -16,33 +17,15 @@ export const PROFILE_QUERY_KEYS = {
 const profileApi = {
   // Get user statistics
   getUserStats: async () => {
-    const response = await fetch('/api/profile/stats')
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể tải thống kê người dùng')
-    }
-    return response.json()
+    return fetchData('/api/profile/stats')
   },
 
   // Update user profile
   updateProfile: async data => {
-    const response = await fetch('/api/profile', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể cập nhật hồ sơ')
-    }
-
-    return response.json()
+    return putData('/api/profile', data)
   },
 
-  // Update avatar
+  // Update avatar (special case - uses FormData)
   updateAvatar: async formData => {
     const response = await fetch('/api/profile/avatar', {
       method: 'POST',
@@ -59,72 +42,29 @@ const profileApi = {
 
   // Change password
   changePassword: async data => {
-    const response = await fetch('/api/profile/change-password', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể đổi mật khẩu')
-    }
-
-    return response.json()
+    return postData('/api/profile/change-password', data)
   },
 
   // Get security settings
   getSecuritySettings: async () => {
-    const response = await fetch('/api/profile/security')
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể tải cài đặt bảo mật')
-    }
-    return response.json()
+    return fetchData('/api/profile/security')
   },
 
   // Update security settings
   updateSecuritySettings: async data => {
-    const response = await fetch('/api/profile/security', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể cập nhật cài đặt bảo mật')
-    }
-
-    return response.json()
+    return putData('/api/profile/security', data)
   },
 
   // Get login activity
   getLoginActivity: async () => {
-    const response = await fetch('/api/profile/activity')
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể tải hoạt động đăng nhập')
-    }
-    return response.json()
+    return fetchData('/api/profile/activity')
   },
 
   // Sign out device
   signOutDevice: async deviceId => {
-    const response = await fetch(`/api/profile/activity/${deviceId}`, {
+    return fetchData(`/api/profile/activity/${deviceId}`, {
       method: 'DELETE'
     })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể đăng xuất thiết bị')
-    }
-
-    return response.json()
   }
 }
 
@@ -157,7 +97,6 @@ export function useUpdateProfileMutation() {
   return useMutation({
     mutationFn: profileApi.updateProfile,
     onSuccess: () => {
-      // Invalidate profile query
       queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEYS.profile })
       toast.success('Hồ sơ đã được cập nhật')
     },
@@ -173,7 +112,6 @@ export function useUploadAvatarMutation() {
   return useMutation({
     mutationFn: profileApi.updateAvatar,
     onSuccess: () => {
-      // Invalidate profile query
       queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEYS.profile })
       toast.success('Ảnh đại diện đã được cập nhật')
     },
@@ -201,7 +139,6 @@ export function useUpdateSecuritySettingsMutation() {
   return useMutation({
     mutationFn: profileApi.updateSecuritySettings,
     onSuccess: () => {
-      // Invalidate security settings query
       queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEYS.security })
       toast.success('Cài đặt bảo mật đã được cập nhật')
     },
@@ -217,7 +154,6 @@ export function useSignOutDeviceMutation() {
   return useMutation({
     mutationFn: profileApi.signOutDevice,
     onSuccess: () => {
-      // Invalidate login activity query
       queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEYS.activity })
       toast.success('Đã đăng xuất khỏi thiết bị')
     },

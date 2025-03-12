@@ -1,6 +1,7 @@
 // src/hooks/queries/useFinanceQueries.js
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'react-hot-toast'
+import { fetchData, postData, buildQueryString } from '@/utils/fetchUtils'
 
 // Query keys
 export const FINANCE_QUERY_KEYS = {
@@ -14,23 +15,10 @@ export const FINANCE_QUERY_KEYS = {
 const financeApi = {
   // Tạo yêu cầu nạp tiền
   createPaymentRequest: async data => {
-    const response = await fetch('/api/payment-requests', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể tạo yêu cầu nạp tiền')
-    }
-
-    return response.json()
+    return postData('/api/payment-requests', data)
   },
 
-  // Upload bằng chứng thanh toán
+  // Upload bằng chứng thanh toán (special case - uses FormData)
   uploadPaymentProof: async (requestId, file) => {
     const formData = new FormData()
     formData.append('proof', file)
@@ -51,67 +39,35 @@ const financeApi = {
 
   // Lấy danh sách yêu cầu nạp/rút tiền
   getPaymentRequests: async params => {
-    const queryParams = new URLSearchParams()
-    if (params?.type) queryParams.append('type', params.type)
-    if (params?.status) queryParams.append('status', params.status)
-    if (params?.page) queryParams.append('page', params.page.toString())
-    if (params?.pageSize) queryParams.append('pageSize', params.pageSize.toString())
+    const queryString = buildQueryString({
+      type: params?.type,
+      status: params?.status,
+      page: params?.page,
+      pageSize: params?.pageSize
+    })
 
-    const response = await fetch(`/api/payment-requests?${queryParams}`)
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể lấy danh sách yêu cầu')
-    }
-
-    return response.json()
+    return fetchData(`/api/payment-requests${queryString}`)
   },
 
   // Tạo yêu cầu rút tiền
   createWithdrawalRequest: async data => {
-    const response = await fetch('/api/payment-requests/withdraw', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể tạo yêu cầu rút tiền')
-    }
-
-    return response.json()
+    return postData('/api/payment-requests/withdraw', data)
   },
 
   // Lấy danh sách yêu cầu rút tiền
   getWithdrawalRequests: async params => {
-    const queryParams = new URLSearchParams()
-    if (params?.status) queryParams.append('status', params.status)
-    if (params?.page) queryParams.append('page', params.page.toString())
-    if (params?.pageSize) queryParams.append('pageSize', params.pageSize.toString())
+    const queryString = buildQueryString({
+      status: params?.status,
+      page: params?.page,
+      pageSize: params?.pageSize
+    })
 
-    const response = await fetch(`/api/payment-requests/withdraw?${queryParams}`)
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể lấy danh sách yêu cầu rút tiền')
-    }
-
-    return response.json()
+    return fetchData(`/api/payment-requests/withdraw${queryString}`)
   },
 
   // Lấy chi tiết yêu cầu rút tiền
   getWithdrawalRequestDetail: async id => {
-    const response = await fetch(`/api/payment-requests/withdraw/${id}`)
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể lấy thông tin yêu cầu rút tiền')
-    }
-
-    return response.json()
+    return fetchData(`/api/payment-requests/withdraw/${id}`)
   }
 }
 

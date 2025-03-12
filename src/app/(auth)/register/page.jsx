@@ -1,5 +1,4 @@
 // src/app/(auth)/register/page.jsx
-import Link from 'next/link'
 import { RegisterForm } from '@/components/auth/RegisterForm'
 
 export const metadata = {

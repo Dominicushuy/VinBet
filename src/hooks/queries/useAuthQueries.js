@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { toast } from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
+import { postData } from '@/utils/fetchUtils'
 
 // Query keys
 export const AUTH_QUERY_KEYS = {
@@ -67,22 +68,7 @@ export function useLoginMutation() {
 
   return useMutation({
     mutationFn: async credentials => {
-      // Gọi API đăng nhập
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(credentials)
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Đăng nhập thất bại')
-      }
-
-      return result
+      return postData('/api/auth/login', credentials)
     },
     onSuccess: async () => {
       // Invalidate và refetch session sau khi đăng nhập
@@ -104,22 +90,7 @@ export function useRegisterMutation() {
 
   return useMutation({
     mutationFn: async data => {
-      // Gọi API đăng ký
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Đăng ký thất bại')
-      }
-
-      return result
+      return postData('/api/auth/register', data)
     },
     onSuccess: () => {
       router.push('/login?registered=true')
@@ -137,21 +108,7 @@ export function useLogoutMutation() {
 
   return useMutation({
     mutationFn: async () => {
-      // Gọi API đăng xuất
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Đăng xuất thất bại')
-      }
-
-      return result
+      return postData('/api/auth/logout', {})
     },
     onSuccess: () => {
       // Reset tất cả queries sau khi đăng xuất
@@ -168,22 +125,7 @@ export function useLogoutMutation() {
 export function useForgotPasswordMutation() {
   return useMutation({
     mutationFn: async email => {
-      // Gọi API đặt lại mật khẩu
-      const response = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email })
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Yêu cầu đặt lại mật khẩu thất bại')
-      }
-
-      return result
+      return postData('/api/auth/forgot-password', { email })
     },
     onSuccess: () => {
       toast.success('Vui lòng kiểm tra email để đặt lại mật khẩu')
@@ -200,22 +142,7 @@ export function useNewPasswordMutation() {
 
   return useMutation({
     mutationFn: async newPassword => {
-      // Gọi API đặt mật khẩu mới
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ password: newPassword })
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Không thể đặt lại mật khẩu')
-      }
-
-      return result
+      return postData('/api/auth/reset-password', { password: newPassword })
     },
     onSuccess: () => {
       // Xóa session query và chuyển về trang đăng nhập

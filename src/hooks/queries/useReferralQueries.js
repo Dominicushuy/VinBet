@@ -1,5 +1,6 @@
 // src/hooks/queries/useReferralQueries.js
 import { useQuery } from '@tanstack/react-query'
+import { fetchData, buildQueryString } from '@/utils/fetchUtils'
 
 // Query keys
 export const REFERRAL_QUERY_KEYS = {
@@ -12,46 +13,23 @@ export const REFERRAL_QUERY_KEYS = {
 const referralApi = {
   // Lấy mã giới thiệu
   getReferralCode: async () => {
-    const response = await fetch('/api/referrals/code')
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể lấy mã giới thiệu')
-    }
-    return response.json()
+    return fetchData('/api/referrals/code')
   },
 
   // Lấy thống kê giới thiệu
   getReferralStats: async () => {
-    const response = await fetch('/api/referrals/stats')
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể lấy thống kê giới thiệu')
-    }
-    return response.json()
+    return fetchData('/api/referrals/stats')
   },
 
   // Lấy danh sách người được giới thiệu
   getReferralsList: async params => {
-    let url = '/api/referrals/list'
+    const queryString = buildQueryString({
+      status: params?.status,
+      page: params?.page,
+      pageSize: params?.pageSize
+    })
 
-    // Add query parameters if provided
-    if (params) {
-      const queryParams = new URLSearchParams()
-      if (params.status) queryParams.append('status', params.status)
-      if (params.page) queryParams.append('page', params.page.toString())
-      if (params.pageSize) queryParams.append('pageSize', params.pageSize.toString())
-
-      if (queryParams.toString()) {
-        url += `?${queryParams.toString()}`
-      }
-    }
-
-    const response = await fetch(url)
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể lấy danh sách giới thiệu')
-    }
-    return response.json()
+    return fetchData(`/api/referrals/list${queryString}`)
   }
 }
 

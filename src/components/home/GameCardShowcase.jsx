@@ -7,12 +7,12 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Clock, ExternalLink, Users, Trophy, Zap } from 'lucide-react'
 import { GameListSkeleton } from '@/components/game/GameListSkeleton'
-import { useQuery } from '@tanstack/react-query'
-import { apiService } from '@/services/api.service'
+import { useGamesByTypeQuery } from '@/hooks/queries/useHomeQueries'
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
 
 function GameCard({ game, index }) {
+  // Component code remains the same
   const [timeLeft, setTimeLeft] = useState('')
   const [isEnding, setIsEnding] = useState(false)
 
@@ -171,33 +171,7 @@ function GameCard({ game, index }) {
 }
 
 export function GameCardShowcase({ type, count = 6 }) {
-  const { data: fetchedGames, isLoading } = useQuery({
-    queryKey: ['games', type],
-    queryFn: async () => {
-      // Gọi API tương ứng dựa vào type
-      switch (type) {
-        case 'active': {
-          const activeResponse = await apiService.games.getActiveGames()
-          return activeResponse.active || []
-        }
-        case 'upcoming': {
-          const upcomingResponse = await apiService.games.getUpcomingGames()
-          return upcomingResponse.gameRounds || []
-        }
-        case 'popular': {
-          const popularResponse = await apiService.games.getPopularGames()
-          return popularResponse.gameRounds || []
-        }
-        case 'jackpot': {
-          const jackpotResponse = await apiService.games.getJackpotGames()
-          return jackpotResponse.gameRounds || []
-        }
-        default:
-          return []
-      }
-    },
-    refetchInterval: type === 'active' ? 30000 : false // Auto refresh cho active games
-  })
+  const { data: fetchedGames, isLoading } = useGamesByTypeQuery(type)
 
   if (isLoading) {
     return <GameListSkeleton count={count} />

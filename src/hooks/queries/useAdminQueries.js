@@ -1,6 +1,7 @@
 // src/hooks/queries/useAdminQueries.js
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'react-hot-toast'
+import { fetchData, postData, buildQueryString } from '@/utils/fetchUtils'
 import { GAME_QUERY_KEYS } from './useGameQueries'
 
 // Query keys
@@ -16,160 +17,74 @@ export const ADMIN_QUERY_KEYS = {
 export const adminApi = {
   // Lấy danh sách các payment requests
   getPaymentRequests: async params => {
-    const queryParams = new URLSearchParams()
-    if (params && params.type) queryParams.append('type', params.type)
-    if (params && params.status) queryParams.append('status', params.status)
-    if (params && params.page) queryParams.append('page', params.page.toString())
-    if (params && params.pageSize) queryParams.append('pageSize', params.pageSize.toString())
-    // Add these new filter parameters
-    if (params && params.startDate) queryParams.append('startDate', params.startDate)
-    if (params && params.endDate) queryParams.append('endDate', params.endDate)
-    if (params && params.search) queryParams.append('search', params.search)
-    if (params && params.sortBy) queryParams.append('sortBy', params.sortBy)
-    if (params && params.sortOrder) queryParams.append('sortOrder', params.sortOrder)
+    const queryString = buildQueryString({
+      type: params?.type,
+      status: params?.status,
+      page: params?.page,
+      pageSize: params?.pageSize,
+      startDate: params?.startDate,
+      endDate: params?.endDate,
+      search: params?.search,
+      sortBy: params?.sortBy,
+      sortOrder: params?.sortOrder
+    })
 
-    const response = await fetch(`/api/admin/payment-requests?${queryParams}`)
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể lấy danh sách yêu cầu')
-    }
-
-    return response.json()
+    return fetchData(`/api/admin/payment-requests${queryString}`)
   },
 
   // Phê duyệt/từ chối payment request
   processPaymentRequest: async (id, action, data) => {
-    const response = await fetch(`/api/admin/payment-requests/${id}/${action}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || `Không thể ${action === 'approve' ? 'phê duyệt' : 'từ chối'} yêu cầu`)
-    }
-
-    return response.json()
+    return postData(`/api/admin/payment-requests/${id}/${action}`, data)
   },
 
   // Lấy danh sách người dùng
   getUsers: async params => {
-    const queryParams = new URLSearchParams()
-    if (params && params.query) queryParams.append('query', params.query)
-    if (params && params.page) queryParams.append('page', params.page.toString())
-    if (params && params.pageSize) queryParams.append('pageSize', params.pageSize.toString())
-    if (params && params.sortBy) queryParams.append('sortBy', params.sortBy)
-    if (params && params.sortOrder) queryParams.append('sortOrder', params.sortOrder)
+    const queryString = buildQueryString({
+      query: params?.query,
+      page: params?.page,
+      pageSize: params?.pageSize,
+      sortBy: params?.sortBy,
+      sortOrder: params?.sortOrder
+    })
 
-    const response = await fetch(`/api/admin/users?${queryParams}`)
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể lấy danh sách người dùng')
-    }
-
-    return response.json()
+    return fetchData(`/api/admin/users${queryString}`)
   },
 
   // Lấy thống kê dashboard
   getDashboardStats: async () => {
-    const response = await fetch('/api/admin/dashboard-summary')
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể lấy thống kê dashboard')
-    }
-
-    return response.json()
+    return fetchData('/api/admin/dashboard-summary')
   },
 
   // Lấy thống kê dashboard
   getDashboardSummary: async () => {
-    const response = await fetch('/api/admin/dashboard-summary')
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể lấy thống kê dashboard')
-    }
-
-    return response.json()
+    return fetchData('/api/admin/dashboard-summary')
   },
 
   // Lấy metrics theo thời gian
   getMetrics: async params => {
-    const queryParams = new URLSearchParams()
-    if (params && params.startDate) queryParams.append('startDate', params.startDate)
-    if (params && params.endDate) queryParams.append('endDate', params.endDate)
-    if (params && params.interval) queryParams.append('interval', params.interval)
+    const queryString = buildQueryString({
+      startDate: params?.startDate,
+      endDate: params?.endDate,
+      interval: params?.interval
+    })
 
-    const response = await fetch(`/api/admin/metrics?${queryParams}`)
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể lấy metrics')
-    }
-
-    return response.json()
+    return fetchData(`/api/admin/metrics${queryString}`)
   },
 
   getUserDetail: async userId => {
-    const response = await fetch(`/api/admin/users/${userId}`)
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể lấy thông tin người dùng')
-    }
-
-    return response.json()
+    return fetchData(`/api/admin/users/${userId}`)
   },
 
   updateUser: async (userId, data) => {
-    const response = await fetch(`/api/admin/users/${userId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể cập nhật người dùng')
-    }
-
-    return response.json()
+    return postData(`/api/admin/users/${userId}`, data, { method: 'PUT' })
   },
 
   setGameResult: async (gameId, data) => {
-    const response = await fetch(`/api/admin/games/${gameId}/results`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể cập nhật kết quả game')
-    }
-
-    return response.json()
+    return postData(`/api/admin/games/${gameId}/results`, data)
   },
 
   getTransactions: async () => {
-    const response = await fetch('/api/admin/transactions')
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể lấy danh sách giao dịch')
-    }
-
-    return response.json()
+    return fetchData('/api/admin/transactions')
   }
 }
 
@@ -221,10 +136,9 @@ export function useAdminMetricsQuery(params) {
   return useQuery({
     queryKey: ADMIN_QUERY_KEYS.metrics(params),
     queryFn: () => adminApi.getMetrics(params),
-    // Thêm cấu hình để tránh gọi API liên tục
-    staleTime: 5 * 60 * 1000, // 5 phút
+    staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchInterval: 5 * 60 * 1000 // Tự động refetch sau 5 phút
+    refetchInterval: 5 * 60 * 1000
   })
 }
 

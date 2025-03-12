@@ -1,4 +1,6 @@
 // src/components/auth/ResetPasswordForm.jsx
+'use client'
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { z } from 'zod'

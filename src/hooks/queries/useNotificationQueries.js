@@ -1,7 +1,8 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-// src/hooks/queries/useNotificationQueries.js (Enhanced)
+// src/hooks/queries/useNotificationQueries.js
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { toast } from 'react-hot-toast'
+import { fetchData, postData, deleteData, putData, buildQueryString } from '@/utils/fetchUtils'
 
 // Query keys
 export const NOTIFICATION_QUERY_KEYS = {
@@ -16,178 +17,74 @@ export const NOTIFICATION_QUERY_KEYS = {
 const notificationApi = {
   // Get user notifications
   getNotifications: async params => {
-    const queryParams = new URLSearchParams()
-    if (params?.page) queryParams.append('page', params.page.toString())
-    if (params?.pageSize) queryParams.append('pageSize', params.pageSize.toString())
-    if (params?.type) queryParams.append('type', params.type)
-    if (params?.isRead !== undefined) queryParams.append('isRead', params.isRead.toString())
-    if (params?.searchQuery) queryParams.append('search', params.searchQuery)
+    const queryString = buildQueryString({
+      page: params?.page,
+      pageSize: params?.pageSize,
+      type: params?.type,
+      isRead: params?.isRead !== undefined ? params.isRead : undefined,
+      search: params?.searchQuery
+    })
 
-    const response = await fetch(`/api/notifications?${queryParams}`)
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể tải thông báo')
-    }
-
-    return response.json()
+    return fetchData(`/api/notifications${queryString}`)
   },
 
   // Get notification detail
   getNotificationDetail: async id => {
-    const response = await fetch(`/api/notifications/${id}`)
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể tải chi tiết thông báo')
-    }
-
-    return response.json()
+    return fetchData(`/api/notifications/${id}`)
   },
 
   // Get unread notification count
   getNotificationCount: async () => {
-    const response = await fetch(`/api/notifications/count`)
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể tải số lượng thông báo')
-    }
-
-    return response.json()
+    return fetchData(`/api/notifications/count`)
   },
 
   // Mark notification as read
   markNotificationRead: async id => {
-    const response = await fetch(`/api/notifications/${id}/read`, {
-      method: 'POST'
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể đánh dấu đã đọc')
-    }
-
-    return response.json()
+    return postData(`/api/notifications/${id}/read`, {})
   },
 
   // Mark all notifications as read
   markAllNotificationsRead: async () => {
-    const response = await fetch(`/api/notifications/read-all`, {
-      method: 'POST'
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể đánh dấu tất cả đã đọc')
-    }
-
-    return response.json()
+    return postData(`/api/notifications/read-all`, {})
   },
 
   // Delete notification
   deleteNotification: async id => {
-    const response = await fetch(`/api/notifications/${id}`, {
-      method: 'DELETE'
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể xóa thông báo')
-    }
-
-    return response.json()
+    return deleteData(`/api/notifications/${id}`)
   },
 
   // Delete all notifications
   deleteAllNotifications: async params => {
-    const queryParams = new URLSearchParams()
-    if (params?.type) queryParams.append('type', params.type)
-
-    const response = await fetch(`/api/notifications/delete-all?${queryParams}`, {
-      method: 'DELETE'
+    const queryString = buildQueryString({
+      type: params?.type
     })
 
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể xóa tất cả thông báo')
-    }
-
-    return response.json()
+    return deleteData(`/api/notifications/delete-all${queryString}`)
   },
 
   // Get notification settings
   getNotificationSettings: async () => {
-    const response = await fetch(`/api/notifications/settings`)
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể tải cài đặt thông báo')
-    }
-
-    return response.json()
+    return fetchData(`/api/notifications/settings`)
   },
 
   // Update notification settings
   updateNotificationSettings: async settings => {
-    const response = await fetch(`/api/notifications/settings`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(settings)
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể cập nhật cài đặt thông báo')
-    }
-
-    return response.json()
+    return putData(`/api/notifications/settings`, settings)
   },
 
   // Get Telegram status
   getTelegramStatus: async () => {
-    const response = await fetch(`/api/notifications/telegram`)
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể kiểm tra trạng thái Telegram')
-    }
-
-    return response.json()
+    return fetchData(`/api/notifications/telegram`)
   },
 
   // Connect Telegram
   connectTelegram: async telegramId => {
-    const response = await fetch(`/api/notifications/telegram`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ telegram_id: telegramId })
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể kết nối Telegram')
-    }
-
-    return response.json()
+    return postData(`/api/notifications/telegram`, { telegram_id: telegramId })
   },
 
   // Disconnect Telegram
   disconnectTelegram: async () => {
-    const response = await fetch(`/api/notifications/telegram`, {
-      method: 'DELETE'
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Không thể ngắt kết nối Telegram')
-    }
-
-    return response.json()
+    return deleteData(`/api/notifications/telegram`)
   }
 }
 

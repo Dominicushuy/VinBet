@@ -1,47 +1,103 @@
 // src/hooks/queries/useHomeQueries.js
 import { useQuery } from '@tanstack/react-query'
-import { fetchData } from '@/utils/fetchUtils'
+import { fetchData, buildQueryString } from '@/utils/fetchUtils'
 
-// Query hook cho danh sách game sắp diễn ra
+// Query keys
+export const HOME_QUERY_KEYS = {
+  upcomingGames: ['games', 'upcoming'],
+  popularGames: ['games', 'popular'],
+  jackpotGames: ['games', 'jackpot-games'],
+  jackpotAmount: ['jackpot'],
+  recentWinners: ['winners', 'recent'],
+  gamesByType: type => ['games', type]
+}
+
+// API functions
+const homeApi = {
+  // Get upcoming games
+  getUpcomingGames: async () => {
+    return fetchData('/api/games/upcoming')
+  },
+
+  // Get popular games
+  getPopularGames: async () => {
+    return fetchData('/api/games/popular')
+  },
+
+  // Get jackpot games
+  getJackpotGames: async () => {
+    return fetchData('/api/games/jackpot-games')
+  },
+
+  // Get jackpot amount
+  getJackpotAmount: async () => {
+    return fetchData('/api/games/jackpot')
+  },
+
+  // Get recent winners
+  getRecentWinners: async () => {
+    return fetchData('/api/games/winners/recent')
+  },
+
+  // Get active games
+  getActiveGames: async () => {
+    return fetchData('/api/game-rounds/active')
+  },
+
+  // Get games by type
+  getGamesByType: async type => {
+    switch (type) {
+      case 'active':
+        return fetchData('/api/game-rounds/active')
+      case 'upcoming':
+        return fetchData('/api/games/upcoming')
+      case 'popular':
+        return fetchData('/api/games/popular')
+      case 'jackpot':
+        return fetchData('/api/games/jackpot-games')
+      default:
+        return { gameRounds: [] }
+    }
+  }
+}
+
+// Query hooks
 export function useUpcomingGamesQuery() {
   return useQuery({
-    queryKey: ['games', 'upcoming'],
+    queryKey: HOME_QUERY_KEYS.upcomingGames,
     queryFn: async () => {
-      const response = await fetchData('/api/games/upcoming')
+      const response = await homeApi.getUpcomingGames()
       return response.gameRounds || []
     }
   })
 }
 
-// Query hook cho danh sách game phổ biến
 export function usePopularGamesQuery() {
   return useQuery({
-    queryKey: ['games', 'popular'],
+    queryKey: HOME_QUERY_KEYS.popularGames,
     queryFn: async () => {
-      const response = await fetchData('/api/games/popular')
+      const response = await homeApi.getPopularGames()
       return response.gameRounds || []
     }
   })
 }
 
-// Query hook cho danh sách game jackpot
 export function useJackpotGamesQuery() {
   return useQuery({
-    queryKey: ['games', 'jackpot'],
+    queryKey: HOME_QUERY_KEYS.jackpotGames,
     queryFn: async () => {
-      const response = await fetchData('/api/games/jackpot-games')
+      const response = await homeApi.getJackpotGames()
       return response.gameRounds || []
     }
   })
 }
 
-// Query hook cho jackpot amount
 export function useJackpotQuery(initialValue) {
   return useQuery({
-    queryKey: ['jackpot'],
+    queryKey: HOME_QUERY_KEYS.jackpotAmount,
     queryFn: async () => {
       try {
-        const response = await fetchData('/api/games/jackpot')
+        const response = await homeApi.getJackpotAmount()
         return response.jackpotAmount
       } catch (error) {
         console.error('Error fetching jackpot:', error)
@@ -53,16 +109,15 @@ export function useJackpotQuery(initialValue) {
   })
 }
 
-// Query hook cho danh sách người thắng gần đây
 export function useRecentWinnersQuery(initialWinners) {
   const hasInitialData = !!initialWinners && initialWinners.length > 0
 
   return useQuery({
-    queryKey: ['winners', 'recent'],
+    queryKey: HOME_QUERY_KEYS.recentWinners,
     queryFn: async () => {
       if (hasInitialData) return initialWinners
       try {
-        const response = await fetchData('/api/games/winners/recent')
+        const response = await homeApi.getRecentWinners()
         return response.winners || []
       } catch (error) {
         console.error('Error fetching winners:', error)
@@ -75,31 +130,29 @@ export function useRecentWinnersQuery(initialWinners) {
   })
 }
 
-// Hook tổng hợp để truy vấn game theo loại
+export function useActiveGamesQuery() {
+  return useQuery({
+    queryKey: ['games', 'active'],
+    queryFn: async () => {
+      const response = await homeApi.getActiveGames()
+      return response.active || []
+    },
+    refetchInterval: 60000 // 1 minute
+  })
+}
+
 export function useGamesByTypeQuery(type) {
   return useQuery({
-    queryKey: ['games', type],
+    queryKey: HOME_QUERY_KEYS.gamesByType(type),
     queryFn: async () => {
-      switch (type) {
-        case 'active': {
-          const response = await fetchData('/api/game-rounds/active')
-          return response.active || []
-        }
-        case 'upcoming': {
-          const response = await fetchData('/api/games/upcoming')
-          return response.gameRounds || []
-        }
-        case 'popular': {
-          const response = await fetchData('/api/games/popular')
-          return response.gameRounds || []
-        }
-        case 'jackpot': {
-          const response = await fetchData('/api/games/jackpot-games')
-          return response.gameRounds || []
-        }
-        default:
-          return []
+      const response = await homeApi.getGamesByType(type)
+
+      // Handle different response formats
+      if (type === 'active' && response.active) {
+        return response.active
       }
+
+      return response.gameRounds || []
     },
     refetchInterval: type === 'active' ? 30000 : false // Auto refresh cho active games
   })

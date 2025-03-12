@@ -1,5 +1,4 @@
 // src/app/(auth)/forgot-password/page.jsx
-import Link from 'next/link'
 import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm'
 
 export const metadata = {
