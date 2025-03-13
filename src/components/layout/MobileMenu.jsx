@@ -1,37 +1,18 @@
-import React from 'react'
+'use client'
+
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { usePathname } from 'next/navigation'
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { LogOut } from 'lucide-react'
+import { LogOut, ChevronDown } from 'lucide-react'
 import { formatCurrency } from '@/utils/formatUtils'
 import { Badge } from '../ui/badge'
-import { ChevronDown } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
-function NavItem({ href, icon, label, isActive, onClick, badge }) {
-  return (
-    <Link
-      href={href}
-      onClick={onClick}
-      className={`flex items-center justify-between px-3 py-2 rounded-md transition-colors ${
-        isActive ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-accent hover:text-accent-foreground'
-      }`}
-    >
-      <div className='flex items-center gap-3'>
-        {icon}
-        <span>{label}</span>
-      </div>
-      {badge && (
-        <Badge variant='secondary' className='ml-auto'>
-          {badge}
-        </Badge>
-      )}
-    </Link>
-  )
-}
-
-function NavItemWithSub({ icon, label, isActive, subItems, isOpen, onToggle }) {
+function NavItemWithSub({ icon, label, isActive, subItems, isOpen, onToggle, pathname, closeSheet }) {
   return (
     <div className='space-y-1'>
       <button
@@ -46,20 +27,45 @@ function NavItemWithSub({ icon, label, isActive, subItems, isOpen, onToggle }) {
         </div>
         <ChevronDown size={16} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
-      {isOpen && (
-        <div className='pl-9 space-y-1'>
-          {subItems.map(item => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className='flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground'
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </div>
-      )}
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{
+              opacity: 1,
+              height: 'auto',
+              transition: {
+                duration: 0.3,
+                ease: 'easeInOut'
+              }
+            }}
+            exit={{
+              opacity: 0,
+              height: 0,
+              transition: {
+                duration: 0.2,
+                ease: 'easeInOut'
+              }
+            }}
+            className='pl-9 space-y-1'
+          >
+            {subItems.map(item => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground ${
+                  pathname === item.href ? 'bg-primary/10 text-primary' : ''
+                }`}
+                onClick={closeSheet}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </Link>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -75,6 +81,8 @@ export const MobileMenu = React.memo(function MobileMenu({
   checkIsActive,
   closeSheet
 }) {
+  const pathname = usePathname()
+
   const getUserInitial = () => {
     if (profile?.display_name) return profile.display_name[0].toUpperCase()
     if (profile?.username) return profile.username[0].toUpperCase()
@@ -139,18 +147,27 @@ export const MobileMenu = React.memo(function MobileMenu({
                     subItems={item.subItems}
                     isOpen={openSubMenus[item.key] || false}
                     onToggle={() => toggleSubMenu(item.key)}
+                    pathname={pathname}
+                    closeSheet={closeSheet}
                   />
                 )
               }
               return (
-                <NavItem
+                <Link
                   key={item.href}
                   href={item.href}
-                  icon={item.icon}
-                  label={item.label}
-                  isActive={checkIsActive(item.href)}
+                  className={`flex items-center justify-between px-3 py-2 rounded-md transition-colors ${
+                    checkIsActive(item.href)
+                      ? 'bg-primary text-primary-foreground font-medium'
+                      : 'hover:bg-accent hover:text-accent-foreground'
+                  }`}
                   onClick={closeSheet}
-                />
+                >
+                  <div className='flex items-center gap-3'>
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </div>
+                </Link>
               )
             })}
           </nav>

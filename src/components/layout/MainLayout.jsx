@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -24,45 +24,16 @@ import {
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
-import { useEffect } from 'react'
 
 export function MainLayout({ children }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [openSubMenus, setOpenSubMenus] = useState({})
-  const pathname = usePathname()
-  const { profile, signOut } = useAuth()
-  const { theme, setTheme } = useTheme()
-  const [isMounted, setIsMounted] = useState(false)
-
-  // Handle client-side mounting for theme toggle
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
-
-  const closeSheet = useCallback(() => setIsOpen(false), [])
-
-  const toggleTheme = useCallback(() => {
-    setTheme(theme === 'dark' ? 'light' : 'dark')
-  }, [theme, setTheme])
-
-  const toggleSubMenu = useCallback(key => {
-    setOpenSubMenus(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }))
-  }, [])
-
-  const checkIsActive = useCallback(
-    href => {
-      if (href === '/') return pathname === '/'
-      return pathname.startsWith(href)
-    },
-    [pathname]
-  )
-
   const mainNavItems = useMemo(
     () => [
-      { key: 'home', href: '/', label: 'Trang chủ', icon: <Home size={20} /> },
+      {
+        key: 'home',
+        href: '/',
+        label: 'Trang chủ',
+        icon: <Home size={20} />
+      },
       {
         key: 'games',
         href: '/games',
@@ -105,6 +76,50 @@ export function MainLayout({ children }) {
       }
     ],
     []
+  )
+
+  const pathname = usePathname()
+
+  const [isOpen, setIsOpen] = useState(false)
+  const [openSubMenus, setOpenSubMenus] = useState(() => {
+    // Initialize based on current pathname
+    const initialState = {}
+    mainNavItems.forEach(item => {
+      if (item.subItems) {
+        initialState[item.key] = item.subItems.some(subitem => pathname && pathname === subitem.href)
+      }
+    })
+    return initialState
+  })
+
+  const { profile, signOut } = useAuth()
+  const { theme, setTheme } = useTheme()
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Handle client-side mounting for theme toggle
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  const closeSheet = useCallback(() => setIsOpen(false), [])
+
+  const toggleTheme = useCallback(() => {
+    setTheme(theme === 'dark' ? 'light' : 'dark')
+  }, [theme, setTheme])
+
+  const toggleSubMenu = useCallback(key => {
+    setOpenSubMenus(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }))
+  }, [])
+
+  const checkIsActive = useCallback(
+    href => {
+      if (href === '/') return pathname === '/'
+      return pathname.startsWith(href)
+    },
+    [pathname]
   )
 
   // Theme toggle render function for client-side

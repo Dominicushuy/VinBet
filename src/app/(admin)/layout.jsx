@@ -5,6 +5,8 @@ import { AdminSidebar } from '@/components/admin/layout/AdminSidebar'
 import { AdminFooter } from '@/components/admin/layout/AdminFooter'
 import { Suspense } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+import AdminErrorFallback from '@/components/admin/layout/AdminErrorFallback'
 
 // Component để hiển thị loading state của content
 function AdminContentLoading() {
@@ -34,16 +36,25 @@ export default async function AdminLayout({ children }) {
 
     // Nếu có userProfile, render layout
     return (
-      <div className='min-h-screen bg-background flex flex-col'>
+      <div className='flex min-h-screen flex-col'>
         <AdminHeader userProfile={userProfile || {}} />
-        <div className='flex-1 flex'>
-          <AdminSidebar />
-          <main className='flex-1 p-0 md:p-6 overflow-auto'>
-            <div className='container mx-auto max-w-7xl'>
-              <Suspense fallback={<AdminContentLoading />}>{children}</Suspense>
+
+        <div className='flex-1'>
+          <div className='max-w-screen-3xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6'>
+            <div className='grid grid-cols-1 gap-6 md:grid-cols-[288px_1fr]'>
+              <AdminSidebar />
+
+              <main className='w-full overflow-hidden'>
+                <ErrorBoundary fallback={AdminErrorFallback}>
+                  <div className='bg-background rounded-xl p-4 sm:p-6 shadow-sm border overflow-hidden'>
+                    <Suspense fallback={<AdminContentLoading />}>{children}</Suspense>
+                  </div>
+                </ErrorBoundary>
+              </main>
             </div>
-          </main>
+          </div>
         </div>
+
         <AdminFooter />
       </div>
     )

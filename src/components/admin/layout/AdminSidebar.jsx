@@ -5,13 +5,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { ChevronDown } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { adminMenuItems, adminSupportMenuItems } from '@/config/adminMenuItems'
-import { motion, AnimatePresence } from 'framer-motion'
 
-export function AdminSidebar() {
+export const AdminSidebar = React.memo(function AdminSidebar() {
   const pathname = usePathname()
   const [openGroups, setOpenGroups] = useState(() => {
     // Initially open groups that contain the current active route
@@ -32,114 +31,143 @@ export function AdminSidebar() {
     }))
   }
 
-  const renderMenuItem = item => {
-    // Items with subitems (expandable groups)
+  // Check if an item or any of its subitems are active
+  const isItemActive = item => {
+    if (item.href && pathname === item.href) return true
     if (item.subitems) {
-      const isOpen = openGroups[item.title]
-      const isActive = item.subitems.some(subitem => pathname === subitem.href)
-
-      return (
-        <div key={item.title} className='w-full'>
-          <Button
-            variant='ghost'
-            className={cn(
-              'w-full justify-between text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors group',
-              isActive && 'bg-secondary/70 text-foreground font-medium'
-            )}
-            onClick={() => toggleGroup(item.title)}
-          >
-            <div className='flex items-center gap-3'>
-              {item.icon &&
-                React.cloneElement(item.icon, {
-                  className: cn(
-                    'h-5 w-5 transition-colors',
-                    isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
-                  )
-                })}
-              <span>{item.title}</span>
-            </div>
-            <ChevronDown className={cn('h-4 w-4 transition-transform', isOpen ? 'rotate-180' : '')} />
-          </Button>
-
-          <AnimatePresence>
-            {isOpen && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{
-                  opacity: 1,
-                  height: 'auto',
-                  transition: {
-                    duration: 0.3,
-                    ease: 'easeInOut'
-                  }
-                }}
-                exit={{
-                  opacity: 0,
-                  height: 0,
-                  transition: {
-                    duration: 0.2,
-                    ease: 'easeInOut'
-                  }
-                }}
-                className='overflow-hidden pl-4 border-l border-border'
-              >
-                {item.subitems.map(subitem => (
-                  <Link
-                    key={subitem.title}
-                    href={subitem.href}
-                    className={cn(
-                      'flex items-center pl-4 py-2 text-sm rounded-md transition-colors',
-                      pathname === subitem.href
-                        ? 'bg-primary/10 text-primary font-medium'
-                        : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-                    )}
-                  >
-                    {subitem.title}
-                  </Link>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      )
+      return item.subitems.some(subitem => pathname === subitem.href)
     }
-
-    // Regular menu item
-    return (
-      <Link
-        href={item.href}
-        key={item.title}
-        className={cn(
-          'flex items-center gap-3 px-3 py-2 rounded-md transition-colors group',
-          pathname === item.href
-            ? 'bg-primary/10 text-primary font-medium'
-            : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-        )}
-      >
-        {item.icon &&
-          React.cloneElement(item.icon, {
-            className: cn(
-              'h-5 w-5 transition-colors',
-              pathname === item.href ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
-            )
-          })}
-        <span>{item.title}</span>
-      </Link>
-    )
+    return false
   }
 
   return (
-    <aside className='hidden md:block w-64 border-r bg-background'>
-      <ScrollArea className='h-[calc(100vh-4rem)]'>
-        <nav className='px-3 py-4 space-y-2'>
-          {adminMenuItems.map(renderMenuItem)}
+    <aside className='hidden md:block w-72'>
+      <div className='sticky top-24'>
+        <ScrollArea className='h-[calc(100vh-6rem)]'>
+          <div className='px-3 py-4 space-y-6'>
+            {/* Main Navigation */}
+            <Card className='rounded-xl border bg-card shadow-sm'>
+              <nav className='p-2 space-y-1.5'>
+                {adminMenuItems.map(item => {
+                  // Items with subitems (expandable groups)
+                  if (item.subitems) {
+                    const isOpen = openGroups[item.title]
+                    const isActive = isItemActive(item)
 
-          <Separator className='my-4' />
+                    return (
+                      <NavItemWithSub
+                        key={item.title}
+                        icon={item.icon}
+                        label={item.title}
+                        isActive={isActive}
+                        subItems={item.subitems}
+                        isOpen={isOpen}
+                        onToggle={() => toggleGroup(item.title)}
+                        pathname={pathname}
+                      />
+                    )
+                  }
 
-          <div className='px-3 text-xs text-muted-foreground mb-2'>Hỗ trợ</div>
-          {adminSupportMenuItems.map(renderMenuItem)}
-        </nav>
-      </ScrollArea>
+                  // Regular menu item
+                  return (
+                    <NavItem
+                      key={item.title}
+                      href={item.href}
+                      icon={item.icon}
+                      label={item.title}
+                      isActive={pathname === item.href}
+                    />
+                  )
+                })}
+              </nav>
+            </Card>
+
+            {/* Support Section */}
+            <Card className='rounded-xl border bg-card shadow-sm'>
+              <div className='p-2 space-y-1.5'>
+                <h3 className='px-3 text-xs font-medium text-muted-foreground'>Hỗ trợ</h3>
+                <Separator className='my-2' />
+                {adminSupportMenuItems.map(item => (
+                  <NavItem
+                    key={item.title}
+                    href={item.href}
+                    icon={item.icon}
+                    label={item.title}
+                    isActive={pathname === item.href}
+                  />
+                ))}
+              </div>
+            </Card>
+          </div>
+        </ScrollArea>
+      </div>
     </aside>
   )
-}
+})
+
+const NavItem = React.memo(function NavItem({ href, icon, label, isActive, onClick }) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={`flex items-center gap-2 px-2.5 py-2 rounded-md transition-colors ${
+        isActive ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-accent hover:text-accent-foreground'
+      }`}
+    >
+      {icon &&
+        React.cloneElement(icon, {
+          className: cn('h-4 w-4 flex-shrink-0', isActive ? 'text-primary-foreground' : 'text-muted-foreground')
+        })}
+      <span className='line-clamp-1'>{label}</span>
+    </Link>
+  )
+})
+
+const NavItemWithSub = React.memo(function NavItemWithSub({
+  icon,
+  label,
+  isActive,
+  subItems,
+  isOpen,
+  onToggle,
+  pathname
+}) {
+  return (
+    <div className='space-y-1'>
+      <button
+        onClick={onToggle}
+        className={`flex w-full items-center justify-between px-2.5 py-2 rounded-md transition-colors ${
+          isActive ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-accent hover:text-accent-foreground'
+        }`}
+      >
+        <div className='flex items-center gap-2 min-w-0'>
+          {icon &&
+            React.cloneElement(icon, {
+              className: cn('h-4 w-4 flex-shrink-0', isActive ? 'text-primary-foreground' : 'text-muted-foreground')
+            })}
+          <span className='line-clamp-1'>{label}</span>
+        </div>
+        <ChevronDown className={`h-4 w-4 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className='pl-6 space-y-1'>
+          {subItems.map(item => (
+            <Link
+              key={item.title}
+              href={item.href}
+              className={`flex items-center gap-2 px-2.5 py-1.5 text-sm rounded-md transition-colors ${
+                item.href === pathname
+                  ? 'bg-primary/10 text-primary font-medium'
+                  : 'hover:bg-accent hover:text-accent-foreground'
+              }`}
+            >
+              <span className='line-clamp-1'>{item.title}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+})
+
+export default AdminSidebar

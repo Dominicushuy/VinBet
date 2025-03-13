@@ -64,126 +64,128 @@ export function AdminHeader({ userProfile }) {
   }
 
   return (
-    <header className='sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm'>
-      <div className='container flex h-16 items-center justify-between px-4 md:px-6'>
-        <div className='flex items-center gap-4'>
-          <ResponsiveAdminMenu />
+    <header className='sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'>
+      <div className='max-w-screen-2xl mx-auto w-full px-4 sm:px-6 lg:px-8'>
+        <div className='flex h-16 items-center justify-between'>
+          <div className='flex items-center gap-4'>
+            <ResponsiveAdminMenu />
 
-          <Link href='/admin/dashboard' className='flex items-center gap-2'>
-            <div className='h-8 w-8 rounded-full bg-primary flex items-center justify-center'>
-              <span className='text-primary-foreground font-bold text-sm'>VB</span>
-            </div>
-            <span className='text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent'>
-              VinBet
-            </span>
-            <Badge variant='outline' className='ml-2'>
-              Admin
-            </Badge>
-          </Link>
-        </div>
-
-        <div className='hidden md:flex items-center gap-2 md:gap-4 lg:gap-6'>
-          <div className='relative w-full max-w-[300px]'>
-            <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
-            <Input
-              type='search'
-              placeholder='Tìm kiếm...'
-              className='w-full pl-8 rounded-full bg-muted'
-              aria-label='Tìm kiếm'
-            />
-          </div>
-        </div>
-
-        <div className='flex items-center gap-2'>
-          <Button variant='ghost' size='icon' aria-label='Thông báo' asChild>
-            <Link href='/admin/notifications'>
-              <Bell size={20} />
-              {notificationData?.count > 0 && (
-                <span
-                  className='absolute top-0 right-0 flex h-3 w-3 rounded-full 
-                  bg-red-500 text-white items-center justify-center text-[0.6rem]'
-                >
-                  {notificationData.count}
-                </span>
-              )}
+            <Link href='/admin/dashboard' className='flex items-center gap-2'>
+              <div className='h-8 w-8 rounded-full bg-primary flex items-center justify-center'>
+                <span className='text-primary-foreground font-bold text-sm'>VB</span>
+              </div>
+              <span className='text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent'>
+                VinBet
+              </span>
+              <Badge variant='outline' className='ml-2'>
+                Admin
+              </Badge>
             </Link>
-          </Button>
+          </div>
 
-          {renderThemeToggle()}
+          <div className='hidden md:flex items-center gap-2 md:gap-4 lg:gap-6'>
+            <div className='relative w-full max-w-[300px]'>
+              <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
+              <Input
+                type='search'
+                placeholder='Tìm kiếm...'
+                className='w-full pl-8 rounded-full bg-muted'
+                aria-label='Tìm kiếm'
+              />
+            </div>
+          </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant='ghost' size='icon' className='rounded-full h-8 w-8 overflow-hidden'>
-                <Avatar className='h-8 w-8'>
-                  <AvatarImage src={userProfile?.avatar} alt={userProfile?.name || 'Avatar'} />
-                  <AvatarFallback>{userProfile?.name?.charAt(0).toUpperCase() || 'A'}</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align='end' className='w-64'>
-              <DropdownMenuLabel>
-                <div className='flex items-center space-x-3'>
-                  <Avatar className='h-10 w-10'>
+          <div className='flex items-center gap-2'>
+            <Button variant='ghost' size='icon' aria-label='Thông báo' asChild>
+              <Link href='/admin/notifications'>
+                <Bell size={20} />
+                {notificationData?.count > 0 && (
+                  <span
+                    className='absolute top-0 right-0 flex h-3 w-3 rounded-full 
+                  bg-red-500 text-white items-center justify-center text-[0.6rem]'
+                  >
+                    {notificationData.count}
+                  </span>
+                )}
+              </Link>
+            </Button>
+
+            {renderThemeToggle()}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant='ghost' size='icon' className='rounded-full h-8 w-8 overflow-hidden'>
+                  <Avatar className='h-8 w-8'>
                     <AvatarImage src={userProfile?.avatar} alt={userProfile?.name || 'Avatar'} />
                     <AvatarFallback>{userProfile?.name?.charAt(0).toUpperCase() || 'A'}</AvatarFallback>
                   </Avatar>
-                  <div>
-                    <p className='text-sm font-medium'>{userProfile?.name}</p>
-                    <p className='text-xs text-muted-foreground truncate'>{userProfile?.email}</p>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end' className='w-64'>
+                <DropdownMenuLabel>
+                  <div className='flex items-center space-x-3'>
+                    <Avatar className='h-10 w-10'>
+                      <AvatarImage src={userProfile?.avatar} alt={userProfile?.name || 'Avatar'} />
+                      <AvatarFallback>{userProfile?.name?.charAt(0).toUpperCase() || 'A'}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className='text-sm font-medium'>{userProfile?.name}</p>
+                      <p className='text-xs text-muted-foreground truncate'>{userProfile?.email}</p>
+                    </div>
                   </div>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
 
-              <DropdownMenuGroup>
-                <DropdownMenuItem asChild>
-                  <Link href='/admin/profile' className='cursor-pointer flex items-center'>
-                    <User size={16} className='mr-2' />
-                    Thông tin cá nhân
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href='/admin/profile/activity' className='cursor-pointer flex items-center'>
-                    <Activity size={16} className='mr-2' />
-                    Nhật ký hoạt động
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href='/admin/settings' className='cursor-pointer flex items-center'>
-                    <Settings size={16} className='mr-2' />
-                    Cài đặt hệ thống
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem asChild>
+                    <Link href='/admin/profile' className='cursor-pointer flex items-center'>
+                      <User size={16} className='mr-2' />
+                      Thông tin cá nhân
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href='/admin/profile/activity' className='cursor-pointer flex items-center'>
+                      <Activity size={16} className='mr-2' />
+                      Nhật ký hoạt động
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href='/admin/settings' className='cursor-pointer flex items-center'>
+                      <Settings size={16} className='mr-2' />
+                      Cài đặt hệ thống
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
 
-              <DropdownMenuSeparator />
+                <DropdownMenuSeparator />
 
-              <DropdownMenuGroup>
-                <DropdownMenuItem asChild>
-                  <Link href='/admin/payments' className='cursor-pointer flex items-center'>
-                    <CreditCard size={16} className='mr-2' />
-                    Quản lý thanh toán
-                  </Link>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem asChild>
+                    <Link href='/admin/payments' className='cursor-pointer flex items-center'>
+                      <CreditCard size={16} className='mr-2' />
+                      Quản lý thanh toán
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href='/admin/users' className='cursor-pointer flex items-center'>
+                      <Shield size={16} className='mr-2' />
+                      Quản trị người dùng
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className='cursor-pointer text-destructive focus:text-destructive'
+                >
+                  <LogOut size={16} className='mr-2' />
+                  Đăng xuất
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href='/admin/users' className='cursor-pointer flex items-center'>
-                    <Shield size={16} className='mr-2' />
-                    Quản trị người dùng
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem
-                onClick={handleLogout}
-                className='cursor-pointer text-destructive focus:text-destructive'
-              >
-                <LogOut size={16} className='mr-2' />
-                Đăng xuất
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
     </header>

@@ -52,6 +52,10 @@ module.exports = {
       },
       screens: {
         xs: '480px'
+      },
+      transitionProperty: {
+        height: 'height',
+        spacing: 'margin, padding'
       }
     }
   },
