@@ -105,8 +105,8 @@ export function AvatarUploader({ onSuccess }) {
   return (
     <div className='space-y-6'>
       <div>
-        <DialogTitle>Cập nhật ảnh đại diện</DialogTitle>
-        <DialogDescription>Tải lên và điều chỉnh ảnh đại diện mới của bạn</DialogDescription>
+        <h5 className='text-lg font-semibold leading-none tracking-tight'>Cập nhật ảnh đại diện</h5>
+        <p className='text-sm text-muted-foreground'>Tải lên và điều chỉnh ảnh đại diện mới của bạn</p>
       </div>
 
       <div className='space-y-4'>
