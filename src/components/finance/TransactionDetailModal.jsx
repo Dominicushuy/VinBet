@@ -1,4 +1,3 @@
-// src/components/finance/TransactionDetailModal.jsx
 'use client'
 
 import { format } from 'date-fns'
@@ -14,122 +13,52 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { toast } from 'react-hot-toast'
+import { useTransactionHelpers } from '@/hooks/useTransactionHelpers'
 import {
-  ArrowDownRight,
-  ArrowUpRight,
-  Award,
+  ArrowDownToLine,
   Calendar,
   Check,
   Clock,
   CopyIcon,
-  DollarSign,
   FileText,
   Hash,
   Link2Icon,
   PrinterIcon,
-  Share2,
-  User,
   Tag
 } from 'lucide-react'
+import { formatCurrency } from '@/utils/formatUtils'
+import { ArrowUpRight, DollarSign, Award, CreditCard } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 export function TransactionDetailModal({ transaction, isOpen, onClose }) {
-  if (!transaction) return null
+  const {
+    getTransactionIcon,
+    getAmountColor,
+    formatAmount,
+    copyToClipboard,
+    formatTransactionType,
+    formatTransactionStatus
+  } = useTransactionHelpers()
 
-  // Format money
-  const formatMoney = amount => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(amount)
-  }
+  if (!transaction) return null
 
   // Get transaction type icon
   const getTransactionTypeIcon = () => {
-    switch (transaction.type) {
-      case 'deposit':
-        return <ArrowUpRight className='h-6 w-6 text-green-500' />
-      case 'withdrawal':
-        return <ArrowDownRight className='h-6 w-6 text-red-500' />
-      case 'bet':
-        return <DollarSign className='h-6 w-6 text-blue-500' />
-      case 'win':
-        return <Award className='h-6 w-6 text-amber-500' />
-      case 'referral_reward':
-        return <Award className='h-6 w-6 text-purple-500' />
+    const iconInfo = getTransactionIcon(transaction.type)
+
+    // Dynamically import icons based on component name
+    switch (iconInfo.component) {
+      case 'ArrowUpRight':
+        return <ArrowUpRight className={`h-6 w-6 ${iconInfo.color}`} />
+      case 'ArrowDownRight':
+        return <ArrowDownToLine className={`h-6 w-6 ${iconInfo.color}`} />
+      case 'DollarSign':
+        return <DollarSign className={`h-6 w-6 ${iconInfo.color}`} />
+      case 'Award':
+        return <Award className={`h-6 w-6 ${iconInfo.color}`} />
       default:
-        return <DollarSign className='h-6 w-6 text-gray-500' />
+        return <CreditCard className='h-6 w-6 text-gray-500' />
     }
-  }
-
-  // Get transaction type name
-  const getTransactionTypeName = () => {
-    switch (transaction.type) {
-      case 'deposit':
-        return 'Nạp tiền'
-      case 'withdrawal':
-        return 'Rút tiền'
-      case 'bet':
-        return 'Đặt cược'
-      case 'win':
-        return 'Thắng cược'
-      case 'referral_reward':
-        return 'Thưởng giới thiệu'
-      default:
-        return transaction.type
-    }
-  }
-
-  // Get status badge
-  const getStatusBadge = () => {
-    switch (transaction.status) {
-      case 'completed':
-        return (
-          <Badge variant='outline' className='bg-green-100 text-green-800 border-green-200'>
-            Hoàn thành
-          </Badge>
-        )
-      case 'pending':
-        return (
-          <Badge variant='outline' className='bg-yellow-100 text-yellow-800 border-yellow-200'>
-            Đang xử lý
-          </Badge>
-        )
-      case 'failed':
-        return (
-          <Badge variant='outline' className='bg-red-100 text-red-800 border-red-200'>
-            Thất bại
-          </Badge>
-        )
-      case 'cancelled':
-        return (
-          <Badge variant='outline' className='bg-gray-100 text-gray-800 border-gray-200'>
-            Đã hủy
-          </Badge>
-        )
-      default:
-        return <Badge variant='outline'>{transaction.status}</Badge>
-    }
-  }
-
-  // Get amount with color and sign
-  const getFormattedAmount = () => {
-    const isPositive =
-      transaction.type === 'deposit' || transaction.type === 'win' || transaction.type === 'referral_reward'
-    const textColor = isPositive ? 'text-green-600' : 'text-red-600'
-    const prefix = isPositive ? '+' : '-'
-
-    return (
-      <span className={`font-medium ${textColor} text-xl`}>
-        {prefix} {formatMoney(Math.abs(transaction.amount))}
-      </span>
-    )
-  }
-
-  // Copy to clipboard
-  const copyToClipboard = (text, successMessage = 'Đã sao chép') => {
-    navigator.clipboard.writeText(text)
-    toast.success(successMessage)
   }
 
   // Print receipt
@@ -141,11 +70,7 @@ export function TransactionDetailModal({ transaction, isOpen, onClose }) {
     }
 
     const formattedDate = format(new Date(transaction.created_at), 'HH:mm:ss, dd/MM/yyyy', { locale: vi })
-
-    const isPositive =
-      transaction.type === 'deposit' || transaction.type === 'win' || transaction.type === 'referral_reward'
-    const prefix = isPositive ? '+' : '-'
-    const amountFormatted = `${prefix} ${formatMoney(Math.abs(transaction.amount))}`
+    const amountFormatted = formatAmount(transaction.amount, transaction.type)
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -197,7 +122,7 @@ export function TransactionDetailModal({ transaction, isOpen, onClose }) {
               font-weight: bold;
               text-align: center;
               margin: 20px 0;
-              color: ${isPositive ? 'green' : 'red'};
+              color: ${getAmountColor(transaction.type).includes('green') ? 'green' : 'red'};
             }
             .footer {
               text-align: center;
@@ -228,7 +153,7 @@ export function TransactionDetailModal({ transaction, isOpen, onClose }) {
           <div class="receipt-info">
             <div class="info-row">
               <span class="label">Loại giao dịch:</span>
-              <span>${getTransactionTypeName()}</span>
+              <span>${formatTransactionType(transaction.type)}</span>
             </div>
             <div class="info-row">
               <span class="label">Mã giao dịch:</span>
@@ -240,7 +165,7 @@ export function TransactionDetailModal({ transaction, isOpen, onClose }) {
             </div>
             <div class="info-row">
               <span class="label">Trạng thái:</span>
-              <span>${transaction.status}</span>
+              <span>${formatTransactionStatus(transaction.status)}</span>
             </div>
             ${
               transaction.reference_id
@@ -290,11 +215,26 @@ export function TransactionDetailModal({ transaction, isOpen, onClose }) {
           </div>
           <DialogTitle className='text-xl'>Chi tiết giao dịch</DialogTitle>
           <DialogDescription>
-            {getTransactionTypeName()} - #{transaction.id.substring(0, 8)}
+            {formatTransactionType(transaction.type)} - #{transaction.id.substring(0, 8)}
           </DialogDescription>
 
-          <div className='mt-4'>{getFormattedAmount()}</div>
-          <div className='mt-1'>{getStatusBadge()}</div>
+          <div className='mt-4'>{formatAmount(transaction.amount, transaction.type)}</div>
+          <div className='mt-1'>
+            <Badge
+              variant='outline'
+              className={
+                transaction.status === 'completed'
+                  ? 'bg-green-100 text-green-800 border-green-200'
+                  : transaction.status === 'pending'
+                  ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                  : transaction.status === 'failed'
+                  ? 'bg-red-100 text-red-800 border-red-200'
+                  : 'bg-gray-100 text-gray-800 border-gray-200'
+              }
+            >
+              {formatTransactionStatus(transaction.status)}
+            </Badge>
+          </div>
         </DialogHeader>
 
         <div className='space-y-4 mt-4'>
@@ -328,7 +268,7 @@ export function TransactionDetailModal({ transaction, isOpen, onClose }) {
                 <Tag className='h-4 w-4' />
                 <span>Loại giao dịch:</span>
               </div>
-              <span className='font-medium'>{getTransactionTypeName()}</span>
+              <span className='font-medium'>{formatTransactionType(transaction.type)}</span>
             </div>
 
             <div className='flex items-center justify-between text-sm'>
@@ -392,14 +332,18 @@ export function TransactionDetailModal({ transaction, isOpen, onClose }) {
             className='gap-2'
             onClick={() =>
               copyToClipboard(
-                `VinBet - ${getTransactionTypeName()} - ${format(new Date(transaction.created_at), 'dd/MM/yyyy HH:mm', {
-                  locale: vi
-                })} - ${transaction.amount} VND - Mã GD: ${transaction.id}`,
+                `VinBet - ${formatTransactionType(transaction.type)} - ${format(
+                  new Date(transaction.created_at),
+                  'dd/MM/yyyy HH:mm',
+                  {
+                    locale: vi
+                  }
+                )} - ${formatCurrency(transaction.amount)} - Mã GD: ${transaction.id}`,
                 'Đã sao chép thông tin giao dịch'
               )
             }
           >
-            <CopyIcon className='h-4 w-4' /> Sao chép
+            <FileText className='h-4 w-4' /> Sao chép
           </Button>
           <Button size='sm' className='gap-2' onClick={onClose}>
             <Check className='h-4 w-4' /> Xong

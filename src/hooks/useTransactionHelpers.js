@@ -1,4 +1,3 @@
-// src/hooks/useTransactionHelpers.js
 import { useCallback } from 'react'
 import { toast } from 'react-hot-toast'
 import { formatCurrency, formatTransactionType, formatTransactionStatus } from '@/utils/formatUtils'

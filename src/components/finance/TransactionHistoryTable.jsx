@@ -10,19 +10,8 @@ import { Pagination } from '@/components/ui/pagination'
 import { TransactionDetailModal } from '@/components/finance/TransactionDetailModal'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useTransactionsQuery } from '@/hooks/queries/useTransactionQueries'
-import {
-  ArrowDown,
-  ArrowDownRight,
-  ArrowUp,
-  ArrowUpRight,
-  Award,
-  DollarSign,
-  EyeIcon,
-  Filter,
-  Loader2,
-  SortAsc,
-  SortDesc
-} from 'lucide-react'
+import { useTransactionHelpers } from '@/hooks/useTransactionHelpers'
+import { Filter, SortAsc, SortDesc, EyeIcon, DollarSign, ArrowUpRight, ArrowDownRight, Award } from 'lucide-react'
 
 export function TransactionHistoryTable({ initialData, filters, currentPage, onPageChange }) {
   const [selectedTransaction, setSelectedTransaction] = useState(null)
@@ -41,6 +30,20 @@ export function TransactionHistoryTable({ initialData, filters, currentPage, onP
     sortOrder: sortConfig.direction
   })
 
+  // Get transaction helpers
+  const { getTransactionIcon, getAmountColor, formatAmount, formatTransactionType, formatTransactionStatus } =
+    useTransactionHelpers()
+
+  // Update sort config when filters change
+  useEffect(() => {
+    if (filters.sortBy && filters.sortOrder) {
+      setSortConfig({
+        key: filters.sortBy,
+        direction: filters.sortOrder
+      })
+    }
+  }, [filters.sortBy, filters.sortOrder])
+
   const transactions = (data && data.transactions) || initialData
   const pagination = data?.pagination || {
     total: initialData.length,
@@ -51,139 +54,22 @@ export function TransactionHistoryTable({ initialData, filters, currentPage, onP
 
   // Handle sorting change
   const handleSortChange = key => {
-    setSortConfig(prev => ({
+    const newDirection = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc'
+    setSortConfig({
       key,
-      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
-    }))
-  }
+      direction: newDirection
+    })
 
-  // Format money
-  const formatMoney = amount => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(amount)
+    // Update filters when sorting changes
+    if (typeof filters.onSortChange === 'function') {
+      filters.onSortChange({ sortBy: key, sortOrder: newDirection })
+    }
   }
 
   // View transaction details
   const handleViewDetails = transaction => {
     setSelectedTransaction(transaction)
     setIsDetailModalOpen(true)
-  }
-
-  // Render transaction type badge and icon
-  const renderTransactionType = type => {
-    switch (type) {
-      case 'deposit':
-        return (
-          <div className='flex items-center gap-2'>
-            <div className='w-8 h-8 rounded-full bg-green-100 flex items-center justify-center'>
-              <ArrowUpRight className='h-4 w-4 text-green-600' />
-            </div>
-            <Badge variant='outline' className='bg-green-100 text-green-800 border-green-200'>
-              Nạp tiền
-            </Badge>
-          </div>
-        )
-      case 'withdrawal':
-        return (
-          <div className='flex items-center gap-2'>
-            <div className='w-8 h-8 rounded-full bg-red-100 flex items-center justify-center'>
-              <ArrowDownRight className='h-4 w-4 text-red-600' />
-            </div>
-            <Badge variant='outline' className='bg-red-100 text-red-800 border-red-200'>
-              Rút tiền
-            </Badge>
-          </div>
-        )
-      case 'bet':
-        return (
-          <div className='flex items-center gap-2'>
-            <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center'>
-              <DollarSign className='h-4 w-4 text-blue-600' />
-            </div>
-            <Badge variant='outline' className='bg-blue-100 text-blue-800 border-blue-200'>
-              Đặt cược
-            </Badge>
-          </div>
-        )
-      case 'win':
-        return (
-          <div className='flex items-center gap-2'>
-            <div className='w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center'>
-              <Award className='h-4 w-4 text-amber-600' />
-            </div>
-            <Badge variant='outline' className='bg-amber-100 text-amber-800 border-amber-200'>
-              Thắng cược
-            </Badge>
-          </div>
-        )
-      case 'referral_reward':
-        return (
-          <div className='flex items-center gap-2'>
-            <div className='w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center'>
-              <Award className='h-4 w-4 text-purple-600' />
-            </div>
-            <Badge variant='outline' className='bg-purple-100 text-purple-800 border-purple-200'>
-              Thưởng giới thiệu
-            </Badge>
-          </div>
-        )
-      default:
-        return (
-          <div className='flex items-center gap-2'>
-            <div className='w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center'>
-              <DollarSign className='h-4 w-4 text-gray-600' />
-            </div>
-            <Badge variant='outline'>{type}</Badge>
-          </div>
-        )
-    }
-  }
-
-  // Render transaction status badge
-  const renderTransactionStatus = status => {
-    switch (status) {
-      case 'completed':
-        return (
-          <Badge variant='outline' className='bg-green-100 text-green-800 border-green-200'>
-            Hoàn thành
-          </Badge>
-        )
-      case 'pending':
-        return (
-          <Badge variant='outline' className='bg-yellow-100 text-yellow-800 border-yellow-200'>
-            Đang xử lý
-          </Badge>
-        )
-      case 'failed':
-        return (
-          <Badge variant='outline' className='bg-red-100 text-red-800 border-red-200'>
-            Thất bại
-          </Badge>
-        )
-      case 'cancelled':
-        return (
-          <Badge variant='outline' className='bg-gray-100 text-gray-800 border-gray-200'>
-            Đã hủy
-          </Badge>
-        )
-      default:
-        return <Badge variant='outline'>{status}</Badge>
-    }
-  }
-
-  // Render amount with color based on transaction type
-  const renderAmount = (amount, type) => {
-    const isPositive = type === 'deposit' || type === 'win' || type === 'referral_reward'
-    const textColor = isPositive ? 'text-green-600' : 'text-red-600'
-    const prefix = isPositive ? '+' : '-'
-
-    return (
-      <span className={`font-medium ${textColor}`}>
-        {prefix} {formatMoney(Math.abs(amount))}
-      </span>
-    )
   }
 
   // Generate a sort button with indicator
@@ -254,6 +140,30 @@ export function TransactionHistoryTable({ initialData, filters, currentPage, onP
     )
   }
 
+  // Render transaction type badge and icon
+  const renderTransactionType = type => {
+    const iconInfo = getTransactionIcon(type)
+
+    return (
+      <div className='flex items-center gap-2'>
+        <div className={`w-8 h-8 rounded-full bg-${iconInfo.color.split('-')[1]}-100 flex items-center justify-center`}>
+          {iconInfo.component === 'ArrowUpRight' && <ArrowUpRight className={`h-4 w-4 ${iconInfo.color}`} />}
+          {iconInfo.component === 'ArrowDownRight' && <ArrowDownRight className={`h-4 w-4 ${iconInfo.color}`} />}
+          {iconInfo.component === 'DollarSign' && <DollarSign className={`h-4 w-4 ${iconInfo.color}`} />}
+          {iconInfo.component === 'Award' && <Award className={`h-4 w-4 ${iconInfo.color}`} />}
+        </div>
+        <Badge
+          variant='outline'
+          className={`bg-${iconInfo.color.split('-')[1]}-100 border-${iconInfo.color.split('-')[1]}-200 text-${
+            iconInfo.color.split('-')[1]
+          }-800`}
+        >
+          {formatTransactionType(type)}
+        </Badge>
+      </div>
+    )
+  }
+
   return (
     <div className='w-full'>
       <div className='rounded-md border'>
@@ -294,8 +204,25 @@ export function TransactionHistoryTable({ initialData, filters, currentPage, onP
                   </div>
                 </TableCell>
                 <TableCell>{renderTransactionType(transaction.type)}</TableCell>
-                <TableCell>{renderAmount(transaction.amount, transaction.type)}</TableCell>
-                <TableCell>{renderTransactionStatus(transaction.status)}</TableCell>
+                <TableCell className={getAmountColor(transaction.type)}>
+                  {formatAmount(transaction.amount, transaction.type)}
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant='outline'
+                    className={
+                      transaction.status === 'completed'
+                        ? 'bg-green-100 text-green-800 border-green-200'
+                        : transaction.status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                        : transaction.status === 'failed'
+                        ? 'bg-red-100 text-red-800 border-red-200'
+                        : 'bg-gray-100 text-gray-800 border-gray-200'
+                    }
+                  >
+                    {formatTransactionStatus(transaction.status)}
+                  </Badge>
+                </TableCell>
                 <TableCell className='max-w-[200px]'>
                   <p className='truncate text-sm'>{transaction.description || '-'}</p>
                 </TableCell>

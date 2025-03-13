@@ -1,7 +1,6 @@
-// src/components/finance/TransactionAdvancedFilters.jsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -13,7 +12,7 @@ import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { isValid } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 
-export function TransactionAdvancedFilters({ onFilterChange, initialFilters }) {
+export function TransactionAdvancedFilters({ onFilterChange, onResetFilters, initialFilters, activeFiltersCount = 0 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [filters, setFilters] = useState({
     type: initialFilters.type || '',
@@ -26,12 +25,19 @@ export function TransactionAdvancedFilters({ onFilterChange, initialFilters }) {
     sortOrder: initialFilters.sortOrder || 'desc'
   })
 
-  // Đếm số lượng bộ lọc đang được áp dụng (loại trừ sort options)
-  const activeFilterCount = Object.entries(filters).filter(([key, value]) => {
-    if (key === 'sortBy' || key === 'sortOrder') return false
-    if (value === '' || value === undefined) return false
-    return true
-  }).length
+  // Update filters when initialFilters changes
+  useEffect(() => {
+    setFilters({
+      type: initialFilters.type || '',
+      status: initialFilters.status || '',
+      startDate: initialFilters.startDate ? new Date(initialFilters.startDate) : undefined,
+      endDate: initialFilters.endDate ? new Date(initialFilters.endDate) : undefined,
+      minAmount: initialFilters.minAmount || '',
+      maxAmount: initialFilters.maxAmount || '',
+      sortBy: initialFilters.sortBy || 'created_at',
+      sortOrder: initialFilters.sortOrder || 'desc'
+    })
+  }, [initialFilters])
 
   // Áp dụng bộ lọc
   const handleApplyFilters = () => {
@@ -66,7 +72,12 @@ export function TransactionAdvancedFilters({ onFilterChange, initialFilters }) {
     }
 
     setFilters(resetFilters)
-    onFilterChange(resetFilters)
+
+    if (typeof onResetFilters === 'function') {
+      onResetFilters()
+    } else {
+      onFilterChange(resetFilters)
+    }
   }
 
   // Xử lý thay đổi khoảng thời gian
@@ -85,14 +96,14 @@ export function TransactionAdvancedFilters({ onFilterChange, initialFilters }) {
           <div className='flex items-center gap-2'>
             <Filter className='h-4 w-4 text-muted-foreground' />
             <h3 className='text-sm font-medium'>Bộ lọc nâng cao</h3>
-            {activeFilterCount > 0 && (
+            {activeFiltersCount > 0 && (
               <Badge variant='secondary' className='ml-2'>
-                {activeFilterCount} lọc đang áp dụng
+                {activeFiltersCount} lọc đang áp dụng
               </Badge>
             )}
           </div>
           <div className='flex items-center gap-2'>
-            {activeFilterCount > 0 && (
+            {activeFiltersCount > 0 && (
               <Button variant='ghost' size='sm' onClick={handleResetFilters}>
                 <X className='h-4 w-4 mr-1' /> Xóa bộ lọc
               </Button>

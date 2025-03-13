@@ -1,12 +1,12 @@
-// src/components/finance/FinancialSummary.jsx
 'use client'
 
 import { useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
-import { ArrowDown, ArrowUp, TrendingDown, TrendingUp, RefreshCcw } from 'lucide-react'
+import { ArrowDown, ArrowUp, TrendingDown, TrendingUp, RefreshCw } from 'lucide-react'
 import { useTransactionSummaryQuery } from '@/hooks/queries/useTransactionQueries'
 import { Skeleton } from '@/components/ui/skeleton'
 import { format, subDays } from 'date-fns'
+import { formatCurrency } from '@/utils/formatUtils'
 
 export function FinancialSummary({ summaryData, balance }) {
   const [mounted, setMounted] = useState(false)
@@ -21,17 +21,8 @@ export function FinancialSummary({ summaryData, balance }) {
     endDate: today
   })
 
-  // Format money
-  const formatMoney = amount => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-      maximumFractionDigits: 0
-    }).format(amount)
-  }
-
   // Use the initialized data or fetched data
-  const summary = (data && data.summary) ||
+  const summary = data?.summary ||
     summaryData || {
       total_deposit: 0,
       total_withdrawal: 0,
@@ -64,10 +55,10 @@ export function FinancialSummary({ summaryData, balance }) {
           <div className='flex items-center justify-between mb-3'>
             <h3 className='text-sm font-medium text-muted-foreground'>Số dư hiện tại</h3>
             <div className='w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center'>
-              <RefreshCcw className='h-4 w-4 text-primary' />
+              <RefreshCw className='h-4 w-4 text-primary' />
             </div>
           </div>
-          <div className='text-2xl font-bold text-foreground'>{formatMoney(balance)}</div>
+          <div className='text-2xl font-bold text-foreground'>{formatCurrency(balance)}</div>
           <div className='mt-2 text-xs text-muted-foreground'>Cập nhật theo thời gian thực</div>
         </CardContent>
       </Card>
@@ -82,7 +73,7 @@ export function FinancialSummary({ summaryData, balance }) {
             </div>
           </div>
           <div className='text-2xl font-bold text-green-600'>
-            {isLoading ? <Skeleton className='h-7 w-24' /> : formatMoney(summary.total_deposit)}
+            {isLoading ? <Skeleton className='h-7 w-24' /> : formatCurrency(summary.total_deposit)}
           </div>
           <div className='mt-2 text-xs text-muted-foreground'>30 ngày qua</div>
         </CardContent>
@@ -98,7 +89,7 @@ export function FinancialSummary({ summaryData, balance }) {
             </div>
           </div>
           <div className='text-2xl font-bold text-red-600'>
-            {isLoading ? <Skeleton className='h-7 w-24' /> : formatMoney(summary.total_withdrawal)}
+            {isLoading ? <Skeleton className='h-7 w-24' /> : formatCurrency(summary.total_withdrawal)}
           </div>
           <div className='mt-2 text-xs text-muted-foreground'>30 ngày qua</div>
         </CardContent>
@@ -122,7 +113,7 @@ export function FinancialSummary({ summaryData, balance }) {
               summary.total_win - summary.total_bet >= 0 ? 'text-green-600' : 'text-red-600'
             }`}
           >
-            {isLoading ? <Skeleton className='h-7 w-24' /> : formatMoney(summary.total_win - summary.total_bet)}
+            {isLoading ? <Skeleton className='h-7 w-24' /> : formatCurrency(summary.total_win - summary.total_bet)}
           </div>
           <div className='mt-2 text-xs text-muted-foreground'>30 ngày qua</div>
         </CardContent>
