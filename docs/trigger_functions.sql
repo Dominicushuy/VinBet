@@ -1713,3 +1713,56 @@ BEGIN
     (SELECT COUNT(*) FROM game_rounds WHERE status = 'active') AS active_games_count;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Cập nhật trigger khi admin đăng nhập
+CREATE OR REPLACE FUNCTION record_admin_login()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Tạo session mới
+  INSERT INTO admin_sessions (
+    admin_id,
+    device_info,
+    ip_address,
+    user_agent,
+    location,
+    is_current,
+    last_active,
+    created_at
+  ) VALUES (
+    NEW.id,
+    jsonb_build_object(
+      'os', current_setting('request.headers')::jsonb->>'user-agent',
+      'browser', current_setting('request.headers')::jsonb->>'user-agent'
+    ),
+    current_setting('request.ip', true),
+    current_setting('request.headers')::jsonb->>'user-agent',
+    'Unknown', -- Cần API phân giải địa lý từ IP
+    TRUE,
+    NOW(),
+    NOW()
+  );
+  
+  -- Ghi log đăng nhập
+  INSERT INTO admin_logs (
+    admin_id,
+    action,
+    entity_type,
+    entity_id,
+    details,
+    created_at
+  ) VALUES (
+    NEW.id,
+    'LOGIN',
+    'profiles',
+    NEW.id,
+    jsonb_build_object(
+      'ip', current_setting('request.ip', true),
+      'user_agent', current_setting('request.headers')::jsonb->>'user-agent',
+      'timestamp', NOW()
+    ),
+    NOW()
+  );
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

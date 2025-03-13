@@ -281,9 +281,11 @@ Directory structure:
 │ │ ├── BetList.jsx
 │ │ └── BetSuccessAnimation.jsx
 │ ├── finance/
+│ │ ├── CopyReferralButton.jsx
 │ │ ├── DepositFlowSteps.jsx
 │ │ ├── ExportTransactions.jsx
 │ │ ├── FinancialOverviewChart.jsx
+│ │ ├── FinancialOverviewTabs.jsx
 │ │ ├── FinancialSummary.jsx
 │ │ ├── FinancialSummaryCards.jsx
 │ │ ├── PaymentMethodCard.jsx
@@ -297,7 +299,15 @@ Directory structure:
 │ │ ├── TransactionDetailModal.jsx
 │ │ ├── TransactionHistoryTable.jsx
 │ │ ├── WithdrawalFlowSteps.jsx
-│ │ └── WithdrawalHistory.jsx
+│ │ ├── WithdrawalHistory.jsx
+│ │ ├── deposit-steps/
+│ │ │ ├── Step1Form.jsx
+│ │ │ ├── Step2PaymentInfo.jsx
+│ │ │ └── Step3Success.jsx
+│ │ └── withdrawal-steps/
+│ │ ├── Step1Form.jsx
+│ │ ├── Step2PaymentInfo.jsx
+│ │ └── Step3Success.jsx
 │ ├── game/
 │ │ ├── EmptyState.jsx
 │ │ ├── ErrorState.jsx
@@ -410,6 +420,7 @@ Directory structure:
 │ ├── useGameMutations.js
 │ ├── useNotificationListener.js
 │ ├── useToast.js
+│ ├── useTransactionFilters.js
 │ ├── useTransactionHelpers.js
 │ └── queries/
 │ ├── useAdminQueries.js

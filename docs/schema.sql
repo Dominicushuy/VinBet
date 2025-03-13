@@ -163,3 +163,34 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS bio TEXT;
 -- Create notification_changes publication for notifications table
 CREATE PUBLICATION notification_changes FOR TABLE notifications 
 WITH (publish = 'insert');
+
+
+-- Thêm bảng admin_sessions cho quản lý phiên đăng nhập
+CREATE TABLE IF NOT EXISTS admin_sessions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  admin_id UUID REFERENCES profiles(id) NOT NULL,
+  device_info JSONB,
+  ip_address TEXT,
+  user_agent TEXT,
+  location TEXT,
+  is_current BOOLEAN DEFAULT FALSE,
+  last_active TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Thêm bảng admin_preferences cho lưu trữ tùy chỉnh
+CREATE TABLE IF NOT EXISTS admin_preferences (
+  admin_id UUID REFERENCES profiles(id) PRIMARY KEY,
+  theme TEXT DEFAULT 'system',
+  timezone TEXT DEFAULT 'Asia/Ho_Chi_Minh',
+  date_format TEXT DEFAULT 'dd/MM/yyyy',
+  notification_settings JSONB DEFAULT '{"email_notifications": true, "push_notifications": true, "game_notifications": true, "transaction_notifications": true, "system_notifications": true}',
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tạo index cho tìm kiếm nhanh
+CREATE INDEX IF NOT EXISTS idx_admin_sessions_admin_id ON admin_sessions(admin_id);
+CREATE INDEX IF NOT EXISTS idx_admin_sessions_last_active ON admin_sessions(last_active);
+CREATE INDEX IF NOT EXISTS idx_admin_logs_admin_id ON admin_logs(admin_id);
+CREATE INDEX IF NOT EXISTS idx_admin_logs_action ON admin_logs(action);
+CREATE INDEX IF NOT EXISTS idx_admin_logs_created_at ON admin_logs(created_at);

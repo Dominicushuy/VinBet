@@ -56,8 +56,6 @@ export async function middleware(req) {
     }
   }
 
-  // Sử dụng early return pattern để tăng khả năng đọc hiểu
-
   // Admin đã đăng nhập đang ở trang chủ hoặc trang auth -> chuyển đến admin dashboard
   if (session && isAdmin && (isHomePage || isAuthRoute)) {
     return NextResponse.redirect(new URL('/admin/dashboard', req.url))
