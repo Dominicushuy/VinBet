@@ -2,6 +2,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'react-hot-toast'
 import { fetchData, postData, buildQueryString } from '@/utils/fetchUtils'
+import { AUTH_QUERY_KEYS } from './useAuthQueries'
+import { useRouter } from 'next/navigation'
 
 // Query keys
 export const FINANCE_QUERY_KEYS = {
@@ -120,13 +122,37 @@ export function useUploadPaymentProofMutation() {
 
 export function useCreateWithdrawalMutation() {
   const queryClient = useQueryClient()
+  const router = useRouter()
 
   return useMutation({
-    mutationFn: financeApi.createWithdrawalRequest,
+    mutationFn: async data => {
+      try {
+        const response = await postData('/api/payment-requests/withdraw', data)
+        return response
+      } catch (error) {
+        // Phân loại lỗi để có thông báo phù hợp
+        if (error.status === 400) {
+          throw new Error('Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.')
+        } else if (error.status === 401) {
+          // Nếu unauthorized, chuyển hướng đến trang đăng nhập
+          router.push('/login?redirectTo=/finance/withdrawal')
+          throw new Error('Vui lòng đăng nhập lại để tiếp tục.')
+        } else if (error.status === 409) {
+          throw new Error('Số dư không đủ để thực hiện giao dịch này.')
+        } else {
+          throw new Error('Không thể tạo yêu cầu rút tiền. Vui lòng thử lại sau.')
+        }
+      }
+    },
     onSuccess: data => {
       toast.success('Yêu cầu rút tiền đã được tạo thành công')
+      // Cập nhật query cache để UI hiển thị dữ liệu mới nhất
       queryClient.invalidateQueries({
         queryKey: FINANCE_QUERY_KEYS.withdrawalRequests()
+      })
+      // Cập nhật balance của user
+      queryClient.invalidateQueries({
+        queryKey: AUTH_QUERY_KEYS.profile
       })
       return data
     },

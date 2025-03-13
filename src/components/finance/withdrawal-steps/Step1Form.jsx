@@ -1,0 +1,203 @@
+// src/components/finance/withdrawal-steps/Step1Form.jsx
+'use client'
+
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Button } from '@/components/ui/button'
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { PaymentMethodCard } from '@/components/finance/PaymentMethodCard'
+import { Wallet, Loader2, ArrowRight } from 'lucide-react'
+import { formatCurrency } from '@/utils/formatUtils'
+
+export function Step1Form({ onSubmit, isLoading, config, userBalance }) {
+  // Schema cho withdrawal form
+  const withdrawalFormSchema = z.object({
+    amount: z
+      .number({
+        required_error: 'Vui lòng nhập số tiền',
+        invalid_type_error: 'Số tiền phải là số'
+      })
+      .int('Số tiền phải là số nguyên')
+      .positive('Số tiền phải lớn hơn 0')
+      .refine(data => data >= config.min_withdrawal, {
+        message: `Số tiền tối thiểu là ${formatCurrency(config.min_withdrawal)}`
+      })
+      .refine(data => data <= config.max_withdrawal, {
+        message: `Số tiền tối đa là ${formatCurrency(config.max_withdrawal)}`
+      })
+      .refine(data => data <= userBalance, {
+        message: 'Số dư không đủ để thực hiện giao dịch này'
+      }),
+    paymentMethod: z.string({
+      required_error: 'Vui lòng chọn phương thức rút tiền'
+    })
+  })
+
+  // Dựa vào phương thức thanh toán đã chọn, thêm schema cho các field bắt buộc
+  const form = useForm({
+    resolver: zodResolver(withdrawalFormSchema),
+    defaultValues: {
+      amount: config.min_withdrawal,
+      paymentMethod: '',
+      notes: ''
+    }
+  })
+
+  // Watch form values
+  const watchPaymentMethod = form.watch('paymentMethod')
+
+  // Render payment method form fields
+  const renderPaymentMethodFields = () => {
+    if (!watchPaymentMethod) return null
+
+    const selectedMethod = config.withdrawal_methods.find(method => method.id === watchPaymentMethod)
+
+    if (!selectedMethod) return null
+
+    return (
+      <div className='space-y-4 border-t pt-4 mt-4'>
+        <h3 className='font-medium text-sm'>Thông tin rút tiền</h3>
+        {selectedMethod.fields.map(field => (
+          <FormField
+            key={field.name}
+            control={form.control}
+            name={field.name}
+            render={({ field: formField }) => (
+              <FormItem>
+                <FormLabel>
+                  {field.label}
+                  {field.required && <span className='text-red-500 ml-1'>*</span>}
+                </FormLabel>
+                <FormControl>
+                  <Input type={field.type} placeholder={field.label} {...formField} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ))}
+        <FormField
+          control={form.control}
+          name='notes'
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Ghi chú (không bắt buộc)</FormLabel>
+              <FormControl>
+                <Textarea placeholder='Nhập thêm ghi chú nếu cần' {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
+        <div className='flex items-center justify-between bg-muted/50 p-3 rounded-md'>
+          <span>Số dư có thể rút:</span>
+          <span className='font-semibold text-primary'>{formatCurrency(userBalance)}</span>
+        </div>
+
+        <FormField
+          control={form.control}
+          name='amount'
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Số tiền rút</FormLabel>
+              <FormControl>
+                <div className='relative'>
+                  <Wallet className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
+                  <Input
+                    type='number'
+                    placeholder='100,000'
+                    className='pl-10'
+                    {...field}
+                    onChange={e => {
+                      const value = parseInt(e.target.value)
+                      field.onChange(isNaN(value) ? config.min_withdrawal : value)
+                    }}
+                  />
+                </div>
+              </FormControl>
+              <FormDescription>
+                Số tiền tối thiểu: {formatCurrency(config.min_withdrawal)}, tối đa:{' '}
+                {formatCurrency(Math.min(config.max_withdrawal, userBalance))}
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {form.watch('amount') > 0 && (
+          <div className='bg-muted/50 p-3 rounded-md space-y-2'>
+            <div className='flex justify-between'>
+              <span className='text-sm text-muted-foreground'>Số tiền rút:</span>
+              <span className='text-sm font-medium'>{formatCurrency(form.watch('amount'))}</span>
+            </div>
+            <div className='flex justify-between'>
+              <span className='text-sm text-muted-foreground'>Phí giao dịch:</span>
+              <span className='text-sm font-medium'>{formatCurrency(config.withdrawal_fee || 0)}</span>
+            </div>
+            <div className='border-t pt-2 mt-2 flex justify-between'>
+              <span className='font-medium'>Số tiền nhận được:</span>
+              <span className='font-medium text-primary'>
+                {formatCurrency(form.watch('amount') - (config.withdrawal_fee || 0))}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <FormField
+          control={form.control}
+          name='paymentMethod'
+          render={({ field }) => (
+            <FormItem className='space-y-4'>
+              <FormLabel>Phương thức rút tiền</FormLabel>
+              <FormControl>
+                <div className='grid gap-4 grid-cols-1 md:grid-cols-3'>
+                  {config.withdrawal_methods.map(method => (
+                    <PaymentMethodCard
+                      key={method.id}
+                      method={{
+                        id: method.id,
+                        name: method.name,
+                        description: method.description,
+                        accounts: []
+                      }}
+                      selected={field.value === method.id}
+                      onSelect={() => field.onChange(method.id)}
+                    />
+                  ))}
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {renderPaymentMethodFields()}
+
+        <div className='pt-4 flex justify-end space-x-2'>
+          <Button type='submit' disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                Đang xử lý...
+              </>
+            ) : (
+              <>
+                Xác nhận rút tiền <ArrowRight className='ml-2 h-4 w-4' />
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  )
+}

@@ -9,40 +9,53 @@ import { WithdrawalHistory } from '@/components/finance/WithdrawalHistory'
 
 export const metadata = {
   title: 'Rút tiền - VinBet',
-  description:
-    'Rút tiền từ tài khoản VinBet của bạn về tài khoản ngân hàng hoặc ví điện tử',
+  description: 'Rút tiền từ tài khoản VinBet của bạn về tài khoản ngân hàng hoặc ví điện tử'
 }
 
 export default async function WithdrawalPage() {
   const supabase = getSupabaseServer()
 
-  // Lấy thông tin user và balance
-  const { data: profileData } = await supabase.auth.getUser()
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('balance, username, display_name')
-    .eq('id', profileData.user?.id)
-    .single()
+  // Lấy thông tin user và session trước
+  const { data: sessionData } = await supabase.auth.getSession()
 
-  // Lấy danh sách 5 yêu cầu rút tiền gần nhất để SSR
-  const { data: paymentRequests, count } = await supabase
-    .from('payment_requests')
-    .select(
-      '*, approved_by:profiles!payment_requests_approved_by_fkey(username, display_name)',
-      { count: 'exact' }
+  if (!sessionData.session) {
+    return (
+      <div className='space-y-6'>
+        <div>
+          <h2 className='text-3xl font-bold tracking-tight'>Rút tiền</h2>
+          <p className='text-muted-foreground'>Vui lòng đăng nhập để sử dụng tính năng này</p>
+        </div>
+        <Alert variant='default' className='bg-blue-50 text-blue-800 border-blue-200'>
+          <InfoIcon className='h-4 w-4' />
+          <AlertTitle>Chưa đăng nhập</AlertTitle>
+          <AlertDescription>Bạn cần đăng nhập để sử dụng tính năng rút tiền.</AlertDescription>
+        </Alert>
+      </div>
     )
-    .eq('type', 'withdrawal')
-    .order('created_at', { ascending: false })
-    .range(0, 4)
+  }
 
-  // Lấy thông tin cấu hình rút tiền
-  const { data: withdrawalConfig } = await supabase
-    .from('payment_settings')
-    .select(
-      'withdrawal_methods, min_withdrawal, max_withdrawal, withdrawal_fee'
-    )
-    .single()
+  // Fetch các dữ liệu cần thiết song song để tối ưu hiệu suất
+  const [profileResult, paymentRequestsResult, configResult] = await Promise.all([
+    supabase.from('profiles').select('balance, username, display_name').eq('id', sessionData.session?.user.id).single(),
 
+    supabase
+      .from('payment_requests')
+      .select('*, approved_by:profiles!payment_requests_approved_by_fkey(username, display_name)', { count: 'exact' })
+      .eq('type', 'withdrawal')
+      .order('created_at', { ascending: false })
+      .range(0, 4),
+
+    supabase
+      .from('payment_settings')
+      .select('withdrawal_methods, min_withdrawal, max_withdrawal, withdrawal_fee')
+      .single()
+  ])
+
+  const { data: profile } = profileResult
+  const { data: paymentRequests, count } = paymentRequestsResult
+  const { data: withdrawalConfig } = configResult
+
+  // Fallback config nếu không có dữ liệu cấu hình từ database
   const config = withdrawalConfig || {
     withdrawal_methods: [
       {
@@ -54,24 +67,24 @@ export default async function WithdrawalPage() {
             name: 'bankName',
             label: 'Tên ngân hàng',
             type: 'text',
-            required: true,
+            required: true
           },
           {
             name: 'accountNumber',
             label: 'Số tài khoản',
             type: 'text',
-            required: true,
+            required: true
           },
           {
             name: 'accountName',
             label: 'Tên chủ tài khoản',
             type: 'text',
-            required: true,
+            required: true
           },
-          { name: 'branch', label: 'Chi nhánh', type: 'text', required: false },
+          { name: 'branch', label: 'Chi nhánh', type: 'text', required: false }
         ],
         processingTime: '24-48 giờ',
-        fee: 0,
+        fee: 0
       },
       {
         id: 'momo',
@@ -82,17 +95,17 @@ export default async function WithdrawalPage() {
             name: 'phoneNumber',
             label: 'Số điện thoại',
             type: 'text',
-            required: true,
+            required: true
           },
           {
             name: 'fullName',
             label: 'Họ và tên',
             type: 'text',
-            required: true,
-          },
+            required: true
+          }
         ],
         processingTime: '5-30 phút',
-        fee: 0,
+        fee: 0
       },
       {
         id: 'zalopay',
@@ -103,42 +116,37 @@ export default async function WithdrawalPage() {
             name: 'phoneNumber',
             label: 'Số điện thoại',
             type: 'text',
-            required: true,
+            required: true
           },
           {
             name: 'fullName',
             label: 'Họ và tên',
             type: 'text',
-            required: true,
-          },
+            required: true
+          }
         ],
         processingTime: '5-30 phút',
-        fee: 0,
-      },
+        fee: 0
+      }
     ],
     min_withdrawal: 50000,
     max_withdrawal: 50000000,
-    withdrawal_fee: 0,
+    withdrawal_fee: 0
   }
 
   return (
     <div className='space-y-6'>
       <div>
         <h2 className='text-3xl font-bold tracking-tight'>Rút tiền</h2>
-        <p className='text-muted-foreground'>
-          Rút tiền từ tài khoản VinBet về tài khoản ngân hàng hoặc ví điện tử
-        </p>
+        <p className='text-muted-foreground'>Rút tiền từ tài khoản VinBet về tài khoản ngân hàng hoặc ví điện tử</p>
       </div>
 
-      <Alert
-        variant='default'
-        className='bg-blue-50 text-blue-800 border-blue-200'>
+      <Alert variant='default' className='bg-blue-50 text-blue-800 border-blue-200'>
         <InfoIcon className='h-4 w-4' />
         <AlertTitle>Lưu ý khi rút tiền</AlertTitle>
         <AlertDescription>
-          Để đảm bảo giao dịch được xử lý nhanh chóng, vui lòng cung cấp đầy đủ
-          và chính xác thông tin tài khoản của bạn. Thời gian xử lý tùy thuộc
-          vào phương thức rút tiền, có thể từ 5 phút đến 48 giờ.
+          Để đảm bảo giao dịch được xử lý nhanh chóng, vui lòng cung cấp đầy đủ và chính xác thông tin tài khoản của
+          bạn. Thời gian xử lý tùy thuộc vào phương thức rút tiền, có thể từ 5 phút đến 48 giờ.
         </AlertDescription>
       </Alert>
 
@@ -148,10 +156,7 @@ export default async function WithdrawalPage() {
           <TabsTrigger value='history'>Lịch sử rút tiền</TabsTrigger>
         </TabsList>
         <TabsContent value='withdraw' className='mt-6'>
-          <WithdrawalFlowSteps
-            userBalance={profile?.balance || 0}
-            config={config}
-          />
+          <WithdrawalFlowSteps userBalance={profile?.balance || 0} config={config} />
         </TabsContent>
         <TabsContent value='history' className='mt-6'>
           <WithdrawalHistory
@@ -161,8 +166,8 @@ export default async function WithdrawalPage() {
                 total: count || 0,
                 page: 1,
                 pageSize: 5,
-                totalPages: Math.ceil((count || 0) / 5),
-              },
+                totalPages: Math.ceil((count || 0) / 5)
+              }
             }}
           />
         </TabsContent>
