@@ -1,3 +1,4 @@
+// src/components/finance/PaymentRequestList.jsx
 'use client'
 
 import { useState } from 'react'
@@ -11,6 +12,7 @@ import { usePaymentRequestsQuery } from '@/hooks/queries/useFinanceQueries'
 import { PaymentStatus } from './PaymentStatus'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { Pagination } from '../ui/pagination'
+import { formatCurrency } from '@/utils/formatUtils'
 
 export function PaymentRequestList({ type = 'deposit', initialData }) {
   const [status, setStatus] = useState(undefined)
@@ -24,22 +26,14 @@ export function PaymentRequestList({ type = 'deposit', initialData }) {
     pageSize
   })
 
-  const paymentRequests = (data && data.paymentRequests) || (initialData && initialData.paymentRequests) || []
-  const pagination = (data && data.pagination) ||
-    (initialData && initialData.pagination) || {
+  const paymentRequests = data?.paymentRequests ?? initialData?.paymentRequests ?? []
+  const pagination = data?.pagination ??
+    initialData?.pagination ?? {
       total: 0,
       page: 1,
       pageSize: 10,
       totalPages: 0
     }
-
-  // Format currency
-  const formatMoney = amount => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(amount)
-  }
 
   const handlePageChange = newPage => {
     setPage(newPage)
@@ -77,16 +71,16 @@ export function PaymentRequestList({ type = 'deposit', initialData }) {
           </TabsList>
 
           <TabsContent value='all'>
-            <PaymentRequestTable paymentRequests={paymentRequests} isLoading={isLoading} formatMoney={formatMoney} />
+            <PaymentRequestTable paymentRequests={paymentRequests} isLoading={isLoading} />
           </TabsContent>
           <TabsContent value='pending'>
-            <PaymentRequestTable paymentRequests={paymentRequests} isLoading={isLoading} formatMoney={formatMoney} />
+            <PaymentRequestTable paymentRequests={paymentRequests} isLoading={isLoading} />
           </TabsContent>
           <TabsContent value='approved'>
-            <PaymentRequestTable paymentRequests={paymentRequests} isLoading={isLoading} formatMoney={formatMoney} />
+            <PaymentRequestTable paymentRequests={paymentRequests} isLoading={isLoading} />
           </TabsContent>
           <TabsContent value='rejected'>
-            <PaymentRequestTable paymentRequests={paymentRequests} isLoading={isLoading} formatMoney={formatMoney} />
+            <PaymentRequestTable paymentRequests={paymentRequests} isLoading={isLoading} />
           </TabsContent>
         </Tabs>
 
@@ -104,7 +98,7 @@ export function PaymentRequestList({ type = 'deposit', initialData }) {
   )
 }
 
-function PaymentRequestTable({ paymentRequests, isLoading, formatMoney }) {
+function PaymentRequestTable({ paymentRequests, isLoading }) {
   if (isLoading) {
     return (
       <div className='flex justify-center py-6'>
@@ -144,7 +138,7 @@ function PaymentRequestTable({ paymentRequests, isLoading, formatMoney }) {
                   : 'N/A'}
               </TableCell>
               <TableCell>{formatPaymentMethod(request.payment_method)}</TableCell>
-              <TableCell>{formatMoney(request.amount)}</TableCell>
+              <TableCell>{formatCurrency(request.amount)}</TableCell>
               <TableCell>
                 <PaymentStatus status={request.status} />
               </TableCell>

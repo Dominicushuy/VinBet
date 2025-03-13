@@ -1,4 +1,4 @@
-// src/components/finance/PaymentProofUpload.jsx - Enhanced
+// src/components/finance/PaymentProofUpload.jsx
 'use client'
 
 import { useState, useRef } from 'react'
@@ -53,37 +53,41 @@ export function PaymentProofUpload({ requestId, onUploadComplete }) {
 
   // Upload bằng chứng thanh toán
   const uploadProof = async file => {
+    let progressInterval
     try {
       setUploadProgress(0)
       setIsUploaded(false)
-      const progressInterval = setInterval(() => {
+
+      progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 90) {
-            clearInterval(progressInterval)
             return prev
           }
           return prev + 10
         })
       }, 300)
 
-      await mutateAsync({
+      const result = await mutateAsync({
         requestId,
         file
       })
 
-      clearInterval(progressInterval)
       setUploadProgress(100)
       setIsUploaded(true)
 
       if (onUploadComplete) {
         setTimeout(() => {
-          onUploadComplete()
+          onUploadComplete(result)
         }, 1000)
       }
     } catch (error) {
       console.error('Upload error:', error)
       setUploadProgress(0)
       toast.error('Không thể tải lên bằng chứng thanh toán. Vui lòng thử lại.')
+    } finally {
+      if (progressInterval) {
+        clearInterval(progressInterval)
+      }
     }
   }
 
