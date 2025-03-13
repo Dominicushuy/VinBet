@@ -1,7 +1,7 @@
 // src/app/(main)/finance/page.jsx
-
 import { dynamicConfig } from '@/app/config'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -21,6 +21,7 @@ import { FinancialOverviewChart } from '@/components/finance/FinancialOverviewCh
 import { RecentTransactionsList } from '@/components/finance/RecentTransactionsList'
 import { FinancialSummaryCards } from '@/components/finance/FinancialSummaryCards'
 import { formatCurrency } from '@/utils/formatUtils'
+import toast from 'react-hot-toast'
 
 export const dynamic = dynamicConfig.dynamic
 export const revalidate = dynamicConfig.revalidate
@@ -32,47 +33,69 @@ export const metadata = {
 
 export default async function FinancePage() {
   const supabase = getSupabaseServer()
-  const { data: profile } = await supabase.auth.getUser()
+  const { data: profile, error: profileError } = await supabase.auth.getUser()
+
+  if (profileError || !profile?.user) {
+    // Nếu không có user, redirect về trang login
+    redirect('/login?next=/finance')
+  }
+
+  const userId = profile.user.id
 
   // Lấy thông tin tài chính của người dùng
-  const { data: userData } = await supabase
+  const { data: userData, error: userError } = await supabase
     .from('profiles')
     .select('balance, username, display_name, referral_code')
-    .eq('id', profile.user?.id || '')
+    .eq('id', userId)
     .single()
 
-  // Lấy thống kê giao dịch
-  const { data: transactionStats } = await supabase.rpc('get_transaction_summary', {
-    p_profile_id: profile.user?.id || '',
-    p_start_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    p_end_date: new Date().toISOString()
-  })
+  // Sử dụng Promise.allSettled để xử lý các requests song song
+  const [transactionStatsResult, recentTransactionsResult] = await Promise.allSettled([
+    supabase.rpc('get_transaction_summary', {
+      p_profile_id: userId,
+      p_start_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      p_end_date: new Date().toISOString()
+    }),
+    supabase
+      .from('transactions')
+      .select('*')
+      .eq('profile_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(5)
+  ])
 
-  // Lấy 5 giao dịch gần nhất
-  const { data: recentTransactions } = await supabase
-    .from('transactions')
-    .select('*')
-    .eq('profile_id', profile.user?.id || '')
-    .order('created_at', { ascending: false })
-    .limit(5)
+  // Xử lý kết quả, sử dụng giá trị mặc định nếu có lỗi
+  const transactionStats = transactionStatsResult.status === 'fulfilled' ? transactionStatsResult.value.data : [{}]
+  const recentTransactions = recentTransactionsResult.status === 'fulfilled' ? recentTransactionsResult.value.data : []
+
+  // Sử dụng giá trị mặc định nếu không có userData
+  const userInfo = userData || {
+    balance: 0,
+    display_name: 'Người dùng',
+    username: '',
+    referral_code: ''
+  }
 
   return (
     <div className='space-y-6'>
-      <div className='flex justify-between items-center'>
+      {/* Header và Actions */}
+      <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4'>
         <div>
-          <h2 className='text-3xl font-bold tracking-tight'>Tài chính</h2>
+          <h2 className='text-2xl sm:text-3xl font-bold tracking-tight'>Tài chính</h2>
           <p className='text-muted-foreground'>Quản lý tài chính và giao dịch trong tài khoản của bạn</p>
         </div>
-        <div className='flex gap-2'>
-          <Button variant='outline' size='sm' asChild>
+        <div className='flex gap-2 w-full sm:w-auto'>
+          <Button variant='outline' size='sm' className='flex-1 sm:flex-none' asChild>
             <Link href='/finance/transactions'>
               <Clock className='mr-2 h-4 w-4' />
-              Lịch sử giao dịch
+              <span className='sm:inline hidden'>Lịch sử giao dịch</span>
+              <span className='sm:hidden inline'>Lịch sử</span>
             </Link>
           </Button>
-          <Button variant='outline' size='sm'>
+          <Button variant='outline' size='sm' className='flex-1 sm:flex-none'>
             <Download className='mr-2 h-4 w-4' />
-            Xuất báo cáo
+            <span className='sm:inline hidden'>Xuất báo cáo</span>
+            <span className='sm:hidden inline'>Xuất</span>
           </Button>
         </div>
       </div>
@@ -86,9 +109,7 @@ export default async function FinancePage() {
           </CardHeader>
           <CardContent>
             <div className='flex flex-col space-y-2'>
-              <div className='text-4xl font-bold text-primary'>
-                {userData?.balance ? formatCurrency(userData.balance) : '0 đ'}
-              </div>
+              <div className='text-4xl font-bold text-primary'>{formatCurrency(userInfo.balance || 0)}</div>
               <div className='flex items-center text-sm text-muted-foreground'>
                 <TrendingUp className='mr-1 h-4 w-4 text-green-500' />
                 <span className='text-green-500 font-medium'>
@@ -125,9 +146,17 @@ export default async function FinancePage() {
               <p className='text-sm text-muted-foreground mb-2'>Mã giới thiệu của bạn</p>
               <div className='flex items-center'>
                 <code className='relative rounded bg-muted px-[0.5rem] py-[0.3rem] font-mono text-lg'>
-                  {userData?.referral_code || 'VINBET123'}
+                  {userInfo.referral_code || 'VINBET123'}
                 </code>
-                <Button variant='ghost' size='sm' className='ml-2'>
+                <Button
+                  variant='ghost'
+                  size='sm'
+                  className='ml-2'
+                  onClick={() => {
+                    navigator.clipboard.writeText(userInfo.referral_code || 'VINBET123')
+                    toast.success('Đã sao chép mã giới thiệu')
+                  }}
+                >
                   <svg width='15' height='15' viewBox='0 0 15 15' fill='none' xmlns='http://www.w3.org/2000/svg'>
                     <path
                       d='M5 2V1H10V2H5ZM4.5 0C4.22386 0 4 0.223858 4 0.5V2.5C4 2.77614 4.22386 3 4.5 3H10.5C10.7761 3 11 2.77614 11 2.5V0.5C11 0.223858 10.7761 0 10.5 0H4.5ZM2 4.5C2 4.22386 2.22386 4 2.5 4H12.5C12.7761 4 13 4.22386 13 4.5V12.5C13 12.7761 12.7761 13 12.5 13H2.5C2.22386 13 2 12.7761 2 12.5V4.5ZM2.5 3C1.67157 3 1 3.67157 1 4.5V12.5C1 13.3284 1.67157 14 2.5 14H12.5C13.3284 14 14 13.3284 14 12.5V4.5C14 3.67157 13.3284 3 12.5 3H2.5Z'
@@ -157,7 +186,7 @@ export default async function FinancePage() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue='all'>
-            <TabsList className='mb-4'>
+            <TabsList className='mb-4 overflow-x-auto flex sm:grid sm:grid-cols-5 w-full'>
               <TabsTrigger value='all'>Tất cả</TabsTrigger>
               <TabsTrigger value='deposits'>Nạp tiền</TabsTrigger>
               <TabsTrigger value='withdrawals'>Rút tiền</TabsTrigger>
@@ -165,19 +194,19 @@ export default async function FinancePage() {
               <TabsTrigger value='wins'>Thắng cược</TabsTrigger>
             </TabsList>
             <TabsContent value='all'>
-              <FinancialOverviewChart userId={profile.user?.id} period='month' filter='all' />
+              <FinancialOverviewChart userId={userId} period='month' filter='all' />
             </TabsContent>
             <TabsContent value='deposits'>
-              <FinancialOverviewChart userId={profile.user?.id} period='month' filter='deposit' />
+              <FinancialOverviewChart userId={userId} period='month' filter='deposit' />
             </TabsContent>
             <TabsContent value='withdrawals'>
-              <FinancialOverviewChart userId={profile.user?.id} period='month' filter='withdrawal' />
+              <FinancialOverviewChart userId={userId} period='month' filter='withdrawal' />
             </TabsContent>
             <TabsContent value='bets'>
-              <FinancialOverviewChart userId={profile.user?.id} period='month' filter='bet' />
+              <FinancialOverviewChart userId={userId} period='month' filter='bet' />
             </TabsContent>
             <TabsContent value='wins'>
-              <FinancialOverviewChart userId={profile.user?.id} period='month' filter='win' />
+              <FinancialOverviewChart userId={userId} period='month' filter='win' />
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -215,7 +244,7 @@ export default async function FinancePage() {
       </div>
 
       {/* Quick Access Cards */}
-      <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6'>
         <Card className='hover:shadow-md transition-all'>
           <CardHeader className='pb-2'>
             <CardTitle className='text-lg flex items-center'>
