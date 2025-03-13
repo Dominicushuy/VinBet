@@ -86,13 +86,13 @@ export function TelegramConnect() {
 
   return (
     <Card className='w-full'>
-      <CardHeader>
+      {/* <CardHeader>
         <CardTitle className='flex items-center'>
           <MessageSquare className='mr-2 h-5 w-5 text-primary' />
           Kết nối Telegram
         </CardTitle>
         <CardDescription>Kết nối tài khoản Telegram để nhận thông báo nhanh chóng</CardDescription>
-      </CardHeader>
+      </CardHeader> */}
 
       <CardContent className='pb-6'>
         {isStatusLoading ? (
