@@ -6,51 +6,67 @@ import { createAdminApiHandler } from '@/utils/adminAuthHandler'
 import { z } from 'zod'
 
 const sendNotificationSchema = z.object({
-  userIds: z.array(z.string().uuid()),
-  type: z.enum(['email', 'system', 'both']),
-  title: z.string().min(3),
-  content: z.string().min(5)
+  title: z.string().min(3, 'Tiêu đề cần ít nhất 3 ký tự'),
+  content: z.string().min(5, 'Nội dung cần ít nhất 5 ký tự'),
+  type: z.enum(['system', 'transaction', 'game', 'admin']),
+  userIds: z.array(z.string().uuid()).default([])
 })
 
 export const POST = createAdminApiHandler(async (request, _, { supabase, user }) => {
   try {
     const body = await request.json()
-    const { userIds, type, title, content } = sendNotificationSchema.parse(body)
+    const validatedData = sendNotificationSchema.parse(body)
+    const { title, content, type, userIds } = validatedData
 
-    if (userIds.length === 0) {
-      return NextResponse.json({ error: 'Danh sách người dùng trống' }, { status: 400 })
+    // Nếu userIds trống, lấy tất cả người dùng (trừ admin nếu cần)
+    let targetUserIds = [...userIds]
+
+    if (targetUserIds.length === 0) {
+      // Lấy danh sách tất cả ID người dùng
+      const { data: allUsers, error: usersError } = await supabase.from('profiles').select('id').eq('is_blocked', false) // Chỉ lấy tài khoản chưa bị khóa
+
+      if (usersError) {
+        return NextResponse.json({ error: 'Lỗi khi lấy danh sách người dùng' }, { status: 500 })
+      }
+
+      targetUserIds = allUsers.map(user => user.id)
+    } else {
+      // Validate users exist
+      const { data: users, error: userError } = await supabase.from('profiles').select('id').in('id', targetUserIds)
+
+      if (userError) {
+        return NextResponse.json({ error: 'Lỗi khi kiểm tra người dùng' }, { status: 500 })
+      }
+
+      if (users.length === 0) {
+        return NextResponse.json({ error: 'Không tìm thấy người dùng' }, { status: 404 })
+      }
+
+      // Chỉ lấy ID của những người dùng thực sự tồn tại
+      targetUserIds = users.map(user => user.id)
     }
 
-    // Check if users exist
-    const { data: users, error: userError } = await supabase.from('profiles').select('id, email').in('id', userIds)
-
-    if (userError) {
-      return NextResponse.json({ error: 'Lỗi khi kiểm tra người dùng' }, { status: 500 })
-    }
-
-    if (users.length === 0) {
-      return NextResponse.json({ error: 'Không tìm thấy người dùng' }, { status: 404 })
+    if (targetUserIds.length === 0) {
+      return NextResponse.json({ error: 'Không có người dùng nào để gửi thông báo' }, { status: 400 })
     }
 
     const adminId = user.id
     const now = new Date().toISOString()
 
-    // Create system notifications
-    if (type === 'system' || type === 'both') {
-      const notifications = userIds.map(profileId => ({
-        profile_id: profileId,
-        title,
-        content,
-        type: 'admin',
-        is_read: false,
-        created_at: now
-      }))
+    // Tạo thông báo
+    const notifications = targetUserIds.map(profileId => ({
+      profile_id: profileId,
+      title,
+      content,
+      type,
+      is_read: false,
+      created_at: now
+    }))
 
-      const { error: notificationError } = await supabase.from('notifications').insert(notifications)
+    const { error: notificationError } = await supabase.from('notifications').insert(notifications)
 
-      if (notificationError) {
-        return NextResponse.json({ error: 'Lỗi khi tạo thông báo hệ thống' }, { status: 500 })
-      }
+    if (notificationError) {
+      return NextResponse.json({ error: 'Lỗi khi tạo thông báo' }, { status: 500 })
     }
 
     // Create admin log
@@ -58,9 +74,9 @@ export const POST = createAdminApiHandler(async (request, _, { supabase, user })
       admin_id: adminId,
       action: 'SEND_NOTIFICATION',
       entity_type: 'notifications',
-      entity_id: userIds[0], // Log first user ID
+      entity_id: targetUserIds[0], // Log first user ID
       details: {
-        userIds,
+        recipient_count: targetUserIds.length,
         type,
         title,
         time: now
@@ -69,7 +85,7 @@ export const POST = createAdminApiHandler(async (request, _, { supabase, user })
 
     return NextResponse.json({
       success: true,
-      message: `Đã gửi thông báo cho ${userIds.length} người dùng`
+      message: `Đã gửi thông báo cho ${targetUserIds.length} người dùng`
     })
   } catch (error) {
     console.error('Error sending notifications:', error)

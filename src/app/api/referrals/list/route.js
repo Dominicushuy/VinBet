@@ -1,3 +1,4 @@
+// src/app/api/referrals/list/route.js
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
@@ -9,8 +10,21 @@ import { handleApiError } from '@/utils/errorHandler'
 // Skema validasi query parameter
 const referralListSchema = z.object({
   status: z.enum(['pending', 'completed']).optional(),
-  page: z.string().optional(),
-  pageSize: z.string().optional()
+  page: z
+    .string()
+    .optional()
+    .transform(val => {
+      const page = val ? parseInt(val, 10) : 1
+      return isNaN(page) || page < 1 ? 1 : page
+    }),
+  pageSize: z
+    .string()
+    .optional()
+    .transform(val => {
+      const size = val ? parseInt(val, 10) : 10
+      // Limit pageSize between 5 and 50
+      return isNaN(size) || size < 5 ? 5 : size > 50 ? 50 : size
+    })
 })
 
 export async function GET(request) {
@@ -30,9 +44,9 @@ export async function GET(request) {
     const queryParams = Object.fromEntries(url.searchParams)
     const validatedParams = referralListSchema.parse(queryParams)
 
-    // Thiết lập phân trang
-    const page = Number(validatedParams.page) || 1
-    const pageSize = Number(validatedParams.pageSize) || 10
+    // Thiết lập phân trang (đã qua transform trong schema)
+    const page = validatedParams.page
+    const pageSize = validatedParams.pageSize
     const offset = (page - 1) * pageSize
 
     // Xây dựng truy vấn
@@ -71,13 +85,20 @@ export async function GET(request) {
       return handleApiError(error, 'Lỗi khi lấy danh sách giới thiệu')
     }
 
+    // Check for null values in the response data
+    const sanitizedReferrals = (referrals || []).map(ref => ({
+      ...ref,
+      reward_amount: ref.reward_amount || 0,
+      referred: ref.referred || null
+    }))
+
     return NextResponse.json({
-      referrals: referrals || [],
+      referrals: sanitizedReferrals,
       pagination: {
         total: count || 0,
         page,
         pageSize,
-        totalPages: Math.ceil((count || 0) / pageSize)
+        totalPages: Math.max(1, Math.ceil((count || 0) / pageSize))
       }
     })
   } catch (error) {

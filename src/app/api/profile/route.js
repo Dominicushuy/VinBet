@@ -1,3 +1,4 @@
+// src/app/api/profile/route.js
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
@@ -25,7 +26,8 @@ const profileUpdateSchema = z.object({
     .regex(/^[0-9+]+$/, 'Số điện thoại chỉ chứa số và dấu +')
     .optional()
     .nullable(),
-  avatar_url: z.string().url('URL không hợp lệ').optional().nullable()
+  avatar_url: z.string().url('URL không hợp lệ').optional().nullable(),
+  bio: z.string().max(200, 'Giới thiệu không được vượt quá 200 ký tự').optional().nullable()
 })
 
 // GET: Lấy thông tin profile
@@ -95,6 +97,45 @@ export async function PUT(request) {
 
     // Validate dữ liệu cập nhật
     const validatedData = profileUpdateSchema.parse(body)
+
+    // Kiểm tra username
+    if (validatedData.username) {
+      // Lấy profile hiện tại
+      const { data: currentProfile } = await supabase.from('profiles').select('username').eq('id', userId).single()
+
+      // Nếu đã có username và đang cố thay đổi
+      if (currentProfile?.username && currentProfile.username !== validatedData.username) {
+        return NextResponse.json(
+          {
+            error: 'Username không thể thay đổi sau khi đã đặt',
+            details: {
+              field: 'username'
+            }
+          },
+          { status: 400 }
+        )
+      }
+
+      // Kiểm tra trùng username
+      const { data: existingUser } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', validatedData.username)
+        .neq('id', userId)
+        .single()
+
+      if (existingUser) {
+        return NextResponse.json(
+          {
+            error: 'Username đã được sử dụng',
+            details: {
+              field: 'username'
+            }
+          },
+          { status: 400 }
+        )
+      }
+    }
 
     // Cập nhật profile
     const { data: profile, error } = await supabase

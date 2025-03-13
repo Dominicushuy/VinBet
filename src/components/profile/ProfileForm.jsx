@@ -14,6 +14,7 @@ import { toast } from 'react-hot-toast'
 import { Loader, Save } from 'lucide-react'
 import { useUpdateProfileMutation } from '@/hooks/queries/useProfileQueries'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useCallback, useEffect } from 'react'
 
 // Define validation schema
 const profileSchema = z.object({
@@ -48,15 +49,41 @@ export function ProfileForm({ initialProfile }) {
     }
   })
 
-  // Handle form submission
-  async function onSubmit(data) {
-    try {
-      await updateProfileMutation.mutateAsync(data)
-      toast.success('Cập nhật thông tin thành công')
-    } catch (error) {
-      toast.error(error.message || 'Cập nhật thông tin thất bại')
+  // Reset form when initial values change (e.g. after profile fetch)
+  useEffect(() => {
+    if (initialProfile) {
+      form.reset({
+        display_name: initialProfile.display_name || '',
+        username: initialProfile.username || '',
+        phone_number: initialProfile.phone_number || '',
+        bio: initialProfile.bio || ''
+      })
     }
-  }
+  }, [initialProfile, form])
+
+  // Handle form submission
+  const onSubmit = useCallback(
+    async data => {
+      try {
+        await updateProfileMutation.mutateAsync(data)
+        toast.success('Cập nhật thông tin thành công')
+      } catch (error) {
+        const errorMessage =
+          error.details?.field === 'username' ? error.message : error.message || 'Cập nhật thông tin thất bại'
+
+        toast.error(errorMessage)
+
+        // Set form error if specific field error
+        if (error.details?.field) {
+          form.setError(error.details.field, {
+            type: 'manual',
+            message: error.message
+          })
+        }
+      }
+    },
+    [updateProfileMutation, form]
+  )
 
   return (
     <Card>

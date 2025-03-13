@@ -1,42 +1,68 @@
 // src/components/referrals/ReferralCodeCard.jsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Check, Copy, RefreshCw, Link2 } from 'lucide-react'
+import { Check, Copy, RefreshCw, Link2, Loader2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { useReferralCodeQuery } from '@/hooks/queries/useReferralQueries'
 
 export function ReferralCodeCard() {
-  const [copied, setCopied] = useState(false)
-  const { data, isLoading, error, refetch } = useReferralCodeQuery()
+  const [copiedCode, setCopiedCode] = useState(false)
+  const [copiedLink, setCopiedLink] = useState(false)
+  const copyTimeoutRef = useRef(null)
+  const { data, isLoading, error, refetch, isFetching } = useReferralCodeQuery()
 
-  const copyToClipboard = async text => {
+  // Cleanup timeouts when unmounting
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const copyToClipboard = async (text, isCode = true) => {
+    // Check if Clipboard API is supported
+    if (!navigator.clipboard) {
+      toast.error('Trình duyệt của bạn không hỗ trợ sao chép')
+      return
+    }
+
     try {
       await navigator.clipboard.writeText(text)
-      setCopied(true)
-      toast.success('Đã sao chép mã giới thiệu!')
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      toast.error('Không thể sao chép mã giới thiệu')
-    }
-  }
+      if (isCode) {
+        setCopiedCode(true)
+        toast.success('Đã sao chép mã giới thiệu!')
+      } else {
+        setCopiedLink(true)
+        toast.success('Đã sao chép liên kết giới thiệu!')
+      }
 
-  const copyShareLink = async () => {
-    if (!data?.shareUrl) return
+      // Clear previous timeout if exists
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
 
-    try {
-      await navigator.clipboard.writeText(data.shareUrl)
-      toast.success('Đã sao chép liên kết giới thiệu!')
+      // Set new timeout
+      copyTimeoutRef.current = setTimeout(() => {
+        if (isCode) setCopiedCode(false)
+        else setCopiedLink(false)
+        copyTimeoutRef.current = null
+      }, 2000)
     } catch (err) {
-      toast.error('Không thể sao chép liên kết')
+      toast.error(isCode ? 'Không thể sao chép mã giới thiệu' : 'Không thể sao chép liên kết')
     }
   }
 
   const refreshReferralCode = async () => {
-    await refetch()
+    try {
+      await refetch()
+      toast.success('Đã làm mới mã giới thiệu')
+    } catch (err) {
+      toast.error('Không thể làm mới mã giới thiệu')
+    }
   }
 
   if (isLoading) {
@@ -84,16 +110,23 @@ export function ReferralCodeCard() {
           <div className='grid flex-1 gap-2'>
             <div className='font-semibold'>Mã giới thiệu</div>
             <div className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm'>
-              <span className='flex-1 leading-loose'>{data?.referralCode}</span>
+              <span className='flex-1 leading-loose'>{data?.referralCode || 'N/A'}</span>
             </div>
           </div>
           <Button
             size='icon'
-            onClick={() => copyToClipboard(data?.referralCode || '')}
+            onClick={() => copyToClipboard(data?.referralCode || '', true)}
             variant='outline'
             className='shrink-0'
+            disabled={!data?.referralCode || isFetching}
           >
-            {copied ? <Check className='h-4 w-4' /> : <Copy className='h-4 w-4' />}
+            {isFetching ? (
+              <Loader2 className='h-4 w-4 animate-spin' />
+            ) : copiedCode ? (
+              <Check className='h-4 w-4' />
+            ) : (
+              <Copy className='h-4 w-4' />
+            )}
           </Button>
         </div>
 
@@ -101,11 +134,23 @@ export function ReferralCodeCard() {
           <div className='grid flex-1 gap-2'>
             <div className='font-semibold'>Liên kết giới thiệu</div>
             <div className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm truncate'>
-              <span className='flex-1 leading-loose overflow-hidden text-ellipsis'>{data?.shareUrl}</span>
+              <span className='flex-1 leading-loose overflow-hidden text-ellipsis'>{data?.shareUrl || 'N/A'}</span>
             </div>
           </div>
-          <Button size='icon' onClick={copyShareLink} variant='outline' className='shrink-0'>
-            <Link2 className='h-4 w-4' />
+          <Button
+            size='icon'
+            onClick={() => copyToClipboard(data?.shareUrl || '', false)}
+            variant='outline'
+            className='shrink-0'
+            disabled={!data?.shareUrl || isFetching}
+          >
+            {isFetching ? (
+              <Loader2 className='h-4 w-4 animate-spin' />
+            ) : copiedLink ? (
+              <Check className='h-4 w-4' />
+            ) : (
+              <Link2 className='h-4 w-4' />
+            )}
           </Button>
         </div>
       </CardContent>

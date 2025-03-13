@@ -11,45 +11,7 @@ import { useToast } from '@/hooks/useToast'
 import { formatDistanceToNow } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import { LaptopIcon as Computer, Smartphone, Laptop, ExternalLink, History, AlertTriangle } from 'lucide-react'
-
-const mockLoginHistory = [
-  {
-    id: '1',
-    device: 'Windows PC',
-    browser: 'Chrome 120',
-    ip: '118.70.xxx.xxx',
-    location: 'Hà Nội, Việt Nam',
-    time: new Date(Date.now() - 1000 * 60 * 5),
-    current: true
-  },
-  {
-    id: '2',
-    device: 'Macbook Pro',
-    browser: 'Safari 17',
-    ip: '118.70.xxx.xxx',
-    location: 'Hà Nội, Việt Nam',
-    time: new Date(Date.now() - 1000 * 60 * 60 * 3),
-    current: false
-  },
-  {
-    id: '3',
-    device: 'iPhone 15',
-    browser: 'Mobile Safari',
-    ip: '113.23.xxx.xxx',
-    location: 'Hồ Chí Minh, Việt Nam',
-    time: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-    current: false
-  },
-  {
-    id: '4',
-    device: 'Android Phone',
-    browser: 'Chrome Mobile',
-    ip: '103.7.xxx.xxx',
-    location: 'Đà Nẵng, Việt Nam',
-    time: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
-    current: false
-  }
-]
+import { fetchData, deleteData } from '@/utils/fetchUtils'
 
 export function LoginHistory() {
   const { toast } = useToast()
@@ -57,14 +19,25 @@ export function LoginHistory() {
   const [loginHistory, setLoginHistory] = useState([])
 
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setLoginHistory(mockLoginHistory)
-      setIsLoading(false)
-    }, 1000)
+    const fetchLoginHistory = async () => {
+      try {
+        setIsLoading(true)
+        const data = await fetchData('/api/profile/activity')
+        setLoginHistory(data.sessions || [])
+      } catch (error) {
+        console.error('Error fetching login history:', error)
+        toast({
+          title: 'Không thể tải lịch sử đăng nhập',
+          description: 'Vui lòng thử lại sau',
+          variant: 'destructive'
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-    return () => clearTimeout(timer)
-  }, [])
+    fetchLoginHistory()
+  }, [toast])
 
   const getDeviceIcon = device => {
     if (device.toLowerCase().includes('iphone') || device.toLowerCase().includes('android')) {
@@ -78,14 +51,24 @@ export function LoginHistory() {
     return <Computer className='h-4 w-4' />
   }
 
-  const handleSignOutDevice = deviceId => {
-    setLoginHistory(loginHistory.filter(item => item.id !== deviceId))
+  const handleSignOutDevice = async deviceId => {
+    try {
+      await deleteData(`/api/profile/activity/${deviceId}`)
+      setLoginHistory(loginHistory.filter(item => item.id !== deviceId))
 
-    toast({
-      title: 'Đã đăng xuất thiết bị',
-      description: 'Phiên đăng nhập đã được kết thúc trên thiết bị này',
-      variant: 'default'
-    })
+      toast({
+        title: 'Đã đăng xuất thiết bị',
+        description: 'Phiên đăng nhập đã được kết thúc trên thiết bị này',
+        variant: 'default'
+      })
+    } catch (error) {
+      console.error('Error signing out device:', error)
+      toast({
+        title: 'Không thể đăng xuất thiết bị',
+        description: 'Vui lòng thử lại sau',
+        variant: 'destructive'
+      })
+    }
   }
 
   return (
@@ -147,7 +130,7 @@ export function LoginHistory() {
                     <TableCell>{session.location}</TableCell>
 
                     <TableCell>
-                      {formatDistanceToNow(session.time, {
+                      {formatDistanceToNow(new Date(session.time), {
                         addSuffix: true,
                         locale: vi
                       })}

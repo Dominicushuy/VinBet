@@ -298,11 +298,41 @@ CREATE OR REPLACE FUNCTION process_referral()
 RETURNS TRIGGER AS $$
 DECLARE
   referrer_id UUID;
-  reward_amount DECIMAL(15, 2) := 10.00; -- Example reward amount
+  reward_settings RECORD;
+  reward_amount DECIMAL(15, 2) := 10.00; -- Giá trị mặc định
 BEGIN
   -- Check if user was referred (has referred_by)
   IF NEW.referred_by IS NOT NULL THEN
     referrer_id := NEW.referred_by;
+    
+    -- Check if referrer exists
+    PERFORM id FROM profiles WHERE id = referrer_id;
+    IF NOT FOUND THEN
+      RAISE WARNING 'Người giới thiệu với ID % không tồn tại', referrer_id;
+      RETURN NEW;
+    END IF;
+    
+    -- Prevent self-referral
+    IF referrer_id = NEW.id THEN
+      RAISE WARNING 'Tự giới thiệu không được cho phép: %', NEW.id;
+      RETURN NEW;
+    END IF;
+    
+    -- Try to get custom reward amount from settings (if exists)
+    BEGIN
+      SELECT value::jsonb->>'amount' INTO reward_amount 
+      FROM settings 
+      WHERE key = 'referral_reward_amount' 
+      LIMIT 1;
+      
+      -- Validate reward amount is a valid number
+      IF reward_amount IS NULL OR reward_amount <= 0 THEN
+        reward_amount := 10.00; -- Giá trị mặc định nếu thiết lập không hợp lệ
+      END IF;
+    EXCEPTION WHEN OTHERS THEN
+      -- Sử dụng giá trị mặc định nếu có lỗi
+      reward_amount := 10.00;
+    END;
     
     -- Create referral record
     INSERT INTO referrals (
@@ -310,19 +340,21 @@ BEGIN
       referred_id,
       status,
       reward_amount,
-      created_at
+      created_at,
+      updated_at
     ) VALUES (
       referrer_id,
       NEW.id,
       'pending',
       reward_amount,
+      NOW(),
       NOW()
     );
   END IF;
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
 
 -- Trigger for referral processing
 DROP TRIGGER IF EXISTS on_new_referred_user ON profiles;
@@ -332,7 +364,7 @@ FOR EACH ROW
 WHEN (NEW.referred_by IS NOT NULL)
 EXECUTE FUNCTION process_referral();
 
--- Function to complete referral and give reward when referred user makes first deposit
+-- Function to complete referral and give reward when referred user makes first deposit 
 CREATE OR REPLACE FUNCTION complete_referral_on_deposit()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -378,10 +410,10 @@ BEGIN
         'referral_reward',
         'completed',
         ref_record.id,
-        'Referral reward for user ' || NEW.profile_id
+        'Thưởng giới thiệu người dùng ' || NEW.profile_id
       );
       
-      -- Create notification for referrer
+      -- Create notification for referrer (fixed to Vietnamese)
       INSERT INTO notifications (
         profile_id,
         title,
@@ -390,8 +422,8 @@ BEGIN
         reference_id
       ) VALUES (
         referrer_id,
-        'Referral Reward',
-        'You received ' || ref_record.reward_amount || ' as a referral reward!',
+        'Thưởng Giới Thiệu',
+        'Bạn đã nhận ' || ref_record.reward_amount || '₫ tiền thưởng từ chương trình giới thiệu!',
         'system',
         ref_record.id
       );
@@ -400,7 +432,7 @@ BEGIN
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
 
 -- Trigger for completing referrals on deposit
 DROP TRIGGER IF EXISTS on_deposit_complete_referral ON payment_requests;

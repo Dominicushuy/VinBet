@@ -1,3 +1,4 @@
+// src/app/api/profile/change-password/route.js
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
@@ -5,6 +6,13 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { handleApiError } from '@/utils/errorHandler'
+import { rateLimit } from '@/utils/rateLimit'
+
+// Rate limiter: 5 yêu cầu trong 10 phút
+const limiter = rateLimit({
+  interval: 10 * 60 * 1000, // 10 phút
+  uniqueTokenPerInterval: 500
+})
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Mật khẩu hiện tại là bắt buộc'),
@@ -29,6 +37,16 @@ const changePasswordSchema = z.object({
 
 export async function POST(request) {
   try {
+    // Lấy IP từ request
+    const ip = request.headers.get('x-forwarded-for') || 'anonymous'
+
+    // Kiểm tra rate limit
+    try {
+      await limiter.check(5, ip) // 5 yêu cầu cho mỗi IP
+    } catch (error) {
+      return NextResponse.json({ error: 'Quá nhiều yêu cầu, vui lòng thử lại sau' }, { status: 429 })
+    }
+
     const supabase = createRouteHandlerClient({ cookies })
 
     // Kiểm tra session
@@ -58,6 +76,17 @@ export async function POST(request) {
       )
     }
 
+    // Kiểm tra mật khẩu mới không giống mật khẩu cũ
+    if (validatedData.currentPassword === validatedData.newPassword) {
+      return NextResponse.json(
+        {
+          error: 'Mật khẩu mới không được giống mật khẩu cũ',
+          details: 'Vui lòng chọn mật khẩu khác'
+        },
+        { status: 400 }
+      )
+    }
+
     // Cập nhật mật khẩu mới
     const { error: updateError } = await supabase.auth.updateUser({
       password: validatedData.newPassword
@@ -67,7 +96,18 @@ export async function POST(request) {
       return handleApiError(updateError, 'Không thể cập nhật mật khẩu')
     }
 
-    // Đăng xuất khỏi tất cả các phiên
+    // Ghi log hành động đổi mật khẩu (nếu cần)
+    await supabase.from('admin_logs').insert({
+      admin_id: sessionData.session.user.id,
+      action: 'CHANGE_PASSWORD',
+      entity_type: 'profiles',
+      entity_id: sessionData.session.user.id,
+      details: {
+        timestamp: new Date().toISOString()
+      }
+    })
+
+    // Đăng xuất khỏi tất cả các phiên (hoặc giữ phiên hiện tại nếu muốn)
     await supabase.auth.signOut()
 
     return NextResponse.json({

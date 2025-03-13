@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,24 +11,29 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { useMutation } from '@tanstack/react-query'
 
 const notificationFormSchema = z.object({
-  title: z.string().min(1, 'Tiêu đề không được để trống'),
-  content: z.string().min(1, 'Nội dung không được để trống'),
-  type: z.enum(['system', 'game', 'transaction', 'admin']),
+  title: z.string().min(3, 'Tiêu đề cần ít nhất 3 ký tự'),
+  content: z.string().min(5, 'Nội dung cần ít nhất 5 ký tự'),
+  type: z.enum(['system', 'transaction', 'game', 'admin']),
   recipients: z.enum(['all', 'specific']),
-  user_id: z.string().optional()
+  user_id: z
+    .string()
+    .optional()
+    .refine(val => {
+      if (val === '' || val === undefined) return true
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val)
+    }, 'ID người dùng không đúng định dạng UUID')
 })
 
 export function NotificationSender() {
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
   const form = useForm({
     resolver: zodResolver(notificationFormSchema),
     defaultValues: {
       title: '',
       content: '',
-      type: 'system',
+      type: 'admin',
       recipients: 'all',
       user_id: ''
     }
@@ -37,15 +41,37 @@ export function NotificationSender() {
 
   const recipientsType = form.watch('recipients')
 
-  const handleSubmit = async data => {
-    setIsSubmitting(true)
-    try {
+  // Validate user_id khi recipients là 'specific'
+  const validateUserIdField = data => {
+    if (data.recipients === 'specific' && (!data.user_id || data.user_id.trim() === '')) {
+      form.setError('user_id', {
+        type: 'manual',
+        message: 'ID người dùng không được để trống khi chọn gửi cho người dùng cụ thể'
+      })
+      return false
+    }
+    return true
+  }
+
+  const sendNotification = useMutation({
+    mutationFn: async data => {
+      // Chuẩn bị dữ liệu cho API
+      const payload = {
+        title: data.title,
+        content: data.content,
+        type: data.type,
+        userIds:
+          data.recipients === 'all'
+            ? [] // API sẽ lấy tất cả user IDs
+            : [data.user_id]
+      }
+
       const response = await fetch('/api/admin/notifications/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(payload)
       })
 
       if (!response.ok) {
@@ -53,15 +79,21 @@ export function NotificationSender() {
         throw new Error(errorData.error || 'Không thể gửi thông báo')
       }
 
-      const result = await response.json()
-      toast.success(`Đã gửi thông báo tới ${result.count} người dùng`)
+      return response.json()
+    },
+    onSuccess: data => {
+      toast.success(data.message || 'Đã gửi thông báo thành công')
       form.reset()
-    } catch (error) {
+    },
+    onError: error => {
       console.error('Error sending notification:', error)
       toast.error(error.message || 'Không thể gửi thông báo')
-    } finally {
-      setIsSubmitting(false)
     }
+  })
+
+  const handleSubmit = data => {
+    if (!validateUserIdField(data)) return
+    sendNotification.mutate(data)
   }
 
   return (
@@ -117,8 +149,8 @@ export function NotificationSender() {
                     </FormControl>
                     <SelectContent>
                       <SelectItem value='system'>Hệ thống</SelectItem>
-                      <SelectItem value='game'>Trò chơi</SelectItem>
                       <SelectItem value='transaction'>Giao dịch</SelectItem>
+                      <SelectItem value='game'>Trò chơi</SelectItem>
                       <SelectItem value='admin'>Admin</SelectItem>
                     </SelectContent>
                   </Select>
@@ -165,8 +197,8 @@ export function NotificationSender() {
               />
             )}
 
-            <Button type='submit' disabled={isSubmitting} className='w-full'>
-              {isSubmitting ? (
+            <Button type='submit' disabled={sendNotification.isPending} className='w-full'>
+              {sendNotification.isPending ? (
                 <>
                   <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                   Đang gửi...

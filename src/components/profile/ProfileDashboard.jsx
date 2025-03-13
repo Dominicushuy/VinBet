@@ -8,19 +8,48 @@ import { AccountStatus } from './AccountStatus'
 import { ProfileForm } from './ProfileForm'
 import { PasswordChangeForm } from './PasswordChangeForm'
 import { LoginHistory } from './LoginHistory'
-import { NotificationSettings } from '../notifications/NotificationSettings'
 import { Card } from '@/components/ui/card'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { User, Bell, Key, History, Mail } from 'lucide-react'
+import { useCallback, useMemo } from 'react'
+import dynamic from 'next/dynamic'
+
+// Lazy load heavy components
+const DynamicNotificationSettings = dynamic(
+  () => import('../notifications/NotificationSettings').then(mod => mod.NotificationSettings),
+  { ssr: true, loading: () => <SettingsSkeleton /> }
+)
+
+function SettingsSkeleton() {
+  return <Card className='w-full h-[600px] flex items-center justify-center'>Loading settings...</Card>
+}
+
+// ProfileInfoItem component for DRY principle
+const ProfileInfoItem = ({ label, value }) => (
+  <div>
+    <p className='text-sm text-muted-foreground'>{label}</p>
+    <p className='font-medium'>{value || '-'}</p>
+  </div>
+)
 
 export function ProfileDashboard({ initialProfile, initialStats }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const activeTab = searchParams.get('tab') || 'overview'
 
-  const handleTabChange = value => {
-    router.push(`/profile?tab=${value}`, { scroll: false })
-  }
+  // Memoize handler to prevent unnecessary re-renders
+  const handleTabChange = useCallback(
+    value => {
+      router.push(`/profile?tab=${value}`, { scroll: false })
+    },
+    [router]
+  )
+
+  // Memoize formatted date to avoid recalculation
+  const joinDate = useMemo(() => {
+    if (!initialProfile?.created_at) return '-'
+    return new Date(initialProfile.created_at).toLocaleDateString('vi-VN')
+  }, [initialProfile?.created_at])
 
   return (
     <div className='space-y-8'>
@@ -45,10 +74,6 @@ export function ProfileDashboard({ initialProfile, initialStats }) {
                 <Mail className='h-4 w-4' />
                 <span className='hidden sm:inline'>Chỉnh sửa</span>
               </TabsTrigger>
-              {/* <TabsTrigger value="security" className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                <span className="hidden sm:inline">Bảo mật</span>
-              </TabsTrigger> */}
               <TabsTrigger value='passwords' className='flex items-center gap-2'>
                 <Key className='h-4 w-4' />
                 <span className='hidden sm:inline'>Mật khẩu</span>
@@ -68,30 +93,19 @@ export function ProfileDashboard({ initialProfile, initialStats }) {
                 <h3 className='text-lg font-medium mb-4'>Thông tin tài khoản</h3>
                 <div className='space-y-4'>
                   <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                    <div>
-                      <p className='text-sm text-muted-foreground'>Username</p>
-                      <p className='font-medium'>{initialProfile?.username}</p>
-                    </div>
-                    <div>
-                      <p className='text-sm text-muted-foreground'>Email</p>
-                      <p className='font-medium'>{initialProfile?.email}</p>
-                    </div>
-                    <div>
-                      <p className='text-sm text-muted-foreground'>Tên hiển thị</p>
-                      <p className='font-medium'>{initialProfile?.display_name || '-'}</p>
-                    </div>
-                    <div>
-                      <p className='text-sm text-muted-foreground'>Số điện thoại</p>
-                      <p className='font-medium'>{initialProfile?.phone_number || '-'}</p>
-                    </div>
-                    <div>
-                      <p className='text-sm text-muted-foreground'>Ngày tham gia</p>
-                      <p className='font-medium'>{new Date(initialProfile?.created_at).toLocaleDateString('vi-VN')}</p>
-                    </div>
-                    <div>
-                      <p className='text-sm text-muted-foreground'>Mã giới thiệu</p>
-                      <p className='font-medium'>{initialProfile?.referral_code}</p>
-                    </div>
+                    <ProfileInfoItem label='Username' value={initialProfile?.username} />
+                    <ProfileInfoItem label='Email' value={initialProfile?.email} />
+                    <ProfileInfoItem label='Tên hiển thị' value={initialProfile?.display_name} />
+                    <ProfileInfoItem label='Số điện thoại' value={initialProfile?.phone_number} />
+                    <ProfileInfoItem label='Ngày tham gia' value={joinDate} />
+                    <ProfileInfoItem label='Mã giới thiệu' value={initialProfile?.referral_code} />
+
+                    {initialProfile?.bio && (
+                      <div className='md:col-span-2'>
+                        <p className='text-sm text-muted-foreground'>Giới thiệu</p>
+                        <p className='font-medium whitespace-pre-line'>{initialProfile.bio}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -106,7 +120,7 @@ export function ProfileDashboard({ initialProfile, initialStats }) {
             </TabsContent>
 
             <TabsContent value='notifications' className='mt-6'>
-              <NotificationSettings />
+              <DynamicNotificationSettings />
             </TabsContent>
 
             <TabsContent value='activity' className='mt-6'>

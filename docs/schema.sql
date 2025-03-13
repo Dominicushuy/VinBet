@@ -155,3 +155,5 @@ CREATE TABLE IF NOT EXISTS admin_logs (
 
 -- Thêm cột is_blocked vào bảng profiles
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_blocked BOOLEAN DEFAULT FALSE;
+-- Thêm cột bio vào bảng profiles
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS bio TEXT;
