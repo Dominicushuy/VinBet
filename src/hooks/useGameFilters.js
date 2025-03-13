@@ -1,98 +1,172 @@
-import { useCallback, useMemo } from 'react'
-import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+// src/hooks/useGameFilters.js
+import { useState, useCallback, useMemo } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import toast from 'react-hot-toast'
 
 export function useGameFilters() {
   const router = useRouter()
-  const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  // Lấy các params từ URL
-  const status = searchParams.get('status') || undefined
-  const fromDate = searchParams.get('fromDate') || undefined
-  const toDate = searchParams.get('toDate') || undefined
-  const page = Number(searchParams.get('page') || 1)
-  const pageSize = Number(searchParams.get('pageSize') || 10)
-  const search = searchParams.get('search') || undefined
+  // Khởi tạo state từ URL params
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('query') || '')
+  const [status, setStatus] = useState(searchParams.get('status') || 'all')
+  const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'newest')
+  const [jackpotOnly, setJackpotOnly] = useState(searchParams.get('jackpotOnly') === 'true')
+  const [page, setPage] = useState(Number(searchParams.get('page')) || 1)
+  const [pageSize, setPageSize] = useState(Number(searchParams.get('pageSize')) || 12)
 
-  // Tạo đối tượng filters để sử dụng trong component
-  const filters = useMemo(
-    () => ({
-      status,
+  // Xử lý date params an toàn hơn
+  const [fromDate, setFromDate] = useState(() => {
+    const dateStr = searchParams.get('fromDate')
+    if (!dateStr) return undefined
+    const parsedDate = new Date(dateStr)
+    return isNaN(parsedDate.getTime()) ? undefined : parsedDate
+  })
+
+  const [toDate, setToDate] = useState(() => {
+    const dateStr = searchParams.get('toDate')
+    if (!dateStr) return undefined
+    const parsedDate = new Date(dateStr)
+    return isNaN(parsedDate.getTime()) ? undefined : parsedDate
+  })
+
+  // Tính toán số lượng filter đang active
+  const activeFiltersCount = useMemo(() => {
+    return [
+      searchQuery,
+      status !== 'all' ? status : null,
+      sortBy !== 'newest' ? sortBy : null,
       fromDate,
       toDate,
+      jackpotOnly
+    ].filter(Boolean).length
+  }, [searchQuery, status, sortBy, fromDate, toDate, jackpotOnly])
+
+  // Tạo query params cho API call
+  const queryParams = useMemo(() => {
+    return {
+      status: status !== 'all' ? status : undefined,
+      fromDate: fromDate?.toISOString(),
+      toDate: toDate?.toISOString(),
+      query: searchQuery || undefined,
       page,
       pageSize,
-      search
-    }),
-    [status, fromDate, toDate, page, pageSize, search]
-  )
+      sortBy,
+      jackpotOnly: jackpotOnly ? 'true' : undefined
+    }
+  }, [status, fromDate, toDate, searchQuery, page, pageSize, sortBy, jackpotOnly])
 
-  // Hàm cập nhật filters và URL
-  const updateFilters = useCallback(
-    newFilters => {
-      const params = new URLSearchParams(searchParams.toString())
+  // Apply filters và cập nhật URL
+  const applyFilters = useCallback(() => {
+    // Validate date range
+    if (fromDate && toDate && fromDate > toDate) {
+      toast.error('Ngày bắt đầu không thể sau ngày kết thúc')
+      return false
+    }
 
-      Object.entries(newFilters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          params.set(key, String(value))
-        } else {
-          params.delete(key)
-        }
-      })
+    const params = new URLSearchParams()
 
-      router.push(`${pathname}?${params.toString()}`)
-    },
-    [router, pathname, searchParams]
-  )
+    if (searchQuery) params.set('query', searchQuery)
+    if (status !== 'all') params.set('status', status)
+    if (sortBy !== 'newest') params.set('sortBy', sortBy)
+    if (fromDate) params.set('fromDate', fromDate.toISOString())
+    if (toDate) params.set('toDate', toDate.toISOString())
+    if (jackpotOnly) params.set('jackpotOnly', 'true')
+    if (page > 1) params.set('page', page.toString())
+    if (pageSize !== 12) params.set('pageSize', pageSize.toString())
 
-  // Các hàm tiện ích
+    router.push(`/games?${params.toString()}`)
+    return true
+  }, [router, searchQuery, status, sortBy, fromDate, toDate, jackpotOnly, page, pageSize])
+
+  // Reset tất cả filters
+  const resetFilters = useCallback(() => {
+    setSearchQuery('')
+    setStatus('all')
+    setSortBy('newest')
+    setFromDate(undefined)
+    setToDate(undefined)
+    setJackpotOnly(false)
+    setPage(1)
+
+    router.push('/games')
+    return true
+  }, [router])
+
+  // Handle page change
   const handlePageChange = useCallback(
     newPage => {
-      updateFilters({ page: newPage })
+      setPage(newPage)
+      const params = new URLSearchParams(searchParams.toString())
+      params.set('page', newPage.toString())
+      router.push(`/games?${params.toString()}`)
+
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     },
-    [updateFilters]
+    [router, searchParams]
   )
 
-  const handleStatusFilter = useCallback(
-    newStatus => {
-      updateFilters({ status: newStatus, page: 1 })
-    },
-    [updateFilters]
-  )
+  // Remove single filter
+  const removeFilter = useCallback(
+    filterName => {
+      const params = new URLSearchParams(searchParams.toString())
+      params.delete(filterName)
 
-  const handleDateFilter = useCallback(
-    (fromDate, toDate) => {
-      updateFilters({ fromDate, toDate, page: 1 })
-    },
-    [updateFilters]
-  )
+      // Update local state
+      switch (filterName) {
+        case 'query':
+          setSearchQuery('')
+          break
+        case 'status':
+          setStatus('all')
+          break
+        case 'sortBy':
+          setSortBy('newest')
+          break
+        case 'fromDate':
+          setFromDate(undefined)
+          break
+        case 'toDate':
+          setToDate(undefined)
+          break
+        case 'jackpotOnly':
+          setJackpotOnly(false)
+          break
+      }
 
-  const handleSearch = useCallback(
-    searchTerm => {
-      updateFilters({ search: searchTerm, page: 1 })
+      router.push(`/games?${params.toString()}`)
     },
-    [updateFilters]
+    [router, searchParams]
   )
-
-  const handlePageSizeChange = useCallback(
-    newPageSize => {
-      updateFilters({ pageSize: newPageSize, page: 1 })
-    },
-    [updateFilters]
-  )
-
-  const resetFilters = useCallback(() => {
-    router.push(pathname)
-  }, [router, pathname])
 
   return {
-    filters,
-    updateFilters,
+    // State
+    searchQuery,
+    setSearchQuery,
+    status,
+    setStatus,
+    sortBy,
+    setSortBy,
+    fromDate,
+    setFromDate,
+    toDate,
+    setToDate,
+    jackpotOnly,
+    setJackpotOnly,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+
+    // Computed
+    activeFiltersCount,
+    queryParams,
+
+    // Actions
+    applyFilters,
+    resetFilters,
     handlePageChange,
-    handleStatusFilter,
-    handleDateFilter,
-    handleSearch,
-    handlePageSizeChange,
-    resetFilters
+    removeFilter
   }
 }

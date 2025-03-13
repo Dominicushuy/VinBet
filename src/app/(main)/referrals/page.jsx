@@ -4,7 +4,7 @@ import { ReferralShareLinks } from '@/components/referrals/ReferralShareLinks'
 import { ReferralStatistics } from '@/components/referrals/ReferralStatistics'
 import { ReferralsList } from '@/components/referrals/ReferralsList'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { getSupabaseServer } from '@/lib/supabase/server'
+// import { getSupabaseServer } from '@/lib/supabase/server'
 import { Separator } from '@/components/ui/separator'
 import { Suspense } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -14,26 +14,26 @@ export const metadata = {
   description: 'Giới thiệu bạn bè sử dụng VinBet và cả hai cùng nhận thưởng'
 }
 
-async function getInitialData() {
-  try {
-    const supabase = getSupabaseServer()
+// async function getInitialData() {
+//   try {
+//     const supabase = getSupabaseServer()
 
-    // Không cần chạy api từ server, do dữ liệu sẽ được tải bởi client components
-    return {
-      stats: null,
-      referralCode: null
-    }
-  } catch (error) {
-    console.error('Error fetching initial referral data:', error)
-    return {
-      stats: null,
-      referralCode: null
-    }
-  }
-}
+//     // Không cần chạy api từ server, do dữ liệu sẽ được tải bởi client components
+//     return {
+//       stats: null,
+//       referralCode: null
+//     }
+//   } catch (error) {
+//     console.error('Error fetching initial referral data:', error)
+//     return {
+//       stats: null,
+//       referralCode: null
+//     }
+//   }
+// }
 
 export default async function ReferralsPage() {
-  const initialData = await getInitialData()
+  // const initialData = await getInitialData()
 
   return (
     <div className='container pb-12'>
