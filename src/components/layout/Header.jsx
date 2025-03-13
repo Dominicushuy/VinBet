@@ -13,6 +13,7 @@ import {
 import { Menu, LogOut, User, DollarSign, Users, Settings, HelpCircle } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { formatCurrency } from '@/utils/formatUtils'
+import { MessageSquare } from 'lucide-react'
 
 export const Header = React.memo(function Header({ openSheet, profile, signOut, navItems, checkIsActive }) {
   return (
@@ -121,6 +122,12 @@ const UserMenu = React.memo(function UserMenu({ profile, signOut }) {
           <Link href='/notifications/settings' className='cursor-pointer'>
             <Settings className='mr-2 h-4 w-4' />
             <span>Cài đặt</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href='/notifications/telegram' className='cursor-pointer'>
+            <MessageSquare className='mr-2 h-4 w-4' />
+            <span>Kết nối Telegram</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>

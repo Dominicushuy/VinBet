@@ -1,3 +1,4 @@
+// src/app/api/notifications/telegram/route.js
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
@@ -8,7 +9,11 @@ import { sendTelegramMessage } from '@/utils/telegram'
 import { handleApiError } from '@/utils/errorHandler'
 
 const telegramConnectSchema = z.object({
-  telegram_id: z.string().min(1, 'Telegram ID is required')
+  telegram_id: z
+    .string()
+    .min(1, 'Telegram ID là bắt buộc')
+    .max(50, 'Telegram ID không hợp lệ')
+    .regex(/^[0-9]+$/, 'Telegram ID phải là chuỗi số')
 })
 
 // POST: Connect account with Telegram
@@ -46,18 +51,23 @@ export async function POST(request) {
     // Create notification about successful connection
     await supabase.rpc('create_notification', {
       p_profile_id: userId,
-      p_title: 'Telegram Connected Successfully',
+      p_title: 'Kết nối Telegram thành công',
       p_content:
-        'Your account has been connected to Telegram. You will now receive important notifications via Telegram.',
+        'Tài khoản của bạn đã được kết nối với Telegram. Bạn sẽ nhận được các thông báo quan trọng qua Telegram.',
       p_type: 'system'
     })
 
-    // Optional: Send test message
-    await sendTelegramMessage({
-      chat_id: validatedData.telegram_id,
-      text: 'Your VinBet account has been successfully connected!',
-      parse_mode: 'HTML'
-    })
+    // Optional: Send test message with error handling
+    try {
+      await sendTelegramMessage({
+        chat_id: validatedData.telegram_id,
+        text: 'Tài khoản VinBet của bạn đã được kết nối thành công!',
+        parse_mode: 'HTML'
+      })
+    } catch (msgError) {
+      console.error('Không thể gửi tin nhắn kiểm tra:', msgError)
+      // Do not throw error as this is just an optional step
+    }
 
     return NextResponse.json({
       success: true,
@@ -97,9 +107,9 @@ export async function DELETE() {
     // Create notification about disconnection
     await supabase.rpc('create_notification', {
       p_profile_id: userId,
-      p_title: 'Telegram Disconnected',
+      p_title: 'Ngắt kết nối Telegram',
       p_content:
-        'Your account has been disconnected from Telegram. You will no longer receive notifications via Telegram.',
+        'Tài khoản của bạn đã được ngắt kết nối khỏi Telegram. Bạn sẽ không nhận được thông báo qua Telegram nữa.',
       p_type: 'system'
     })
 
