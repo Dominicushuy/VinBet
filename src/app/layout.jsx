@@ -3,8 +3,11 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { ComponentsProvider } from '@/providers/ComponentsProvider'
 import NextTopLoader from 'nextjs-toploader'
+// import { initializeRealtimeSubscriptions } from '@/lib/supabase/realtime'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
+
+// initializeRealtimeSubscriptions()
 
 export const metadata = {
   title: 'VinBet - Nền tảng cá cược trực tuyến',

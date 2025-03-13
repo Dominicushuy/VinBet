@@ -1,137 +1,69 @@
-// src/app/(main)/notifications/page.jsx
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Bell, Filter, Search, X, ArrowUp, Check, Trash2 } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   useNotificationsQuery,
-  useMarkNotificationReadMutation,
   useMarkAllNotificationsReadMutation,
-  useDeleteNotificationMutation,
-  useDeleteAllNotificationsMutation
+  useDeleteAllNotificationsMutation,
+  useMarkNotificationReadMutation,
+  useDeleteNotificationMutation
 } from '@/hooks/queries/useNotificationQueries'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { toast } from 'react-hot-toast'
 import { NotificationItem } from '@/components/notifications/NotificationItem'
-import { EmptyNotifications } from '@/components/notifications/EmptyNotifications'
 import { NotificationDetail } from '@/components/notifications/NotificationDetail'
 import { NotificationSkeleton } from '@/components/notifications/NotificationSkeleton'
+import { EmptyNotifications } from '@/components/notifications/EmptyNotifications'
+import { Separator } from '@/components/ui/separator'
+import { Bell, Trash2, Check } from 'lucide-react'
+import { toast } from 'react-hot-toast'
+import { AnimatePresence } from 'framer-motion'
 
 export default function NotificationsPage() {
   const searchParams = useSearchParams()
   const notificationId = searchParams.get('id')
-
   const [activeTab, setActiveTab] = useState('all')
-  const [selectedType, setSelectedType] = useState('all')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedNotifications, setSelectedNotifications] = useState([])
-  const [isSelectMode, setIsSelectMode] = useState(false)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState([])
   const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
+  const pageSize = 10
 
-  const observerRef = useRef(null)
-  const loadMoreRef = useRef(null)
-
-  const { data, isLoading, error, fetchNextPage, isFetchingNextPage, hasNextPage } = useNotificationsQuery({
+  const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useNotificationsQuery({
     type: activeTab !== 'all' ? activeTab : undefined,
-    searchQuery: searchQuery.length > 2 ? searchQuery : undefined,
-    page: 1,
-    pageSize: 20,
+    page,
+    pageSize,
     infinite: true
   })
 
-  const markReadMutation = useMarkNotificationReadMutation()
   const markAllReadMutation = useMarkAllNotificationsReadMutation()
+  const deleteAllMutation = useDeleteAllNotificationsMutation()
+  const markReadMutation = useMarkNotificationReadMutation()
   const deleteNotificationMutation = useDeleteNotificationMutation()
-  const deleteAllNotificationsMutation = useDeleteAllNotificationsMutation()
 
-  // Set up Intersection Observer for infinite scroll
+  // Reset selected IDs when changing tab
   useEffect(() => {
-    if (observerRef.current) {
-      observerRef.current.disconnect()
-    }
-
-    observerRef.current = new IntersectionObserver(
-      entries => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage()
-        }
-      },
-      { threshold: 0.5 }
-    )
-
-    if (loadMoreRef.current) {
-      observerRef.current.observe(loadMoreRef.current)
-    }
-
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect()
-      }
-    }
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage])
-
-  const handleTypeChange = value => {
-    setSelectedType(value)
-  }
+    setSelectedIds([])
+    setSelectMode(false)
+  }, [activeTab])
 
   const handleTabChange = value => {
     setActiveTab(value)
-    setSelectedNotifications([])
-    setIsSelectMode(false)
     setPage(1)
   }
 
-  const handleSearch = e => {
-    setSearchQuery(e.target.value)
+  const handleToggleSelect = id => {
+    setSelectedIds(prev => (prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]))
   }
 
-  const clearSearch = () => {
-    setSearchQuery('')
-  }
+  const handleToggleSelectAll = () => {
+    if (!data) return
 
-  const toggleSelectMode = () => {
-    setIsSelectMode(!isSelectMode)
-    setSelectedNotifications([])
-  }
-
-  const toggleSelectNotification = id => {
-    if (selectedNotifications.includes(id)) {
-      setSelectedNotifications(selectedNotifications.filter(item => item !== id))
+    const notifications = getNotifications()
+    if (selectedIds.length === notifications.length) {
+      setSelectedIds([])
     } else {
-      setSelectedNotifications([...selectedNotifications, id])
-    }
-  }
-
-  const handleSelectAll = () => {
-    if (!data?.pages) return
-
-    const allNotifications = data.pages.flatMap(page => page.notifications || [])
-
-    if (selectedNotifications.length === allNotifications.length) {
-      setSelectedNotifications([])
-    } else {
-      setSelectedNotifications(allNotifications.map(notification => notification.id))
-    }
-  }
-
-  const handleMarkSelectedAsRead = async () => {
-    try {
-      for (const id of selectedNotifications) {
-        await markReadMutation.mutateAsync(id)
-      }
-      toast.success(`Đã đánh dấu ${selectedNotifications.length} thông báo là đã đọc`)
-      setSelectedNotifications([])
-    } catch (error) {
-      toast.error('Không thể đánh dấu đã đọc')
+      setSelectedIds(notifications.map(item => item.id))
     }
   }
 
@@ -140,236 +72,184 @@ export default function NotificationsPage() {
       await markAllReadMutation.mutateAsync()
       toast.success('Đã đánh dấu tất cả thông báo là đã đọc')
     } catch (error) {
-      toast.error('Không thể đánh dấu tất cả đã đọc')
+      toast.error('Không thể đánh dấu đã đọc')
     }
   }
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteAll = async () => {
     try {
-      for (const id of selectedNotifications) {
+      await deleteAllMutation.mutateAsync({
+        type: activeTab !== 'all' ? activeTab : undefined
+      })
+    } catch (error) {
+      toast.error('Không thể xóa thông báo')
+    }
+  }
+
+  const handleBatchMarkAsRead = async () => {
+    if (selectedIds.length === 0) return
+
+    try {
+      // Thực hiện lần lượt các mutations
+      for (const id of selectedIds) {
+        await markReadMutation.mutateAsync(id)
+      }
+
+      toast.success(`Đã đánh dấu ${selectedIds.length} thông báo là đã đọc`)
+      setSelectedIds([])
+    } catch (error) {
+      toast.error('Không thể đánh dấu đã đọc')
+    }
+  }
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.length === 0) return
+
+    try {
+      // Thực hiện lần lượt các mutations
+      for (const id of selectedIds) {
         await deleteNotificationMutation.mutateAsync(id)
       }
-      toast.success(`Đã xóa ${selectedNotifications.length} thông báo`)
-      setSelectedNotifications([])
+
+      toast.success(`Đã xóa ${selectedIds.length} thông báo`)
+      setSelectedIds([])
     } catch (error) {
       toast.error('Không thể xóa thông báo')
     }
   }
 
   const getNotifications = () => {
-    if (!data?.pages) return []
-    return data.pages.flatMap(page => page.notifications || [])
+    if (!data) return []
+    return data.pages.flatMap(page => page.notifications)
+  }
+
+  const handleLoadMore = () => {
+    if (!isFetchingNextPage && hasNextPage) {
+      fetchNextPage()
+    }
   }
 
   const notifications = getNotifications()
-  const isAllSelected = selectedNotifications.length > 0 && selectedNotifications.length === notifications.length
+  const hasNotifications = notifications.length > 0
+
+  if (notificationId) {
+    return <NotificationDetail id={notificationId} />
+  }
 
   return (
-    <div className='container mx-auto py-6 max-w-5xl'>
-      <div className='flex items-center justify-between mb-6'>
-        <h1 className='text-3xl font-bold flex items-center gap-3'>
-          <Bell className='h-7 w-7' />
-          Thông báo
+    <div className='container mx-auto py-6 max-w-4xl'>
+      <div className='flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4'>
+        <h1 className='text-2xl font-bold flex items-center'>
+          <Bell className='h-6 w-6 mr-2' />
+          Thông báo của bạn
         </h1>
-        <div className='flex items-center gap-2'>
-          {isSelectMode ? (
+
+        <div className='flex flex-wrap items-center gap-2'>
+          {!selectMode ? (
             <>
-              <Button variant='outline' size='sm' onClick={toggleSelectMode}>
-                <X className='h-4 w-4 mr-1' />
-                Hủy
-              </Button>
-              <Button variant='default' size='sm' onClick={handleSelectAll}>
-                {isAllSelected ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant='outline' size='sm' onClick={toggleSelectMode}>
+              <Button variant='outline' size='sm' onClick={() => setSelectMode(true)}>
                 Chọn
               </Button>
-              <Button variant='default' size='sm' onClick={handleMarkAllAsRead}>
+              <Button variant='outline' size='sm' onClick={handleMarkAllAsRead} disabled={!hasNotifications}>
                 <Check className='h-4 w-4 mr-1' />
-                Đánh dấu tất cả đã đọc
+                <span className='hidden sm:inline'>Đánh dấu đã đọc</span>
+                <span className='sm:hidden'>Đã đọc</span>
+              </Button>
+              <Button variant='outline' size='sm' onClick={handleDeleteAll} disabled={!hasNotifications}>
+                <Trash2 className='h-4 w-4 mr-1' />
+                <span className='hidden sm:inline'>Xóa tất cả</span>
+                <span className='sm:hidden'>Xóa</span>
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant='outline' size='sm' onClick={() => setSelectMode(false)}>
+                Hủy
+              </Button>
+              <Button variant='default' size='sm' disabled={selectedIds.length === 0}>
+                {selectedIds.length} đã chọn
               </Button>
             </>
           )}
         </div>
       </div>
 
-      <div className='grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6'>
-        <div className='space-y-6'>
-          <Card>
-            <CardHeader>
-              <CardTitle>Bộ lọc</CardTitle>
-              <CardDescription>Lọc thông báo của bạn</CardDescription>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='space-y-2'>
-                <div className='relative'>
-                  <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
-                  <Input
-                    type='search'
-                    placeholder='Tìm kiếm thông báo...'
-                    className='pl-9 pr-10'
-                    value={searchQuery}
-                    onChange={handleSearch}
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={clearSearch}
-                      className='absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground'
-                    >
-                      <X className='h-4 w-4' />
-                    </button>
-                  )}
-                </div>
-              </div>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <div className='flex items-center justify-between'>
+          <TabsList className='w-full sm:w-auto'>
+            <TabsTrigger value='all'>Tất cả</TabsTrigger>
+            <TabsTrigger value='system'>Hệ thống</TabsTrigger>
+            <TabsTrigger value='game'>Game</TabsTrigger>
+            <TabsTrigger value='transaction'>Giao dịch</TabsTrigger>
+          </TabsList>
 
-              <Separator />
+          {selectMode && hasNotifications && (
+            <Button variant='ghost' size='sm' onClick={handleToggleSelectAll} className='hidden sm:flex'>
+              {selectedIds.length === notifications.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+            </Button>
+          )}
+        </div>
 
-              <div className='space-y-2'>
-                <label className='text-sm font-medium'>Loại thông báo</label>
-                <Select value={selectedType} onValueChange={handleTypeChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder='Tất cả loại' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='all'>Tất cả loại</SelectItem>
-                    <SelectItem value='system'>Hệ thống</SelectItem>
-                    <SelectItem value='game'>Game</SelectItem>
-                    <SelectItem value='transaction'>Giao dịch</SelectItem>
-                    <SelectItem value='admin'>Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+        <Separator className='my-4' />
 
-              <div className='space-y-2'>
-                <label className='text-sm font-medium'>Trạng thái</label>
-                <Select defaultValue='all'>
-                  <SelectTrigger>
-                    <SelectValue placeholder='Tất cả trạng thái' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='all'>Tất cả trạng thái</SelectItem>
-                    <SelectItem value='read'>Đã đọc</SelectItem>
-                    <SelectItem value='unread'>Chưa đọc</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className='space-y-2'>
-                <label className='text-sm font-medium'>Thời gian</label>
-                <Select defaultValue='any'>
-                  <SelectTrigger>
-                    <SelectValue placeholder='Bất kỳ thời gian' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='any'>Bất kỳ thời gian</SelectItem>
-                    <SelectItem value='today'>Hôm nay</SelectItem>
-                    <SelectItem value='week'>Tuần này</SelectItem>
-                    <SelectItem value='month'>Tháng này</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Separator />
-
-              <Button variant='outline' className='w-full'>
-                <Filter className='h-4 w-4 mr-2' />
-                Áp dụng bộ lọc
+        <TabsContent value={activeTab} className='mt-0'>
+          {isLoading ? (
+            <NotificationSkeleton count={5} />
+          ) : error ? (
+            <div className='text-center py-8'>
+              <p className='text-muted-foreground mb-4'>Không thể tải thông báo</p>
+              <Button variant='outline' onClick={() => window.location.reload()}>
+                Thử lại
               </Button>
-            </CardContent>
-          </Card>
-
-          {isSelectMode && selectedNotifications.length > 0 && (
-            <Card>
-              <CardHeader className='pb-3'>
-                <CardTitle>Hành động</CardTitle>
-                <CardDescription>Đã chọn {selectedNotifications.length} thông báo</CardDescription>
-              </CardHeader>
-              <CardContent className='space-y-2'>
-                <Button variant='default' className='w-full' onClick={handleMarkSelectedAsRead}>
-                  <Check className='h-4 w-4 mr-2' />
-                  Đánh dấu đã đọc
-                </Button>
-                <Button variant='destructive' className='w-full' onClick={handleDeleteSelected}>
-                  <Trash2 className='h-4 w-4 mr-2' />
-                  Xóa thông báo
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        <div className='space-y-6'>
-          {notificationId ? (
-            <NotificationDetail id={notificationId} />
+            </div>
+          ) : !hasNotifications ? (
+            <EmptyNotifications type={activeTab} />
           ) : (
-            <Card>
-              <CardHeader className='pb-0'>
-                <Tabs value={activeTab} onValueChange={handleTabChange} className='w-full'>
-                  <TabsList className='w-full'>
-                    <TabsTrigger value='all'>Tất cả</TabsTrigger>
-                    <TabsTrigger value='system'>Hệ thống</TabsTrigger>
-                    <TabsTrigger value='game'>Game</TabsTrigger>
-                    <TabsTrigger value='transaction'>Giao dịch</TabsTrigger>
-                    <TabsTrigger value='admin'>Admin</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </CardHeader>
-              <CardContent className='pt-4'>
-                {isLoading ? (
-                  <NotificationSkeleton count={5} />
-                ) : error ? (
-                  <Alert variant='destructive'>
-                    <AlertDescription>Không thể tải thông báo. Vui lòng thử lại sau.</AlertDescription>
-                  </Alert>
-                ) : notifications.length === 0 ? (
-                  <EmptyNotifications type={activeTab} />
-                ) : (
-                  <ScrollArea className='h-[600px] pr-4'>
-                    <div className='space-y-1'>
-                      {notifications.map(notification => (
-                        <NotificationItem
-                          key={notification.id}
-                          notification={notification}
-                          isSelectMode={isSelectMode}
-                          isSelected={selectedNotifications.includes(notification.id)}
-                          onToggleSelect={() => toggleSelectNotification(notification.id)}
-                        />
-                      ))}
-                      {hasNextPage && (
-                        <div ref={loadMoreRef} className='flex justify-center py-4'>
-                          {isFetchingNextPage ? (
-                            <div className='flex items-center gap-2'>
-                              <div className='h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent' />
-                              <span className='text-sm text-muted-foreground'>Đang tải thêm...</span>
-                            </div>
-                          ) : (
-                            <Button variant='ghost' size='sm' onClick={() => fetchNextPage()}>
-                              Tải thêm
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </ScrollArea>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
+            <div>
+              <AnimatePresence>
+                {notifications.map(notification => (
+                  <NotificationItem
+                    key={notification.id}
+                    notification={notification}
+                    isSelectMode={selectMode}
+                    isSelected={selectedIds.includes(notification.id)}
+                    onToggleSelect={() => handleToggleSelect(notification.id)}
+                  />
+                ))}
+              </AnimatePresence>
 
-      <div className='fixed bottom-6 right-6'>
-        <Button
-          size='icon'
-          className='h-10 w-10 rounded-full shadow-lg'
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        >
-          <ArrowUp className='h-5 w-5' />
-        </Button>
-      </div>
+              {hasNextPage && (
+                <div className='flex justify-center mt-6'>
+                  <Button variant='outline' onClick={handleLoadMore} disabled={isFetchingNextPage}>
+                    {isFetchingNextPage ? 'Đang tải...' : 'Tải thêm'}
+                  </Button>
+                </div>
+              )}
+
+              {selectMode && selectedIds.length > 0 && (
+                <div className='sticky bottom-4 flex justify-center mt-6'>
+                  <div className='bg-card border shadow-md rounded-full px-4 py-2 flex items-center gap-2'>
+                    <span className='text-sm'>{selectedIds.length} được chọn</span>
+                    <Button variant='ghost' size='sm' className='h-8' onClick={handleBatchMarkAsRead}>
+                      <Check className='h-4 w-4 mr-1' />
+                      Đánh dấu đọc
+                    </Button>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      className='h-8 text-destructive hover:text-destructive'
+                      onClick={handleBatchDelete}
+                    >
+                      <Trash2 className='h-4 w-4 mr-1' />
+                      Xóa
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

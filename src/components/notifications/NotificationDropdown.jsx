@@ -1,36 +1,24 @@
-// src/components/notifications/NotificationDropdown.jsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { Bell, Settings, Check, Clock, X, ChevronRight } from 'lucide-react'
+import { Bell, Check, ChevronRight } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { NotificationBadge } from './NotificationBadge'
 import {
   useNotificationCountQuery,
   useMarkAllNotificationsReadMutation,
-  useNotificationsQuery
+  useNotificationsQuery,
+  useMarkNotificationReadMutation
 } from '@/hooks/queries/useNotificationQueries'
 import { NotificationSkeletonItem } from './NotificationSkeletonItem'
 import { AnimatePresence, motion } from 'framer-motion'
 import { toast } from 'react-hot-toast'
-
-// Nếu muốn, có thể định nghĩa JSDoc cho kiểu dữ liệu của notification
-/**
- * @typedef {Object} NotificationItem
- * @property {string} id
- * @property {string} title
- * @property {string} content
- * @property {string} created_at
- * @property {boolean} is_read
- * @property {string} type
- * @property {string} [reference_id]
- */
+import { getNotificationIcon, formatTimeAgo, getNotificationTypeBadge } from '@/utils/notificationUtils'
 
 export function NotificationDropdown() {
   const [open, setOpen] = useState(false)
@@ -42,6 +30,7 @@ export function NotificationDropdown() {
     type: activeTab !== 'all' ? activeTab : undefined
   })
   const markAllReadMutation = useMarkAllNotificationsReadMutation()
+  const markReadMutation = useMarkNotificationReadMutation()
 
   const handleOpenChange = isOpen => {
     setOpen(isOpen)
@@ -60,85 +49,15 @@ export function NotificationDropdown() {
     }
   }
 
-  const getNotificationIcon = type => {
-    switch (type) {
-      case 'system':
-        return <Bell className='h-4 w-4 text-blue-500' />
-      case 'game':
-        return (
-          <svg
-            className='h-4 w-4 text-purple-500'
-            xmlns='http://www.w3.org/2000/svg'
-            viewBox='0 0 24 24'
-            fill='none'
-            stroke='currentColor'
-            strokeWidth='2'
-            strokeLinecap='round'
-            strokeLinejoin='round'
-          >
-            <path d='M6 9H4.5a2.5 2.5 0 0 1 0-5H6' />
-            <path d='M18 9h1.5a2.5 2.5 0 0 0 0-5H18' />
-            <path d='M4 22h16' />
-            <path d='M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22' />
-            <path d='M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22' />
-            <path d='M18 2H6v7a6 6 0 0 0 12 0V2Z' />
-          </svg>
-        )
-      case 'transaction':
-        return (
-          <svg
-            className='h-4 w-4 text-green-500'
-            xmlns='http://www.w3.org/2000/svg'
-            viewBox='0 0 24 24'
-            fill='none'
-            stroke='currentColor'
-            strokeWidth='2'
-            strokeLinecap='round'
-            strokeLinejoin='round'
-          >
-            <circle cx='12' cy='12' r='10' />
-            <path d='M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8' />
-            <path d='M12 18V6' />
-          </svg>
-        )
-      case 'admin':
-        return (
-          <svg
-            className='h-4 w-4 text-red-500'
-            xmlns='http://www.w3.org/2000/svg'
-            viewBox='0 0 24 24'
-            fill='none'
-            stroke='currentColor'
-            strokeWidth='2'
-            strokeLinecap='round'
-            strokeLinejoin='round'
-          >
-            <rect width='18' height='18' x='3' y='3' rx='2' />
-            <path d='M7 7h.01' />
-            <path d='M12 7h.01' />
-            <path d='M17 7h.01' />
-            <path d='M7 12h.01' />
-            <path d='M12 12h.01' />
-            <path d='M17 12h.01' />
-            <path d='M7 17h.01' />
-            <path d='M12 17h.01' />
-            <path d='M17 17h.01' />
-          </svg>
-        )
-      default:
-        return <Bell className='h-4 w-4 text-gray-500' />
+  const handleMarkRead = async (id, e) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    try {
+      await markReadMutation.mutateAsync(id)
+    } catch (error) {
+      toast.error('Không thể đánh dấu đã đọc')
     }
-  }
-
-  const timeAgo = dateString => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-
-    if (diffInSeconds < 60) return 'vừa xong'
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} phút trước`
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} giờ trước`
-    return `${Math.floor(diffInSeconds / 86400)} ngày trước`
   }
 
   const unreadCount = countData?.count || 0
@@ -238,64 +157,74 @@ export function NotificationDropdown() {
                 </motion.div>
               ) : (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  {notifications.map(notification => (
-                    <motion.div
-                      key={notification.id}
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -5 }}
-                      transition={{ duration: 0.2 }}
-                      className={cn(
-                        'p-4 border-b last:border-b-0 transition-colors relative hover:bg-muted/40',
-                        !notification.is_read && 'bg-primary/5'
-                      )}
-                    >
-                      {!notification.is_read && <span className='absolute left-0 top-0 bottom-0 w-1 bg-primary' />}
-                      <div className='flex gap-3'>
-                        <div
-                          className={cn(
-                            'h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 bg-primary/10'
-                          )}
-                        >
-                          {getNotificationIcon(notification.type)}
-                        </div>
-                        <div className='flex-1 min-w-0'>
-                          <div className='flex items-start justify-between gap-2'>
-                            <p
-                              className={cn(
-                                'font-medium text-sm line-clamp-1',
-                                notification.is_read ? 'text-foreground' : 'text-primary'
-                              )}
-                            >
-                              {notification.title}
-                            </p>
-                            <span className='text-[10px] text-muted-foreground whitespace-nowrap'>
-                              {timeAgo(notification.created_at)}
-                            </span>
-                          </div>
-                          <p className='text-xs text-muted-foreground line-clamp-2 mt-0.5'>{notification.content}</p>
+                  {notifications.map(notification => {
+                    // Memoize với useMemo không hoạt động bên trong map, nhưng chúng ta vẫn tạo ra các biến trung gian
+                    const timeAgo = formatTimeAgo(notification.created_at)
+                    const badgeClassName = getNotificationTypeBadge(notification.type)
+                    const icon = getNotificationIcon(notification.type, { size: 4 })
 
-                          <div className='flex items-center justify-between mt-2'>
-                            <Link
-                              href={`/notifications?id=${notification.id}`}
-                              className='text-[11px] text-primary hover:underline flex items-center'
-                              onClick={() => setOpen(false)}
-                            >
-                              Xem chi tiết
-                              <ChevronRight className='h-3 w-3 ml-0.5' />
-                            </Link>
-
-                            {!notification.is_read && (
-                              <Button size='sm' variant='ghost' className='h-6 px-2 text-[11px]'>
-                                <Check className='h-3 w-3 mr-1' />
-                                Đánh dấu đã đọc
-                              </Button>
+                    return (
+                      <motion.div
+                        key={notification.id}
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        transition={{ duration: 0.2 }}
+                        className={cn(
+                          'p-4 border-b last:border-b-0 transition-colors relative hover:bg-muted/40',
+                          !notification.is_read && 'bg-primary/5'
+                        )}
+                      >
+                        {!notification.is_read && <span className='absolute left-0 top-0 bottom-0 w-1 bg-primary' />}
+                        <div className='flex gap-3'>
+                          <div
+                            className={cn(
+                              'h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 bg-primary/10'
                             )}
+                          >
+                            {icon}
+                          </div>
+                          <div className='flex-1 min-w-0'>
+                            <div className='flex items-start justify-between gap-2'>
+                              <p
+                                className={cn(
+                                  'font-medium text-sm line-clamp-1',
+                                  notification.is_read ? 'text-foreground' : 'text-primary'
+                                )}
+                              >
+                                {notification.title}
+                              </p>
+                              <span className='text-[10px] text-muted-foreground whitespace-nowrap'>{timeAgo}</span>
+                            </div>
+                            <p className='text-xs text-muted-foreground line-clamp-2 mt-0.5'>{notification.content}</p>
+
+                            <div className='flex items-center justify-between mt-2'>
+                              <Link
+                                href={`/notifications?id=${notification.id}`}
+                                className='text-[11px] text-primary hover:underline flex items-center'
+                                onClick={() => setOpen(false)}
+                              >
+                                Xem chi tiết
+                                <ChevronRight className='h-3 w-3 ml-0.5' />
+                              </Link>
+
+                              {!notification.is_read && (
+                                <Button
+                                  size='sm'
+                                  variant='ghost'
+                                  className='h-6 px-2 text-[11px]'
+                                  onClick={e => handleMarkRead(notification.id, e)}
+                                >
+                                  <Check className='h-3 w-3 mr-1' />
+                                  Đánh dấu đã đọc
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    )
+                  })}
                 </motion.div>
               )}
             </AnimatePresence>

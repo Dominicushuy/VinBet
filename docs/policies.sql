@@ -77,3 +77,8 @@ CREATE POLICY "Users can read their referrals" ON referrals FOR SELECT TO public
 CREATE POLICY "Admins can read all referrals" ON referrals FOR SELECT TO public USING (EXISTS (SELECT 1 FROM profiles WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true))));
 CREATE POLICY "Only admin can update game results" ON game_results FOR UPDATE TO public USING (EXISTS (SELECT 1 FROM profiles WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true))));
 CREATE POLICY "Only admin can insert admin logs" ON admin_logs FOR INSERT TO public WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true))));
+
+-- This policy allows users to subscribe to their own notifications
+CREATE POLICY "Users can subscribe to their own notifications" ON notifications
+FOR SELECT TO authenticated
+USING (auth.uid() = profile_id);

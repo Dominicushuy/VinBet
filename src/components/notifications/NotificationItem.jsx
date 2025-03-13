@@ -1,19 +1,18 @@
-// src/components/notifications/NotificationItem.jsx (Enhanced)
 'use client'
 
-import { useState } from 'react'
-import { format } from 'date-fns'
-import { vi } from 'date-fns/locale'
+import { memo, useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Bell, DollarSign, Gamepad, ShieldAlert, Check, Trash2 } from 'lucide-react'
+import { Check, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useMarkNotificationReadMutation, useDeleteNotificationMutation } from '@/hooks/queries/useNotificationQueries'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'react-hot-toast'
 import { motion } from 'framer-motion'
+import { formatTimeAgo, getNotificationIcon, getNotificationTypeBadge } from '@/utils/notificationUtils'
 
-export function NotificationItem({
+// Memoize component để tránh re-render không cần thiết
+export const NotificationItem = memo(function NotificationItem({
   notification,
   isSelectMode = false,
   isSelected = false,
@@ -51,31 +50,10 @@ export function NotificationItem({
     }
   }
 
-  const getNotificationIcon = () => {
-    switch (notification.type) {
-      case 'system':
-        return <Bell className='h-5 w-5 text-blue-500' />
-      case 'transaction':
-        return <DollarSign className='h-5 w-5 text-green-500' />
-      case 'game':
-        return <Gamepad className='h-5 w-5 text-purple-500' />
-      case 'admin':
-        return <ShieldAlert className='h-5 w-5 text-red-500' />
-      default:
-        return <Bell className='h-5 w-5' />
-    }
-  }
-
-  const getStatusBadge = () => {
-    const typeBadges = {
-      system: 'bg-blue-100 text-blue-600',
-      transaction: 'bg-green-100 text-green-600',
-      game: 'bg-purple-100 text-purple-600',
-      admin: 'bg-red-100 text-red-600'
-    }
-
-    return typeBadges[notification.type] || 'bg-gray-100 text-gray-600'
-  }
+  // Memoize các giá trị để tránh tính toán lại
+  const notificationIcon = useMemo(() => getNotificationIcon(notification.type), [notification.type])
+  const statusBadgeClass = useMemo(() => getNotificationTypeBadge(notification.type), [notification.type])
+  const timeAgoString = useMemo(() => formatTimeAgo(notification.created_at), [notification.created_at])
 
   if (isDeleting) {
     return null
@@ -116,20 +94,14 @@ export function NotificationItem({
             </div>
           )}
 
-          <div className={cn('flex-shrink-0 p-2 rounded-full', getStatusBadge())}>{getNotificationIcon()}</div>
+          <div className={cn('flex-shrink-0 p-2 rounded-full', statusBadgeClass)}>{notificationIcon}</div>
 
           <div className='flex-grow space-y-1 min-w-0'>
             <div className='flex justify-between items-start gap-2'>
               <h4 className={cn('font-medium line-clamp-1', !notification.is_read && 'text-primary')}>
                 {notification.title}
               </h4>
-              <span className='text-xs text-muted-foreground whitespace-nowrap flex-shrink-0'>
-                {notification.created_at
-                  ? format(new Date(notification.created_at), 'dd MMM, HH:mm', {
-                      locale: vi
-                    })
-                  : 'N/A'}
-              </span>
+              <span className='text-xs text-muted-foreground whitespace-nowrap flex-shrink-0'>{timeAgoString}</span>
             </div>
 
             <p className='text-sm text-muted-foreground line-clamp-2'>{notification.content}</p>
@@ -159,4 +131,4 @@ export function NotificationItem({
       </Link>
     </motion.div>
   )
-}
+})

@@ -157,3 +157,9 @@ CREATE TABLE IF NOT EXISTS admin_logs (
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_blocked BOOLEAN DEFAULT FALSE;
 -- Thêm cột bio vào bảng profiles
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS bio TEXT;
+
+
+-- Real-time notifications
+-- Create notification_changes publication for notifications table
+CREATE PUBLICATION notification_changes FOR TABLE notifications 
+WITH (publish = 'insert');

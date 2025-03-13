@@ -89,6 +89,7 @@ const notificationApi = {
 }
 
 // Queries
+// Cập nhật định nghĩa useNotificationsQuery để hỗ trợ infinite loading
 export function useNotificationsQuery(params) {
   // For infinite scrolling
   if (params?.infinite) {
@@ -102,20 +103,20 @@ export function useNotificationsQuery(params) {
           ...params,
           page: pageParam
         }),
-      getNextPageParam: (lastPage, allPages) => {
+      getNextPageParam: lastPage => {
+        if (!lastPage.pagination) return undefined
         const { pagination } = lastPage
-        if (pagination.page < pagination.totalPages) {
-          return pagination.page + 1
-        }
-        return undefined
-      }
+        return pagination.page < pagination.totalPages ? pagination.page + 1 : undefined
+      },
+      staleTime: 60 * 1000 // 1 minute
     })
   }
 
   // Regular pagination
   return useQuery({
     queryKey: NOTIFICATION_QUERY_KEYS.notifications(params),
-    queryFn: () => notificationApi.getNotifications(params)
+    queryFn: () => notificationApi.getNotifications(params),
+    staleTime: 60 * 1000 // 1 minute
   })
 }
 
@@ -283,5 +284,27 @@ export function useDisconnectTelegramMutation() {
     onError: error => {
       toast.error(error.message || 'Không thể ngắt kết nối Telegram')
     }
+  })
+}
+
+// Bổ sung infinite query cho notifications
+export function useNotificationsInfiniteQuery(params) {
+  return useInfiniteQuery({
+    queryKey: NOTIFICATION_QUERY_KEYS.notifications({
+      ...params,
+      infinite: true
+    }),
+    queryFn: ({ pageParam = 1 }) =>
+      notificationApi.getNotifications({
+        ...params,
+        page: pageParam
+      }),
+    getNextPageParam: lastPage => {
+      if (!lastPage.pagination) return undefined
+      const { pagination } = lastPage
+      return pagination.page < pagination.totalPages ? pagination.page + 1 : undefined
+    },
+    enabled: !!params,
+    staleTime: 60 * 1000 // 1 minute
   })
 }

@@ -1,4 +1,3 @@
-// src/components/notifications/NotificationDetail.jsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -9,15 +8,21 @@ import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
-import { ArrowLeft, Bell, DollarSign, Gamepad, ShieldAlert, CalendarIcon, ClockIcon, TagIcon } from 'lucide-react'
-import { useNotificationDetailQuery, useMarkNotificationReadMutation } from '@/hooks/queries/useNotificationQueries'
+import { ArrowLeft, CalendarIcon, ClockIcon, TagIcon } from 'lucide-react'
+import {
+  useNotificationDetailQuery,
+  useMarkNotificationReadMutation,
+  useDeleteNotificationMutation
+} from '@/hooks/queries/useNotificationQueries'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'react-hot-toast'
+import { getNotificationIcon, getNotificationTypeBadge, getNotificationTypeLabel } from '@/utils/notificationUtils'
 
 export function NotificationDetail({ id }) {
   const router = useRouter()
   const { data, isLoading, error } = useNotificationDetailQuery(id)
   const markReadMutation = useMarkNotificationReadMutation()
+  const deleteNotificationMutation = useDeleteNotificationMutation()
   const [hasMarkedRead, setHasMarkedRead] = useState(false)
 
   useEffect(() => {
@@ -39,45 +44,14 @@ export function NotificationDetail({ id }) {
     router.push('/notifications')
   }
 
-  const getNotificationIcon = type => {
-    switch (type) {
-      case 'system':
-        return <Bell className='h-6 w-6 text-blue-500' />
-      case 'transaction':
-        return <DollarSign className='h-6 w-6 text-green-500' />
-      case 'game':
-        return <Gamepad className='h-6 w-6 text-purple-500' />
-      case 'admin':
-        return <ShieldAlert className='h-6 w-6 text-red-500' />
-      default:
-        return <Bell className='h-6 w-6' />
+  const handleDelete = async () => {
+    try {
+      await deleteNotificationMutation.mutateAsync(id)
+      toast.success('Đã xóa thông báo')
+      handleBack()
+    } catch (error) {
+      toast.error('Không thể xóa thông báo')
     }
-  }
-
-  const getNotificationTypeLabel = type => {
-    switch (type) {
-      case 'system':
-        return 'Hệ thống'
-      case 'transaction':
-        return 'Giao dịch'
-      case 'game':
-        return 'Game'
-      case 'admin':
-        return 'Admin'
-      default:
-        return 'Khác'
-    }
-  }
-
-  const getNotificationTypeBadge = type => {
-    const typeBadges = {
-      system: 'bg-blue-100 text-blue-600 border-blue-200',
-      transaction: 'bg-green-100 text-green-600 border-green-200',
-      game: 'bg-purple-100 text-purple-600 border-purple-200',
-      admin: 'bg-red-100 text-red-600 border-red-200'
-    }
-
-    return typeBadges[type] || 'bg-gray-100 text-gray-600 border-gray-200'
   }
 
   if (isLoading) {
@@ -201,13 +175,7 @@ export function NotificationDetail({ id }) {
           <ArrowLeft className='h-4 w-4 mr-2' />
           Quay lại danh sách
         </Button>
-        <Button
-          variant='ghost'
-          onClick={() => {
-            toast.success('Đã xóa thông báo')
-            handleBack()
-          }}
-        >
+        <Button variant='ghost' onClick={handleDelete}>
           Xóa thông báo
         </Button>
       </CardFooter>
