@@ -1,4 +1,8 @@
 // src/utils/formatUtils.js (cải tiến)
+
+import { format } from 'date-fns'
+import { vi } from 'date-fns/locale'
+
 /**
  * Format số sang định dạng tiền tệ VND
  * @param {number} value - Giá trị cần format
@@ -83,8 +87,6 @@ export const formatDate = (date, formatStr = 'dd/MM/yyyy') => {
   if (!date) return 'N/A'
 
   try {
-    const { format } = require('date-fns')
-    const { vi } = require('date-fns/locale')
     return format(new Date(date), formatStr, { locale: vi })
   } catch (error) {
     console.error('Date format error:', error)
