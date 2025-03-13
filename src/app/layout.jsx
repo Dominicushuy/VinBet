@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { ComponentsProvider } from '@/providers/ComponentsProvider'
 import NextTopLoader from 'nextjs-toploader'
+import { ThemeProvider } from 'next-themes'
 // import { initializeRealtimeSubscriptions } from '@/lib/supabase/realtime'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
@@ -18,8 +19,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang='vi' className={`${fontSans.variable} ${fontHeading.variable}`}>
       <body className={inter.variable}>
-        <NextTopLoader />
-        <ComponentsProvider>{children}</ComponentsProvider>
+        <ThemeProvider attribute='class' defaultTheme='light' enableSystem>
+          <ComponentsProvider>{children}</ComponentsProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

@@ -9,13 +9,11 @@ import {
   Settings,
   FileText,
   BarChart2,
-  HelpCircle
+  HelpCircle,
+  Activity, // New import for activity tracking
+  UserCog // New import for profile management
 } from 'lucide-react'
 
-/**
- * Cấu hình menu navigation cho Admin Dashboard
- * Được sử dụng trong cả AdminSidebar và ResponsiveAdminMenu
- */
 export const adminMenuItems = [
   {
     title: 'Dashboard',
@@ -25,7 +23,17 @@ export const adminMenuItems = [
   {
     title: 'Người dùng',
     icon: <Users className='w-5 h-5' />,
-    href: '/admin/users'
+    group: 'users',
+    subitems: [
+      {
+        title: 'Danh sách người dùng',
+        href: '/admin/users'
+      },
+      {
+        title: 'Nhật ký hoạt động',
+        href: '/admin/profile/activity'
+      }
+    ]
   },
   {
     title: 'Trò chơi',
@@ -81,15 +89,27 @@ export const adminMenuItems = [
     ]
   },
   {
+    title: 'Tài khoản Admin',
+    icon: <UserCog className='w-5 h-5' />,
+    group: 'admin-profile',
+    subitems: [
+      {
+        title: 'Thông tin tài khoản',
+        href: '/admin/profile'
+      },
+      {
+        title: 'Nhật ký hoạt động',
+        href: '/admin/profile/activity'
+      }
+    ]
+  },
+  {
     title: 'Cài đặt',
     icon: <Settings className='w-5 h-5' />,
     href: '/admin/settings'
   }
 ]
 
-/**
- * Menu items phụ trợ (hiển thị dưới cùng sidebar)
- */
 export const adminSupportMenuItems = [
   {
     title: 'Trợ giúp & Hỗ trợ',
@@ -103,16 +123,22 @@ export const adminSupportMenuItems = [
   }
 ]
 
-/**
- * Menu items rút gọn cho mobile
- * Không bao gồm submenu, chỉ hiển thị trang chính
- */
 export const adminMobileMenuItems = [
-  ...adminMenuItems.map(item => ({
-    title: item.title,
-    icon: item.icon,
-    href: item.href || item.subitems?.[0]?.href || '/admin/dashboard'
-  })),
+  ...adminMenuItems
+    .map(item =>
+      item.subitems
+        ? item.subitems.map(subitem => ({
+            title: subitem.title,
+            icon: item.icon,
+            href: subitem.href
+          }))
+        : {
+            title: item.title,
+            icon: item.icon,
+            href: item.href
+          }
+    )
+    .flat(),
   {
     title: 'Trợ giúp',
     icon: <HelpCircle className='w-5 h-5' />,

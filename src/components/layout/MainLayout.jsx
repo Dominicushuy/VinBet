@@ -18,16 +18,32 @@ import {
   CreditCard,
   History,
   Wallet,
-  BarChart2
+  BarChart2,
+  Sun,
+  Moon
 } from 'lucide-react'
+import { useTheme } from 'next-themes'
+import { Button } from '@/components/ui/button'
+import { useEffect } from 'react'
 
 export function MainLayout({ children }) {
   const [isOpen, setIsOpen] = useState(false)
   const [openSubMenus, setOpenSubMenus] = useState({})
   const pathname = usePathname()
   const { profile, signOut } = useAuth()
+  const { theme, setTheme } = useTheme()
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Handle client-side mounting for theme toggle
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   const closeSheet = useCallback(() => setIsOpen(false), [])
+
+  const toggleTheme = useCallback(() => {
+    setTheme(theme === 'dark' ? 'light' : 'dark')
+  }, [theme, setTheme])
 
   const toggleSubMenu = useCallback(key => {
     setOpenSubMenus(prev => ({
@@ -91,6 +107,23 @@ export function MainLayout({ children }) {
     []
   )
 
+  // Theme toggle render function for client-side
+  const renderThemeToggle = () => {
+    if (!isMounted) return null
+
+    return (
+      <Button
+        variant='ghost'
+        size='icon'
+        onClick={toggleTheme}
+        aria-label={`Chuyển sang chế độ ${theme === 'dark' ? 'sáng' : 'tối'}`}
+        className='hidden md:flex'
+      >
+        {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+      </Button>
+    )
+  }
+
   return (
     <div className='flex min-h-screen flex-col'>
       <Header
@@ -99,6 +132,7 @@ export function MainLayout({ children }) {
         signOut={signOut}
         navItems={mainNavItems.slice(0, 4)}
         checkIsActive={checkIsActive}
+        renderThemeToggle={renderThemeToggle}
       />
 
       <MobileMenu

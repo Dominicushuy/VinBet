@@ -16,14 +16,12 @@ import { useTheme } from 'next-themes'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { toast } from 'react-hot-toast'
-import { useRouter } from 'next/navigation'
 import { ResponsiveAdminMenu } from './ResponsiveAdminMenu'
 import { useAuth } from '@/hooks/useAuth'
 
 export function AdminHeader({ userProfile }) {
   const { theme, setTheme } = useTheme()
   const { signOut } = useAuth()
-  const router = useRouter()
   const [isMounted, setIsMounted] = useState(false)
 
   // Handle client-side mounting
@@ -39,13 +37,11 @@ export function AdminHeader({ userProfile }) {
   const handleLogout = useCallback(async () => {
     try {
       await signOut()
-      router.push('/login')
-      toast.success('Đăng xuất thành công')
     } catch (error) {
       console.error('Logout error:', error)
       toast.error('Có lỗi xảy ra khi đăng xuất')
     }
-  }, [signOut, router])
+  }, [signOut])
 
   // Render theme toggle chỉ ở client-side
   const renderThemeToggle = () => {
@@ -111,7 +107,7 @@ export function AdminHeader({ userProfile }) {
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href='/admin/profile' className='cursor-pointer flex items-center'>
+                <Link href='/profile' className='cursor-pointer flex items-center'>
                   <User size={16} className='mr-2' />
                   Thông tin cá nhân
                 </Link>

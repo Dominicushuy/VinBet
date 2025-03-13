@@ -1,16 +1,16 @@
 // src/hooks/useAuth.js
 import { useCallback, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { useLogoutMutation, useProfileQuery, useSessionQuery } from '@/hooks/queries/useAuthQueries'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
-export function useAuth({ required = false, redirectTo = '/login', adminRequired = false } = {}) {
-  const router = useRouter()
+export function useAuth() {
   const { data: session, isFetching: isSessionFetching } = useSessionQuery()
   const user = session?.user
-  const isAdmin = user?.app_metadata?.is_admin === true || user?.user_metadata?.is_admin === true
 
-  const { data: profileData, isFetching: isProfileFetching } = useProfileQuery(!!user)
+  const { data: profileData, isFetching: isProfileFetching } = useProfileQuery(
+    !!session?.user // Chỉ fetch khi đã đăng nhập
+  )
+
   const profile = profileData?.profile || null
 
   const isLoading = isSessionFetching || isProfileFetching
@@ -44,20 +44,5 @@ export function useAuth({ required = false, redirectTo = '/login', adminRequired
     refreshSession()
   }, [])
 
-  useEffect(() => {
-    // Nếu đã load xong và không đang loading
-    if (!isLoading) {
-      // Nếu cần đăng nhập nhưng không có session -> redirect
-      if (required && !user) {
-        router.push(`${redirectTo}?redirectTo=${encodeURIComponent(window.location.pathname)}`)
-      }
-
-      // Nếu cần quyền admin nhưng không phải admin -> redirect về home
-      if (adminRequired && !isAdmin) {
-        router.push('/')
-      }
-    }
-  }, [isLoading, user, required, adminRequired, redirectTo, router, isAdmin])
-
-  return { user, isAdmin, isLoading, signOut, profile }
+  return { user, isLoading, signOut, profile }
 }

@@ -44,6 +44,10 @@ export async function middleware(req) {
     data: { session }
   } = await supabase.auth.getSession()
 
+  // Kiểm tra có phải vừa mới đăng nhập không (thông qua cookie hoặc query param)
+  const justLoggedIn =
+    req.cookies.get('just_logged_in')?.value === 'true' || req.nextUrl.searchParams.get('just_logged_in') === 'true'
+
   // Sử dụng try-catch để xử lý lỗi khi truy vấn admin status
   let isAdmin = false
   if (session) {
@@ -56,8 +60,15 @@ export async function middleware(req) {
     }
   }
 
-  // Admin đã đăng nhập đang ở trang chủ hoặc trang auth -> chuyển đến admin dashboard
-  if (session && isAdmin && (isHomePage || isAuthRoute)) {
+  // Admin đã đăng nhập đang ở trang chủ hoặc trang auth hoặc vừa đăng nhập -> chuyển đến admin dashboard
+  if (session && isAdmin && (isHomePage || isAuthRoute || justLoggedIn)) {
+    // Nếu có cookie just_logged_in, xóa nó
+    if (justLoggedIn) {
+      const redirectResponse = NextResponse.redirect(new URL('/admin/dashboard', req.url))
+      redirectResponse.cookies.delete('just_logged_in')
+      return redirectResponse
+    }
+
     return NextResponse.redirect(new URL('/admin/dashboard', req.url))
   }
 

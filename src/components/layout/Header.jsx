@@ -10,12 +10,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { Menu, LogOut, User, DollarSign, Users, Settings, HelpCircle } from 'lucide-react'
+import { Menu, LogOut, User, DollarSign, Users, Settings, HelpCircle, Moon, Sun } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { formatCurrency } from '@/utils/formatUtils'
 import { MessageSquare } from 'lucide-react'
+import { useTheme } from 'next-themes'
+import { ShieldCheck } from 'lucide-react'
 
 export const Header = React.memo(function Header({ openSheet, profile, signOut, navItems, checkIsActive }) {
+  const { theme, setTheme } = useTheme()
+  const [isMounted, setIsMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  const toggleTheme = React.useCallback(() => {
+    setTheme(theme === 'dark' ? 'light' : 'dark')
+  }, [theme, setTheme])
+
   return (
     <header className='sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'>
       <div className='max-w-screen-2xl mx-auto w-full px-4 sm:px-6 lg:px-8'>
@@ -57,6 +70,19 @@ export const Header = React.memo(function Header({ openSheet, profile, signOut, 
 
           {/* Right side content */}
           <div className='flex items-center gap-3'>
+            {/* Theme Toggle */}
+            {isMounted && (
+              <Button
+                variant='ghost'
+                size='icon'
+                onClick={toggleTheme}
+                className='hidden md:flex'
+                aria-label={`Chuyển sang chế độ ${theme === 'dark' ? 'sáng' : 'tối'}`}
+              >
+                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              </Button>
+            )}
+
             <NotificationDropdown />
 
             <Button variant='outline' size='sm' asChild className='hidden sm:flex'>
@@ -74,12 +100,15 @@ export const Header = React.memo(function Header({ openSheet, profile, signOut, 
   )
 })
 
-const UserMenu = React.memo(function UserMenu({ profile, signOut }) {
+export const UserMenu = React.memo(function UserMenu({ profile, signOut }) {
   const getUserInitial = () => {
     if (profile?.display_name) return profile.display_name[0].toUpperCase()
     if (profile?.username) return profile.username[0].toUpperCase()
     return 'U'
   }
+
+  // Check if user is an admin
+  const isAdmin = profile?.is_admin || profile?.user_metadata?.is_admin || profile?.app_metadata?.is_admin
 
   return (
     <DropdownMenu>
@@ -99,6 +128,20 @@ const UserMenu = React.memo(function UserMenu({ profile, signOut }) {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+
+        {/* Admin Dashboard Link - Conditionally Rendered */}
+        {isAdmin && (
+          <>
+            <DropdownMenuItem asChild>
+              <Link href='/admin/dashboard' className='cursor-pointer'>
+                <ShieldCheck className='mr-2 h-4 w-4 text-primary' />
+                <span>Quản trị hệ thống</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+
         <DropdownMenuItem asChild>
           <Link href='/profile' className='cursor-pointer'>
             <User className='mr-2 h-4 w-4' />

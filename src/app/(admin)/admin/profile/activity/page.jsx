@@ -17,7 +17,7 @@ import { Download, Loader2, Activity, Filter } from 'lucide-react'
 export default function AdminActivityPage() {
   // Filters
   const [dateRange, setDateRange] = useState({ from: null, to: null })
-  const [action, setAction] = useState('')
+  const [action, setAction] = useState('ALL')
   const [page, setPage] = useState(1)
   const pageSize = 10
 
@@ -106,7 +106,7 @@ export default function AdminActivityPage() {
                   <SelectValue placeholder='Tất cả hành động' />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value=''>Tất cả hành động</SelectItem>
+                  <SelectItem value='ALL'>Tất cả hành động</SelectItem>
                   <SelectItem value='UPDATE_PROFILE'>Cập nhật hồ sơ</SelectItem>
                   <SelectItem value='CHANGE_PASSWORD'>Đổi mật khẩu</SelectItem>
                   <SelectItem value='LOGOUT_SESSION'>Đăng xuất phiên</SelectItem>

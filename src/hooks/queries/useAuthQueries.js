@@ -20,7 +20,7 @@ export function useSessionQuery() {
     queryKey: AUTH_QUERY_KEYS.session,
     queryFn: async () => {
       const supabase = createSupabase()
-      const { data, error } = await supabase.auth.getSession()
+      const { data, error } = await supabase.auth.getUser()
 
       if (error) {
         throw new Error(error.message)
@@ -34,11 +34,6 @@ export function useSessionQuery() {
 }
 
 export function useProfileQuery(enabled = true) {
-  const { data: sessionData } = useQuery({
-    queryKey: AUTH_QUERY_KEYS.session,
-    enabled
-  })
-
   return useQuery({
     queryKey: AUTH_QUERY_KEYS.profile,
     queryFn: async () => {
@@ -57,7 +52,7 @@ export function useProfileQuery(enabled = true) {
 
       return { profile: data }
     },
-    enabled: enabled && !!sessionData?.session, // Chỉ fetch khi đã đăng nhập
+    enabled,
     staleTime: 1000 * 60 * 5 // 5 minutes
   })
 }
