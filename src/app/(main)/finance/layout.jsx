@@ -11,32 +11,32 @@ export default function FinanceLayout({ children }) {
 
   const navItems = [
     {
-      href: '/finance',
+      href: '/finance/overview',
       label: 'Tổng quan',
-      icon: <BarChart2 size={16} />,
+      icon: <BarChart2 size={16} />
     },
     {
       href: '/finance/deposit',
       label: 'Nạp tiền',
-      icon: <Banknote size={16} />,
+      icon: <Banknote size={16} />
     },
     {
       href: '/finance/withdrawal',
       label: 'Rút tiền',
-      icon: <CreditCard size={16} />,
+      icon: <CreditCard size={16} />
     },
     {
       href: '/finance/transactions',
       label: 'Lịch sử giao dịch',
-      icon: <History size={16} />,
-    },
+      icon: <History size={16} />
+    }
   ]
 
   return (
     <div className='space-y-6'>
       <Card className='shadow-none'>
         <nav className='flex p-2 overflow-x-auto'>
-          {navItems.map((item) => (
+          {navItems.map(item => (
             <Link
               key={item.href}
               href={item.href}
@@ -44,7 +44,8 @@ export default function FinanceLayout({ children }) {
                 pathname === item.href
                   ? 'bg-primary text-primary-foreground'
                   : 'hover:bg-accent hover:text-accent-foreground'
-              }`}>
+              }`}
+            >
               {item.icon}
               <span>{item.label}</span>
             </Link>

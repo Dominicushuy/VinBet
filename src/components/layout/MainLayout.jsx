@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -8,83 +8,19 @@ import { Header } from './Header'
 import { Sidebar } from './Sidebar'
 import Footer from './Footer'
 import { MobileMenu } from './MobileMenu'
-import {
-  Home,
-  DollarSign,
-  User,
-  Award,
-  Gamepad as GameController,
-  Settings,
-  CreditCard,
-  History,
-  Wallet,
-  BarChart2,
-  Sun,
-  Moon
-} from 'lucide-react'
+import { Sun, Moon } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
+import { userMenuItems } from '@/config/userMenuItems'
 
 export function MainLayout({ children }) {
-  const mainNavItems = useMemo(
-    () => [
-      {
-        key: 'home',
-        href: '/',
-        label: 'Trang chủ',
-        icon: <Home size={20} />
-      },
-      {
-        key: 'games',
-        href: '/games',
-        label: 'Trò chơi',
-        icon: <GameController size={20} />,
-        subItems: [
-          { href: '/games', label: 'Tất cả trò chơi' },
-          { href: '/games/active', label: 'Đang diễn ra' },
-          { href: '/games/results', label: 'Kết quả' }
-        ]
-      },
-      {
-        key: 'finance',
-        href: '/finance',
-        label: 'Tài chính',
-        icon: <DollarSign size={20} />,
-        subItems: [
-          { href: '/finance', label: 'Tổng quan', icon: <BarChart2 size={16} /> },
-          { href: '/finance/deposit', label: 'Nạp tiền', icon: <Wallet size={16} /> },
-          { href: '/finance/withdrawal', label: 'Rút tiền', icon: <CreditCard size={16} /> },
-          { href: '/finance/transactions', label: 'Lịch sử giao dịch', icon: <History size={16} /> }
-        ]
-      },
-      {
-        key: 'account',
-        href: '/profile',
-        label: 'Tài khoản',
-        icon: <User size={20} />,
-        subItems: [
-          { href: '/profile', label: 'Hồ sơ cá nhân', icon: <User size={16} /> },
-          { href: '/profile?tab=password', label: 'Đổi mật khẩu', icon: <Settings size={16} /> },
-          { href: '/profile?tab=stats', label: 'Thống kê', icon: <BarChart2 size={16} /> }
-        ]
-      },
-      {
-        key: 'referrals',
-        href: '/referrals',
-        label: 'Giới thiệu',
-        icon: <Award size={20} />
-      }
-    ],
-    []
-  )
-
   const pathname = usePathname()
 
   const [isOpen, setIsOpen] = useState(false)
   const [openSubMenus, setOpenSubMenus] = useState(() => {
     // Initialize based on current pathname
     const initialState = {}
-    mainNavItems.forEach(item => {
+    userMenuItems.forEach(item => {
       if (item.subItems) {
         initialState[item.key] = item.subItems.some(subitem => pathname && pathname === subitem.href)
       }
@@ -145,7 +81,7 @@ export function MainLayout({ children }) {
         openSheet={() => setIsOpen(true)}
         profile={profile}
         signOut={signOut}
-        navItems={mainNavItems.slice(0, 4)}
+        navItems={userMenuItems.slice(0, 4)}
         checkIsActive={checkIsActive}
         renderThemeToggle={renderThemeToggle}
       />
@@ -155,7 +91,7 @@ export function MainLayout({ children }) {
         setIsOpen={setIsOpen}
         profile={profile}
         signOut={signOut}
-        mainNavItems={mainNavItems}
+        mainNavItems={userMenuItems}
         openSubMenus={openSubMenus}
         toggleSubMenu={toggleSubMenu}
         checkIsActive={checkIsActive}
@@ -167,7 +103,7 @@ export function MainLayout({ children }) {
           <div className='grid grid-cols-1 gap-6 md:grid-cols-[240px_1fr]'>
             <Sidebar
               profile={profile}
-              mainNavItems={mainNavItems}
+              mainNavItems={userMenuItems}
               openSubMenus={openSubMenus}
               toggleSubMenu={toggleSubMenu}
               checkIsActive={checkIsActive}

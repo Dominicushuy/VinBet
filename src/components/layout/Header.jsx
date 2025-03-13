@@ -149,7 +149,7 @@ export const UserMenu = React.memo(function UserMenu({ profile, signOut }) {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href='/finance' className='cursor-pointer'>
+          <Link href='/finance/overview' className='cursor-pointer'>
             <DollarSign className='mr-2 h-4 w-4' />
             <span>Tài chính</span>
           </Link>

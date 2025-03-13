@@ -10,7 +10,6 @@ import {
   FileText,
   BarChart2,
   HelpCircle,
-  Activity, // New import for activity tracking
   UserCog // New import for profile management
 } from 'lucide-react'
 
@@ -23,17 +22,7 @@ export const adminMenuItems = [
   {
     title: 'Người dùng',
     icon: <Users className='w-5 h-5' />,
-    group: 'users',
-    subitems: [
-      {
-        title: 'Danh sách người dùng',
-        href: '/admin/users'
-      },
-      {
-        title: 'Nhật ký hoạt động',
-        href: '/admin/profile/activity'
-      }
-    ]
+    href: '/admin/users'
   },
   {
     title: 'Trò chơi',
@@ -55,7 +44,7 @@ export const adminMenuItems = [
       },
       {
         title: 'Lịch sử giao dịch',
-        href: '/admin/transactions'
+        href: '/admin/payments?type=transactions'
       }
     ]
   },
@@ -95,7 +84,7 @@ export const adminMenuItems = [
     subitems: [
       {
         title: 'Thông tin tài khoản',
-        href: '/admin/profile'
+        href: '/admin/profile/info'
       },
       {
         title: 'Nhật ký hoạt động',

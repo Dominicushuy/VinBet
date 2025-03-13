@@ -19,6 +19,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang='vi' className={`${fontSans.variable} ${fontHeading.variable}`}>
       <body className={inter.variable}>
+        <NextTopLoader />
         <ThemeProvider attribute='class' defaultTheme='light' enableSystem>
           <ComponentsProvider>{children}</ComponentsProvider>
         </ThemeProvider>

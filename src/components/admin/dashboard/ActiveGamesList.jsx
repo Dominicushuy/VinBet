@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Clock, PlayCircle, Users, AlertCircle } from 'lucide-react'
 import { format, formatDistanceToNow } from 'date-fns'
 import { vi } from 'date-fns/locale'
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'nextjs-toploader'
 
 export function ActiveGamesList() {
   const router = useRouter()

@@ -45,7 +45,7 @@ export function Step3Success({ watchAmount, getSelectedMethodDetails, handleRese
         <Button variant='outline' onClick={handleReset}>
           <RefreshCw className='mr-2 h-4 w-4' /> Tạo yêu cầu mới
         </Button>
-        <Button onClick={() => router.push('/finance')}>
+        <Button onClick={() => router.push('/finance/overview')}>
           <Wallet className='mr-2 h-4 w-4' /> Quay lại trang Tài chính
         </Button>
       </div>

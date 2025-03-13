@@ -7,7 +7,7 @@ import { AdminSecuritySettings } from '@/components/admin/profile/AdminSecurityS
 import { AdminPreferences } from '@/components/admin/profile/AdminPreferences'
 import { AdminPageHeader } from '@/components/admin/layout/AdminPageHeader'
 
-export default function AdminProfilePage() {
+export default function AdminProfileInfoPage() {
   return (
     <>
       <AdminPageHeader title='Thông tin tài khoản Admin' description='Xem và quản lý thông tin cá nhân và bảo mật' />

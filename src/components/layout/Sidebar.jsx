@@ -1,5 +1,8 @@
-import React from 'react'
+'use client'
+
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -8,14 +11,75 @@ import { Award } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/utils/formatUtils'
 import { ChevronDown } from 'lucide-react'
+import { userMenuItems } from '@/config/userMenuItems'
 
-export const Sidebar = React.memo(function Sidebar({
-  profile,
-  mainNavItems,
-  openSubMenus,
-  toggleSubMenu,
-  checkIsActive
-}) {
+export const Sidebar = React.memo(function Sidebar({ profile }) {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [openSubMenus, setOpenSubMenus] = useState({})
+
+  // Check if a path is active with possible query params
+  const checkIsActive = itemPath => {
+    if (!itemPath) return false
+
+    // Extract base path and query params from itemPath
+    const [basePath, queryString] = itemPath.split('?')
+
+    // Check base path match
+    const basePathMatch = pathname === basePath || pathname.startsWith(`${basePath}/`)
+    if (!basePathMatch) return false
+
+    // If there are no query params in the item path, it's active based on path alone
+    if (!queryString) return basePathMatch
+
+    // Parse query params from item path
+    const itemParams = new URLSearchParams(queryString)
+
+    // Check if all query params in the item match the current URL
+    for (const [key, value] of itemParams.entries()) {
+      if (searchParams.get(key) !== value) return false
+    }
+
+    return true
+  }
+
+  // Check if an item or any of its subitems are active
+  const isItemActive = item => {
+    if (item.href && checkIsActive(item.href)) return true
+    if (item.subItems) {
+      return item.subItems.some(subitem => checkIsActive(subitem.href))
+    }
+    return false
+  }
+
+  // Toggle submenu open/close
+  const toggleSubMenu = key => {
+    setOpenSubMenus(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }))
+  }
+
+  // Initialize open menus based on active paths
+  useEffect(() => {
+    const newOpenSubMenus = {}
+
+    userMenuItems.forEach(item => {
+      if (item.key && item.subItems) {
+        // Open submenu if it or any of its items are active
+        const hasActiveChild = isItemActive(item)
+        if (hasActiveChild) {
+          newOpenSubMenus[item.key] = true
+        }
+      }
+    })
+
+    setOpenSubMenus(prev => ({
+      ...prev,
+      ...newOpenSubMenus
+    }))
+  }, [pathname, searchParams])
+
   const getUserInitial = () => {
     if (profile?.display_name) return profile.display_name[0].toUpperCase()
     if (profile?.username) return profile.username[0].toUpperCase()
@@ -23,7 +87,7 @@ export const Sidebar = React.memo(function Sidebar({
   }
 
   return (
-    <aside className='hidden md:block'>
+    <aside className='hidden md:block w-60'>
       <div className='flex flex-col gap-6 sticky top-24'>
         {/* User Info Card */}
         <Card className='rounded-xl border bg-card p-4 space-y-4 shadow-sm'>
@@ -61,27 +125,29 @@ export const Sidebar = React.memo(function Sidebar({
         {/* Navigation */}
         <Card className='rounded-xl border bg-card shadow-sm'>
           <nav className='p-3 space-y-2'>
-            {mainNavItems.map(item => {
+            {userMenuItems.map(item => {
               if (item.subItems) {
                 return (
                   <NavItemWithSub
                     key={item.key}
                     icon={item.icon}
                     label={item.label}
-                    isActive={checkIsActive(item.href)}
+                    isActive={isItemActive(item)}
                     subItems={item.subItems}
                     isOpen={openSubMenus[item.key] || false}
                     onToggle={() => toggleSubMenu(item.key)}
+                    checkIsActive={checkIsActive}
                   />
                 )
               }
               return (
                 <NavItem
-                  key={item.href}
+                  key={item.key || item.href}
                   href={item.href}
                   icon={item.icon}
                   label={item.label}
                   isActive={checkIsActive(item.href)}
+                  badge={item.badge}
                 />
               )
             })}
@@ -110,7 +176,7 @@ const NavItem = React.memo(function NavItem({ href, icon, label, isActive, onCli
       href={href}
       onClick={onClick}
       className={`flex items-center justify-between px-3 py-2 rounded-md transition-colors ${
-        isActive ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-accent hover:text-accent-foreground'
+        isActive ? 'bg-accent text-accent-foreground font-medium' : 'hover:bg-accent hover:text-accent-foreground'
       }`}
     >
       <div className='flex items-center gap-3'>
@@ -126,13 +192,21 @@ const NavItem = React.memo(function NavItem({ href, icon, label, isActive, onCli
   )
 })
 
-const NavItemWithSub = React.memo(function NavItemWithSub({ icon, label, isActive, subItems, isOpen, onToggle }) {
+const NavItemWithSub = React.memo(function NavItemWithSub({
+  icon,
+  label,
+  isActive,
+  subItems,
+  isOpen,
+  onToggle,
+  checkIsActive
+}) {
   return (
     <div className='space-y-1'>
       <button
         onClick={onToggle}
         className={`flex w-full items-center justify-between px-3 py-2 rounded-md transition-colors ${
-          isActive ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-accent hover:text-accent-foreground'
+          isActive ? 'bg-accent text-accent-foreground font-medium' : 'hover:bg-accent hover:text-accent-foreground'
         }`}
       >
         <div className='flex items-center gap-3'>
@@ -143,18 +217,27 @@ const NavItemWithSub = React.memo(function NavItemWithSub({ icon, label, isActiv
       </button>
       {isOpen && (
         <div className='pl-9 space-y-1'>
-          {subItems.map(item => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className='flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground'
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </Link>
-          ))}
+          {subItems.map(item => {
+            const isSubItemActive = checkIsActive(item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors ${
+                  isSubItemActive
+                    ? 'bg-accent text-accent-foreground font-medium'
+                    : 'hover:bg-accent hover:text-accent-foreground'
+                }`}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </Link>
+            )
+          })}
         </div>
       )}
     </div>
   )
 })
+
+export default Sidebar

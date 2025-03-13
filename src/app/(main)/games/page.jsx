@@ -214,16 +214,17 @@ export default function GamesPage() {
 
       {/* Quick Filters Tabs */}
       <Tabs
-        defaultValue='all'
+        // defaultValue='all'
         value={status}
         onValueChange={value => {
+          // Cập nhật state local
           setStatus(value)
-          // Update page to 1 when changing status
-          if (page !== 1) {
-            const newParams = { ...queryParams, status: value, page: 1 }
-            removeFilter('page')
-          }
-          applyFilters()
+
+          // Áp dụng filter với giá trị status mới và reset page về 1
+          applyFilters({
+            status: value,
+            page: 1 // Luôn reset về trang 1 khi thay đổi status
+          })
         }}
       >
         <TabsList className='w-full grid grid-cols-4'>

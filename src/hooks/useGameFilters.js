@@ -2,6 +2,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
+import { useEffect } from 'react'
 
 export function useGameFilters() {
   const router = useRouter()
@@ -14,6 +15,26 @@ export function useGameFilters() {
   const [jackpotOnly, setJackpotOnly] = useState(searchParams.get('jackpotOnly') === 'true')
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1)
   const [pageSize, setPageSize] = useState(Number(searchParams.get('pageSize')) || 12)
+
+  useEffect(() => {
+    const page = Number(searchParams.get('page')) || 1
+    if (page !== 1) setPage(page)
+
+    const pageSize = Number(searchParams.get('pageSize')) || 12
+    if (pageSize !== 12) setPageSize
+
+    const status = searchParams.get('status') || 'all'
+    if (status !== 'all') setStatus(status)
+
+    const sortBy = searchParams.get('sortBy') || 'newest'
+    if (sortBy !== 'newest') setSortBy(sortBy)
+
+    const jackpotOnly = searchParams.get('jackpotOnly') === 'true'
+    if (jackpotOnly) setJackpotOnly(jackpotOnly)
+
+    const query = searchParams.get('query') || ''
+    if (query) setSearchQuery(query)
+  }, [searchParams])
 
   // Xử lý date params an toàn hơn
   const [fromDate, setFromDate] = useState(() => {
@@ -45,7 +66,7 @@ export function useGameFilters() {
   // Tạo query params cho API call
   const queryParams = useMemo(() => {
     return {
-      status: status !== 'all' ? status : undefined,
+      status,
       fromDate: fromDate?.toISOString(),
       toDate: toDate?.toISOString(),
       query: searchQuery || undefined,
@@ -56,28 +77,35 @@ export function useGameFilters() {
     }
   }, [status, fromDate, toDate, searchQuery, page, pageSize, sortBy, jackpotOnly])
 
-  // Apply filters và cập nhật URL
-  const applyFilters = useCallback(() => {
-    // Validate date range
-    if (fromDate && toDate && fromDate > toDate) {
-      toast.error('Ngày bắt đầu không thể sau ngày kết thúc')
-      return false
-    }
+  // Sửa lại hàm applyFilters để nhận các tham số mới trực tiếp
+  const applyFilters = useCallback(
+    (options = {}) => {
+      // Lấy giá trị từ options hoặc sử dụng state hiện tại
+      const newStatus = options.status !== undefined ? options.status : status
+      const newPage = options.page !== undefined ? options.page : page
 
-    const params = new URLSearchParams()
+      // Validate date range
+      if (fromDate && toDate && fromDate > toDate) {
+        toast.error('Ngày bắt đầu không thể sau ngày kết thúc')
+        return false
+      }
 
-    if (searchQuery) params.set('query', searchQuery)
-    if (status !== 'all') params.set('status', status)
-    if (sortBy !== 'newest') params.set('sortBy', sortBy)
-    if (fromDate) params.set('fromDate', fromDate.toISOString())
-    if (toDate) params.set('toDate', toDate.toISOString())
-    if (jackpotOnly) params.set('jackpotOnly', 'true')
-    if (page > 1) params.set('page', page.toString())
-    if (pageSize !== 12) params.set('pageSize', pageSize.toString())
+      const params = new URLSearchParams()
+      params.set('status', newStatus)
 
-    router.push(`/games?${params.toString()}`)
-    return true
-  }, [router, searchQuery, status, sortBy, fromDate, toDate, jackpotOnly, page, pageSize])
+      if (searchQuery) params.set('query', searchQuery)
+      if (sortBy !== 'newest') params.set('sortBy', sortBy)
+      if (fromDate) params.set('fromDate', fromDate.toISOString())
+      if (toDate) params.set('toDate', toDate.toISOString())
+      if (jackpotOnly) params.set('jackpotOnly', 'true')
+      if (newPage > 1) params.set('page', newPage.toString())
+      if (pageSize !== 12) params.set('pageSize', pageSize.toString())
+
+      router.push(`/games?${params.toString()}`)
+      return true
+    },
+    [router, searchQuery, status, sortBy, fromDate, toDate, jackpotOnly, page, pageSize]
+  )
 
   // Reset tất cả filters
   const resetFilters = useCallback(() => {
