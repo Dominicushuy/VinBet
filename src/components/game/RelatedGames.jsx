@@ -1,29 +1,20 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { GameCard } from './GameCard'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent } from '@/components/ui/card'
+import { useRelatedGamesQuery } from '@/hooks/queries/useGameQueries'
 
-export default function RelatedGames({ currentGameId, status = 'active', limit = 3 }) {
+export default memo(function RelatedGames({ currentGameId, status = 'active', limit = 3 }) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [cardsToShow, setCardsToShow] = useState(3)
 
   // Lấy dữ liệu trò chơi liên quan
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['games', 'related', currentGameId, status],
-    queryFn: async () => {
-      const response = await fetch(`/api/games/related?id=${currentGameId}&status=${status}&limit=${limit + 2}`)
-      if (!response.ok) {
-        throw new Error('Failed to fetch related games')
-      }
-      return response.json()
-    }
-  })
+  const { data, isLoading, error } = useRelatedGamesQuery(currentGameId, status, limit)
 
   const relatedGames = data?.gameRounds || []
   const filteredGames = relatedGames.filter(game => game.id !== currentGameId)
@@ -129,4 +120,4 @@ export default function RelatedGames({ currentGameId, status = 'active', limit =
       </div>
     </div>
   )
-}
+})

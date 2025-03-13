@@ -64,16 +64,25 @@ const gameApi = {
 
   getGameBets: async id => {
     return fetchData(`/api/game-rounds/${id}/bets`)
+  },
+
+  getRelatedGames: async (id, status, limit) => {
+    return fetchData(`/api/game-rounds/related?id=${id}&status=${status}&limit=${limit}`)
   }
 }
 
 // Queries
+// Cập nhật hàm useGameDetailQuery để hỗ trợ refetch interval cho game active
 export function useGameDetailQuery(id) {
   return useQuery({
     queryKey: GAME_QUERY_KEYS.gameDetail(id),
     queryFn: () => gameApi.getGameRound(id),
     enabled: !!id,
-    staleTime: 30000 // 30 seconds
+    staleTime: 30000, // 30 seconds
+    refetchOnWindowFocus: false,
+    refetchInterval: data =>
+      // Auto refetch nếu game đang active
+      data?.gameRound?.status === 'active' ? 30000 : false
   })
 }
 
@@ -189,5 +198,13 @@ export function useGameBetsQuery(id) {
     queryKey: GAME_QUERY_KEYS.gameBets(id),
     queryFn: () => gameApi.getGameBets(id),
     enabled: !!id
+  })
+}
+
+export function useRelatedGamesQuery(id, status, limit) {
+  return useQuery({
+    queryKey: ['games', 'related', id, status],
+    queryFn: () => gameApi.getRelatedGames(id, status, limit + 2),
+    staleTime: 5 * 60 * 1000 // 5 minutes
   })
 }
