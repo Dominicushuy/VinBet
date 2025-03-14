@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { toast } from 'react-hot-toast'
 import { fetchData, postData, deleteData, putData, buildQueryString } from '@/utils/fetchUtils'
+import { useAuth } from '../useAuth'
 
 // Query keys
 export const NOTIFICATION_QUERY_KEYS = {
@@ -91,6 +92,8 @@ const notificationApi = {
 // Queries
 // Cập nhật định nghĩa useNotificationsQuery để hỗ trợ infinite loading
 export function useNotificationsQuery(params) {
+  const { user } = useAuth()
+
   // For infinite scrolling
   if (params?.infinite) {
     return useInfiniteQuery({
@@ -116,6 +119,7 @@ export function useNotificationsQuery(params) {
   return useQuery({
     queryKey: NOTIFICATION_QUERY_KEYS.notifications(params),
     queryFn: () => notificationApi.getNotifications(params),
+    enabled: !!user,
     staleTime: 60 * 1000 // 1 minute
   })
 }
@@ -129,9 +133,12 @@ export function useNotificationDetailQuery(id) {
 }
 
 export function useNotificationCountQuery() {
+  const { user } = useAuth()
+
   return useQuery({
     queryKey: NOTIFICATION_QUERY_KEYS.notificationCount,
     queryFn: notificationApi.getNotificationCount,
+    enabled: !!user,
     refetchInterval: 60000 // Refetch every minute
   })
 }

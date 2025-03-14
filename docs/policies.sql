@@ -1,4 +1,81 @@
--- Enable RLS on all tables
+-- ==============================
+-- XÓA TẤT CẢ POLICIES HIỆN TẠI
+-- ==============================
+
+-- Xóa policies trên bảng profiles
+DROP POLICY IF EXISTS profiles_select_policy ON profiles;
+DROP POLICY IF EXISTS profiles_insert_policy ON profiles;
+DROP POLICY IF EXISTS profiles_update_policy ON profiles;
+DROP POLICY IF EXISTS profiles_delete_policy ON profiles;
+
+-- Xóa policies trên bảng game_rounds
+DROP POLICY IF EXISTS game_rounds_select_policy ON game_rounds;
+DROP POLICY IF EXISTS game_rounds_insert_policy ON game_rounds;
+DROP POLICY IF EXISTS game_rounds_update_policy ON game_rounds;
+DROP POLICY IF EXISTS game_rounds_delete_policy ON game_rounds;
+
+-- Xóa policies trên bảng bets
+DROP POLICY IF EXISTS bets_select_policy ON bets;
+DROP POLICY IF EXISTS bets_insert_policy ON bets;
+DROP POLICY IF EXISTS bets_update_policy ON bets;
+DROP POLICY IF EXISTS bets_delete_policy ON bets;
+
+-- Xóa policies trên bảng payment_requests
+DROP POLICY IF EXISTS payment_requests_select_policy ON payment_requests;
+DROP POLICY IF EXISTS payment_requests_insert_policy ON payment_requests;
+DROP POLICY IF EXISTS payment_requests_update_policy ON payment_requests;
+DROP POLICY IF EXISTS payment_requests_delete_policy ON payment_requests;
+
+-- Xóa policies trên bảng transactions
+DROP POLICY IF EXISTS transactions_select_policy ON transactions;
+DROP POLICY IF EXISTS transactions_insert_policy ON transactions;
+DROP POLICY IF EXISTS transactions_update_policy ON transactions;
+DROP POLICY IF EXISTS transactions_delete_policy ON transactions;
+
+-- Xóa policies trên bảng notifications
+DROP POLICY IF EXISTS notifications_select_policy ON notifications;
+DROP POLICY IF EXISTS notifications_insert_policy ON notifications;
+DROP POLICY IF EXISTS notifications_update_policy ON notifications;
+DROP POLICY IF EXISTS notifications_delete_policy ON notifications;
+
+-- Xóa policies trên bảng referrals
+DROP POLICY IF EXISTS referrals_select_policy ON referrals;
+DROP POLICY IF EXISTS referrals_insert_policy ON referrals;
+DROP POLICY IF EXISTS referrals_update_policy ON referrals;
+DROP POLICY IF EXISTS referrals_delete_policy ON referrals;
+
+-- Xóa policies trên bảng admin_logs
+DROP POLICY IF EXISTS admin_logs_select_policy ON admin_logs;
+DROP POLICY IF EXISTS admin_logs_insert_policy ON admin_logs;
+DROP POLICY IF EXISTS admin_logs_update_policy ON admin_logs;
+DROP POLICY IF EXISTS admin_logs_delete_policy ON admin_logs;
+
+-- Xóa policies trên bảng admin_sessions
+DROP POLICY IF EXISTS admin_sessions_select_policy ON admin_sessions;
+DROP POLICY IF EXISTS admin_sessions_insert_policy ON admin_sessions;
+DROP POLICY IF EXISTS admin_sessions_update_policy ON admin_sessions;
+DROP POLICY IF EXISTS admin_sessions_delete_policy ON admin_sessions;
+
+-- Xóa policies trên bảng admin_preferences
+DROP POLICY IF EXISTS admin_preferences_select_policy ON admin_preferences;
+DROP POLICY IF EXISTS admin_preferences_insert_policy ON admin_preferences;
+DROP POLICY IF EXISTS admin_preferences_update_policy ON admin_preferences;
+DROP POLICY IF EXISTS admin_preferences_delete_policy ON admin_preferences;
+
+-- Xóa policies trên bảng telegram_verification
+DROP POLICY IF EXISTS telegram_verification_select_policy ON telegram_verification;
+DROP POLICY IF EXISTS telegram_verification_insert_policy ON telegram_verification;
+DROP POLICY IF EXISTS telegram_verification_update_policy ON telegram_verification;
+DROP POLICY IF EXISTS telegram_verification_delete_policy ON telegram_verification;
+
+-- Xóa function auth.is_admin nếu đã tồn tại
+DROP FUNCTION IF EXISTS auth.is_admin();
+
+-- ==============================
+-- ENABLE ROW LEVEL SECURITY
+-- ==============================
+
+-- Bật RLS cho tất cả các bảng
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE game_rounds ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bets ENABLE ROW LEVEL SECURITY;
@@ -7,205 +84,311 @@ ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE referrals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_logs ENABLE ROW LEVEL SECURITY;
-
--- Drop existing policies to ensure clean setup
-DROP POLICY IF EXISTS "Only admin can view admin logs" ON profiles;
-DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON profiles;
-DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
-DROP POLICY IF EXISTS "Admins can update any profile" ON profiles;
-DROP POLICY IF EXISTS "Users can only insert their own profile" ON profiles;
-DROP POLICY IF EXISTS "Admins can insert any profile" ON profiles;
-DROP POLICY IF EXISTS "Admins can delete profiles" ON profiles;
-DROP POLICY IF EXISTS "System can insert transactions" ON transactions;
-DROP POLICY IF EXISTS "System can update transactions" ON transactions;
-DROP POLICY IF EXISTS "Users can read their own bets" ON bets;
-DROP POLICY IF EXISTS "Users can create their own bets" ON bets;
-DROP POLICY IF EXISTS "Allow system to create notifications" ON notifications;
-DROP POLICY IF EXISTS "Users can update only their own notifications" ON notifications;
-DROP POLICY IF EXISTS "Admins can create notifications for all users" ON notifications;
-DROP POLICY IF EXISTS "Admin can view all transactions" ON transactions;
-DROP POLICY IF EXISTS "Admin can view all bets" ON bets;
-DROP POLICY IF EXISTS "Admin can view all game rounds" ON game_rounds;
-DROP POLICY IF EXISTS "Everyone can read game rounds" ON game_rounds;
-DROP POLICY IF EXISTS "Only admins can create and update game rounds" ON game_rounds;
-DROP POLICY IF EXISTS "Admins can read all bets" ON bets;
-DROP POLICY IF EXISTS "Users can read their own transactions" ON transactions;
-DROP POLICY IF EXISTS "Admins can read all transactions" ON transactions;
-DROP POLICY IF EXISTS "Users can read their own payment requests" ON payment_requests;
-DROP POLICY IF EXISTS "Users can create their own payment requests" ON payment_requests;
-DROP POLICY IF EXISTS "Admins can read all payment requests" ON payment_requests;
-DROP POLICY IF EXISTS "Admins can update all payment requests" ON payment_requests;
-DROP POLICY IF EXISTS "Users can read their own notifications" ON notifications;
-DROP POLICY IF EXISTS "Users can update their own notifications" ON notifications;
-DROP POLICY IF EXISTS "Admins can create notifications" ON notifications;
-DROP POLICY IF EXISTS "Users can read their referrals" ON referrals;
-DROP POLICY IF EXISTS "Admins can read all referrals" ON referrals;
-DROP POLICY IF EXISTS "Only admin can update game results" ON game_results;
-DROP POLICY IF EXISTS "Only admin can insert admin logs" ON admin_logs;
-
--- Policies for profiles table
-CREATE POLICY "Only admin can view admin logs" ON profiles FOR SELECT TO public USING (EXISTS (SELECT 1 FROM profiles WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true))));
-CREATE POLICY "Public profiles are viewable by everyone" ON profiles FOR SELECT TO public USING (true);
-CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE TO public USING (auth.uid() = id);
-CREATE POLICY "Admins can update any profile" ON profiles FOR UPDATE TO public USING (is_admin_direct());
-CREATE POLICY "Users can only insert their own profile" ON profiles FOR INSERT TO public WITH CHECK (auth.uid() = id);
-CREATE POLICY "Admins can insert any profile" ON profiles FOR INSERT TO public WITH CHECK (is_admin_direct());
-CREATE POLICY "Admins can delete profiles" ON profiles FOR DELETE TO public USING (is_admin_direct());
-CREATE POLICY "System can insert transactions" ON transactions FOR INSERT TO public WITH CHECK (true);
-CREATE POLICY "System can update transactions" ON transactions FOR UPDATE TO public USING (true);
-CREATE POLICY "Users can read their own bets" ON bets FOR SELECT TO public USING (auth.uid() = profile_id);
-CREATE POLICY "Users can create their own bets" ON bets FOR INSERT TO public WITH CHECK (auth.uid() = profile_id);
-CREATE POLICY "Allow system to create notifications" ON notifications FOR INSERT TO public WITH CHECK (true);
-CREATE POLICY "Users can update only their own notifications" ON notifications FOR UPDATE TO public USING (auth.uid() = profile_id);
-CREATE POLICY "Admins can create notifications for all users" ON notifications FOR INSERT TO public WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true))));
-CREATE POLICY "Admin can view all transactions" ON transactions FOR SELECT TO public USING (is_admin());
-CREATE POLICY "Admin can view all bets" ON bets FOR SELECT TO public USING (is_admin());
-CREATE POLICY "Admin can view all game rounds" ON game_rounds FOR SELECT TO public USING (is_admin());
-CREATE POLICY "Everyone can read game rounds" ON game_rounds FOR SELECT TO public USING (true);
-CREATE POLICY "Only admins can create and update game rounds" ON game_rounds FOR ALL TO public USING (EXISTS (SELECT 1 FROM profiles WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true))));
-CREATE POLICY "Admins can read all bets" ON bets FOR SELECT TO public USING (EXISTS (SELECT 1 FROM profiles WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true))));
-CREATE POLICY "Users can read their own transactions" ON transactions FOR SELECT TO public USING (auth.uid() = profile_id);
-CREATE POLICY "Admins can read all transactions" ON transactions FOR SELECT TO public USING (EXISTS (SELECT 1 FROM profiles WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true))));
-CREATE POLICY "Users can read their own payment requests" ON payment_requests FOR SELECT TO public USING (auth.uid() = profile_id);
-CREATE POLICY "Users can create their own payment requests" ON payment_requests FOR INSERT TO public WITH CHECK (auth.uid() = profile_id);
-CREATE POLICY "Admins can read all payment requests" ON payment_requests FOR SELECT TO public USING (EXISTS (SELECT 1 FROM profiles WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true))));
-CREATE POLICY "Admins can update all payment requests" ON payment_requests FOR UPDATE TO public USING (EXISTS (SELECT 1 FROM profiles WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true))));
-CREATE POLICY "Users can read their own notifications" ON notifications FOR SELECT TO public USING (auth.uid() = profile_id);
-CREATE POLICY "Users can update their own notifications" ON notifications FOR UPDATE TO public USING (auth.uid() = profile_id);
-CREATE POLICY "Admins can create notifications" ON notifications FOR INSERT TO public WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true))));
-CREATE POLICY "Users can read their referrals" ON referrals FOR SELECT TO public USING (auth.uid() = referrer_id);
-CREATE POLICY "Admins can read all referrals" ON referrals FOR SELECT TO public USING (EXISTS (SELECT 1 FROM profiles WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true))));
-CREATE POLICY "Only admin can update game results" ON game_results FOR UPDATE TO public USING (EXISTS (SELECT 1 FROM profiles WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true))));
-CREATE POLICY "Only admin can insert admin logs" ON admin_logs FOR INSERT TO public WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true))));
-
--- This policy allows users to subscribe to their own notifications
-CREATE POLICY "Users can subscribe to their own notifications" ON notifications
-FOR SELECT TO authenticated
-USING (auth.uid() = profile_id);
-
-DROP POLICY IF EXISTS "Users can read own telegram data" ON profiles;
-DROP POLICY IF EXISTS "Users can update own telegram data" ON profiles;
-DROP POLICY IF EXISTS "Admins can read all telegram data" ON profiles;
-DROP POLICY IF EXISTS "Admins can update all telegram data" ON profiles;
-
--- Policies cho người dùng thường
-CREATE POLICY "Users can read own telegram data" ON profiles
-FOR SELECT
-USING (auth.uid() = id);
-
-CREATE POLICY "Users can update own telegram data" ON profiles
-FOR UPDATE
-USING (auth.uid() = id)
-WITH CHECK (
-  auth.uid() = id AND (
-    -- Chỉ cho phép cập nhật các trường Telegram
-    EXISTS (
-      SELECT 1 FROM jsonb_object_keys(to_jsonb(profiles)) AS key
-      WHERE key IN ('telegram_id', 'telegram_username', 'telegram_settings')
-    )
-  )
-);
-
--- Policies cho admin
-CREATE POLICY "Admins can read all telegram data" ON profiles
-FOR SELECT
-USING (EXISTS (
-  SELECT 1 FROM profiles
-  WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-));
-
-CREATE POLICY "Admins can update all telegram data" ON profiles
-FOR UPDATE
-USING (EXISTS (
-  SELECT 1 FROM profiles
-  WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-));
-
--- Drop existing policies nếu có
-DROP POLICY IF EXISTS "Admins can read own preferences" ON admin_preferences;
-DROP POLICY IF EXISTS "Admins can update own preferences" ON admin_preferences;
-DROP POLICY IF EXISTS "Admins can view all admin sessions" ON admin_sessions;
-DROP POLICY IF EXISTS "Admins can manage admin sessions" ON admin_sessions;
-DROP POLICY IF EXISTS "Users can read own telegram verification" ON telegram_verification;
-DROP POLICY IF EXISTS "Admins can read all telegram verification" ON telegram_verification;
-
--- Policies cho bảng admin_preferences
-CREATE POLICY "Admins can read own preferences" ON admin_preferences
-FOR SELECT
-USING (
-  auth.uid() = admin_id AND EXISTS (
-    SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-  )
-);
-
-CREATE POLICY "Admins can update own preferences" ON admin_preferences
-FOR UPDATE
-USING (
-  auth.uid() = admin_id AND EXISTS (
-    SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-  )
-)
-WITH CHECK (
-  auth.uid() = admin_id AND EXISTS (
-    SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-  )
-);
-
-CREATE POLICY "Admins can insert own preferences" ON admin_preferences
-FOR INSERT
-WITH CHECK (
-  auth.uid() = admin_id AND EXISTS (
-    SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-  )
-);
-
--- Policies cho bảng admin_sessions
-CREATE POLICY "Admins can view all admin sessions" ON admin_sessions
-FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-  )
-);
-
-CREATE POLICY "Admins can manage own sessions" ON admin_sessions
-FOR ALL
-USING (
-  admin_id = auth.uid() AND EXISTS (
-    SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-  )
-);
-
--- Policies cho bảng telegram_verification
-CREATE POLICY "Users can read own telegram verification" ON telegram_verification
-FOR SELECT
-USING (
-  profile_id = auth.uid()
-);
-
-CREATE POLICY "System can insert telegram verification" ON telegram_verification
-FOR INSERT
-WITH CHECK (
-  profile_id = auth.uid() OR EXISTS (
-    SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-  )
-);
-
-CREATE POLICY "Users can update own telegram verification" ON telegram_verification
-FOR UPDATE
-USING (
-  profile_id = auth.uid()
-);
-
-CREATE POLICY "Admins can read all telegram verification" ON telegram_verification
-FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-  )
-);
-
--- Đừng quên bật RLS cho các bảng này
-ALTER TABLE admin_preferences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin_preferences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE telegram_verification ENABLE ROW LEVEL SECURITY;
+
+-- ==============================
+-- HÀM BẢO MẬT KIỂM TRA ADMIN
+-- ==============================
+
+-- Tạo function để kiểm tra nếu người dùng hiện tại là admin
+CREATE OR REPLACE FUNCTION auth.is_admin()
+RETURNS BOOLEAN AS $$
+DECLARE
+  _is_admin BOOLEAN;
+BEGIN
+  SELECT is_admin INTO _is_admin FROM profiles
+  WHERE id = auth.uid();
+  
+  RETURN coalesce(_is_admin, false);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ==============================
+-- PROFILES TABLE POLICIES
+-- ==============================
+
+-- CHÍNH SÁCH XEM: Người dùng chỉ có thể xem profile của họ, admin có thể xem tất cả
+CREATE POLICY profiles_select_policy ON profiles 
+  FOR SELECT USING (
+    auth.uid() = id OR auth.is_admin()
+  );
+
+-- CHÍNH SÁCH TẠO: Người dùng chỉ có thể tạo profile cho chính họ
+CREATE POLICY profiles_insert_policy ON profiles 
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- CHÍNH SÁCH CẬP NHẬT: Người dùng chỉ có thể cập nhật profile của họ, admin có thể cập nhật bất kỳ profile nào
+CREATE POLICY profiles_update_policy ON profiles 
+  FOR UPDATE USING (
+    auth.uid() = id OR auth.is_admin()
+  );
+
+-- CHÍNH SÁCH XÓA: Chỉ admin mới có thể xóa profile
+CREATE POLICY profiles_delete_policy ON profiles 
+  FOR DELETE USING (
+    auth.is_admin()
+  );
+
+-- ==============================
+-- GAME_ROUNDS TABLE POLICIES
+-- ==============================
+
+-- CHÍNH SÁCH XEM: Tất cả người dùng đều có thể xem game rounds
+CREATE POLICY game_rounds_select_policy ON game_rounds 
+  FOR SELECT USING (TRUE);
+
+-- CHÍNH SÁCH TẠO/CẬP NHẬT/XÓA: Chỉ admin mới có thể quản lý game rounds
+CREATE POLICY game_rounds_insert_policy ON game_rounds 
+  FOR INSERT WITH CHECK (
+    auth.is_admin()
+  );
+
+CREATE POLICY game_rounds_update_policy ON game_rounds 
+  FOR UPDATE USING (
+    auth.is_admin()
+  );
+
+CREATE POLICY game_rounds_delete_policy ON game_rounds 
+  FOR DELETE USING (
+    auth.is_admin()
+  );
+
+-- ==============================
+-- BETS TABLE POLICIES
+-- ==============================
+
+-- CHÍNH SÁCH XEM: Người dùng chỉ có thể xem cược của họ, admin có thể xem tất cả
+CREATE POLICY bets_select_policy ON bets 
+  FOR SELECT USING (
+    profile_id = auth.uid() OR auth.is_admin()
+  );
+
+-- CHÍNH SÁCH TẠO: Người dùng chỉ có thể tạo cược cho chính họ
+CREATE POLICY bets_insert_policy ON bets 
+  FOR INSERT WITH CHECK (profile_id = auth.uid());
+
+-- CHÍNH SÁCH CẬP NHẬT: Người dùng không thể cập nhật cược, chỉ admin mới có thể
+CREATE POLICY bets_update_policy ON bets 
+  FOR UPDATE USING (
+    auth.is_admin()
+  );
+
+-- CHÍNH SÁCH XÓA: Chỉ admin mới có thể xóa cược
+CREATE POLICY bets_delete_policy ON bets 
+  FOR DELETE USING (
+    auth.is_admin()
+  );
+
+-- ==============================
+-- PAYMENT_REQUESTS TABLE POLICIES
+-- ==============================
+
+-- CHÍNH SÁCH XEM: Người dùng chỉ có thể xem yêu cầu thanh toán của họ, admin có thể xem tất cả
+CREATE POLICY payment_requests_select_policy ON payment_requests 
+  FOR SELECT USING (
+    profile_id = auth.uid() OR auth.is_admin()
+  );
+
+-- CHÍNH SÁCH TẠO: Người dùng chỉ có thể tạo yêu cầu thanh toán cho chính họ
+CREATE POLICY payment_requests_insert_policy ON payment_requests 
+  FOR INSERT WITH CHECK (profile_id = auth.uid());
+
+-- CHÍNH SÁCH CẬP NHẬT: Người dùng có thể cập nhật yêu cầu thanh toán của họ nếu đang ở trạng thái 'pending'
+-- Admin có thể cập nhật bất kỳ yêu cầu nào
+CREATE POLICY payment_requests_update_policy ON payment_requests 
+  FOR UPDATE USING (
+    (profile_id = auth.uid() AND status = 'pending') OR auth.is_admin()
+  );
+
+-- CHÍNH SÁCH XÓA: Người dùng có thể xóa yêu cầu thanh toán của họ nếu đang ở trạng thái 'pending'
+-- Admin có thể xóa bất kỳ yêu cầu nào
+CREATE POLICY payment_requests_delete_policy ON payment_requests 
+  FOR DELETE USING (
+    (profile_id = auth.uid() AND status = 'pending') OR auth.is_admin()
+  );
+
+-- ==============================
+-- TRANSACTIONS TABLE POLICIES
+-- ==============================
+
+-- CHÍNH SÁCH XEM: Người dùng chỉ có thể xem giao dịch của họ, admin có thể xem tất cả
+CREATE POLICY transactions_select_policy ON transactions 
+  FOR SELECT USING (
+    profile_id = auth.uid() OR auth.is_admin()
+  );
+
+-- CHÍNH SÁCH TẠO/CẬP NHẬT/XÓA: Chỉ admin mới có thể quản lý giao dịch
+CREATE POLICY transactions_insert_policy ON transactions 
+  FOR INSERT WITH CHECK (
+    auth.is_admin()
+  );
+
+CREATE POLICY transactions_update_policy ON transactions 
+  FOR UPDATE USING (
+    auth.is_admin()
+  );
+
+CREATE POLICY transactions_delete_policy ON transactions 
+  FOR DELETE USING (
+    auth.is_admin()
+  );
+
+-- ==============================
+-- NOTIFICATIONS TABLE POLICIES
+-- ==============================
+
+-- CHÍNH SÁCH XEM: Người dùng chỉ có thể xem thông báo của họ, admin có thể xem tất cả
+CREATE POLICY notifications_select_policy ON notifications 
+  FOR SELECT USING (
+    profile_id = auth.uid() OR auth.is_admin()
+  );
+
+-- CHÍNH SÁCH TẠO: Chỉ admin mới có thể tạo thông báo
+CREATE POLICY notifications_insert_policy ON notifications 
+  FOR INSERT WITH CHECK (
+    auth.is_admin()
+  );
+
+-- CHÍNH SÁCH CẬP NHẬT: Người dùng có thể cập nhật thông báo của họ (chỉ trạng thái đọc)
+-- Admin có thể cập nhật bất kỳ thông báo nào
+CREATE POLICY notifications_update_policy ON notifications 
+  FOR UPDATE USING (
+    profile_id = auth.uid() OR auth.is_admin()
+  );
+
+-- CHÍNH SÁCH XÓA: Chỉ admin mới có thể xóa thông báo
+CREATE POLICY notifications_delete_policy ON notifications 
+  FOR DELETE USING (
+    auth.is_admin()
+  );
+
+-- ==============================
+-- REFERRALS TABLE POLICIES
+-- ==============================
+
+-- CHÍNH SÁCH XEM: Người dùng chỉ có thể xem các giới thiệu liên quan đến họ, admin có thể xem tất cả
+CREATE POLICY referrals_select_policy ON referrals 
+  FOR SELECT USING (
+    referrer_id = auth.uid() OR referred_id = auth.uid() OR auth.is_admin()
+  );
+
+-- CHÍNH SÁCH TẠO/CẬP NHẬT/XÓA: Chỉ admin mới có thể quản lý giới thiệu
+CREATE POLICY referrals_insert_policy ON referrals 
+  FOR INSERT WITH CHECK (
+    auth.is_admin()
+  );
+
+CREATE POLICY referrals_update_policy ON referrals 
+  FOR UPDATE USING (
+    auth.is_admin()
+  );
+
+CREATE POLICY referrals_delete_policy ON referrals 
+  FOR DELETE USING (
+    auth.is_admin()
+  );
+
+-- ==============================
+-- ADMIN_LOGS TABLE POLICIES
+-- ==============================
+
+-- Chỉ admin mới có thể truy cập admin_logs
+CREATE POLICY admin_logs_select_policy ON admin_logs 
+  FOR SELECT USING (
+    auth.is_admin()
+  );
+
+CREATE POLICY admin_logs_insert_policy ON admin_logs 
+  FOR INSERT WITH CHECK (
+    auth.is_admin()
+  );
+
+-- Admin không thể cập nhật hoặc xóa logs (để đảm bảo tính toàn vẹn của audit)
+CREATE POLICY admin_logs_update_policy ON admin_logs 
+  FOR UPDATE USING (FALSE);
+
+CREATE POLICY admin_logs_delete_policy ON admin_logs 
+  FOR DELETE USING (FALSE);
+
+-- ==============================
+-- ADMIN_SESSIONS TABLE POLICIES
+-- ==============================
+
+-- Admin chỉ có thể xem các phiên của họ
+CREATE POLICY admin_sessions_select_policy ON admin_sessions 
+  FOR SELECT USING (
+    (admin_id = auth.uid() AND auth.is_admin())
+  );
+
+-- Admin chỉ có thể tạo các phiên cho chính họ
+CREATE POLICY admin_sessions_insert_policy ON admin_sessions 
+  FOR INSERT WITH CHECK (
+    admin_id = auth.uid() AND auth.is_admin()
+  );
+
+-- Admin chỉ có thể cập nhật các phiên của họ
+CREATE POLICY admin_sessions_update_policy ON admin_sessions 
+  FOR UPDATE USING (
+    admin_id = auth.uid() AND auth.is_admin()
+  );
+
+-- Admin chỉ có thể xóa các phiên của họ
+CREATE POLICY admin_sessions_delete_policy ON admin_sessions 
+  FOR DELETE USING (
+    admin_id = auth.uid() AND auth.is_admin()
+  );
+
+-- ==============================
+-- ADMIN_PREFERENCES TABLE POLICIES
+-- ==============================
+
+-- Admin chỉ có thể xem, tạo và cập nhật tùy chọn của họ
+CREATE POLICY admin_preferences_select_policy ON admin_preferences 
+  FOR SELECT USING (
+    admin_id = auth.uid() AND auth.is_admin()
+  );
+
+CREATE POLICY admin_preferences_insert_policy ON admin_preferences 
+  FOR INSERT WITH CHECK (
+    admin_id = auth.uid() AND auth.is_admin()
+  );
+
+CREATE POLICY admin_preferences_update_policy ON admin_preferences 
+  FOR UPDATE USING (
+    admin_id = auth.uid() AND auth.is_admin()
+  );
+
+CREATE POLICY admin_preferences_delete_policy ON admin_preferences 
+  FOR DELETE USING (
+    admin_id = auth.uid() AND auth.is_admin()
+  );
+
+-- ==============================
+-- TELEGRAM_VERIFICATION TABLE POLICIES
+-- ==============================
+
+-- CHÍNH SÁCH XEM: Người dùng chỉ có thể xem xác thực của họ, admin có thể xem tất cả
+CREATE POLICY telegram_verification_select_policy ON telegram_verification 
+  FOR SELECT USING (
+    profile_id = auth.uid() OR auth.is_admin()
+  );
+
+-- CHÍNH SÁCH TẠO: Người dùng chỉ có thể tạo xác thực cho chính họ
+CREATE POLICY telegram_verification_insert_policy ON telegram_verification 
+  FOR INSERT WITH CHECK (profile_id = auth.uid());
+
+-- CHÍNH SÁCH CẬP NHẬT: Người dùng có thể cập nhật xác thực của họ
+-- Admin có thể cập nhật bất kỳ xác thực nào
+CREATE POLICY telegram_verification_update_policy ON telegram_verification 
+  FOR UPDATE USING (
+    profile_id = auth.uid() OR auth.is_admin()
+  );
+
+-- CHÍNH SÁCH XÓA: Người dùng có thể xóa xác thực của họ
+-- Admin có thể xóa bất kỳ xác thực nào
+CREATE POLICY telegram_verification_delete_policy ON telegram_verification 
+  FOR DELETE USING (
+    profile_id = auth.uid() OR auth.is_admin()
+  );

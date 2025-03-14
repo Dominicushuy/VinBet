@@ -166,7 +166,9 @@ Directory structure:
         │       │   │   └── route.js
         │       │   ├── read-all/
         │       │   │   └── route.js
-        │       │   └── settings/
+        │       │   ├── settings/
+        │       │   │   └── route.js
+        │       │   └── telegram/
         │       │       └── route.js
         │       ├── payment-requests/
         │       │   ├── route.js
@@ -201,6 +203,8 @@ Directory structure:
         │       │   ├── generate-code/
         │       │   │   └── route.js
         │       │   ├── send/
+        │       │   │   └── route.js
+        │       │   ├── settings/
         │       │   │   └── route.js
         │       │   ├── setup/
         │       │   │   └── route.js
@@ -286,6 +290,8 @@ Directory structure:
         │   │   │   ├── AdminProfileInfo.jsx
         │   │   │   ├── AdminSecuritySettings.jsx
         │   │   │   └── AdminSessionsList.jsx
+        │   │   ├── telegram/
+        │   │   │   └── TelegramDashboard.jsx
         │   │   ├── user/
         │   │   │   ├── index.jsx
         │   │   │   ├── UserBulkActions.jsx
@@ -384,7 +390,8 @@ Directory structure:
         │   │   ├── NotificationSkeletonItem.jsx
         │   │   ├── NotificationStatusBadge.jsx
         │   │   ├── NotificationToast.jsx
-        │   │   └── TelegramConnect.jsx
+        │   │   ├── TelegramConnect.jsx
+        │   │   └── TelegramSettings.jsx
         │   ├── profile/
         │   │   ├── AccountStatus.jsx
         │   │   ├── AvatarUploader.jsx
@@ -449,6 +456,7 @@ Directory structure:
         │   ├── useGameFilters.js
         │   ├── useGameMutations.js
         │   ├── useNotificationListener.js
+        │   ├── useTelegramNotifications.js
         │   ├── useToast.js
         │   ├── useTransactionFilters.js
         │   ├── useTransactionHelpers.js
@@ -485,7 +493,9 @@ Directory structure:
             ├── errorHandler.js
             ├── fetchUtils.js
             ├── formatUtils.js
+            ├── getBrowserInfo.js
             ├── notificationUtils.js
             ├── rateLimit.js
             ├── telegram.js
-            └── telegramBot.js
+            ├── telegramBot.js
+            └── telegramStats.js
