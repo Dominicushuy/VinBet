@@ -57,14 +57,15 @@
     "sonner": "^2.0.1",
     "tailwind-merge": "1.13.0",
     "tailwindcss-animate": "^1.0.7",
+    "telegraf": "^4.16.3",
     "xlsx": "^0.18.5",
     "yet-another-react-lightbox": "^3.21.7",
     "zod": "3.21.4"
   },
   "devDependencies": {
-    "@types/react": "^18.2.0",
     "@eslint/js": "^9.22.0",
     "@next/eslint-plugin-next": "^15.2.1",
+    "@types/react": "^18.2.0",
     "autoprefixer": "10.4.14",
     "eslint": "^9.22.0",
     "eslint-import-resolver-alias": "^1.1.2",

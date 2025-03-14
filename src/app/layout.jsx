@@ -12,7 +12,30 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
 
 export const metadata = {
   title: 'VinBet - Nền tảng cá cược trực tuyến',
-  description: 'Tham gia cá cược, đặt cược theo con số và nhận thưởng dựa trên kết quả trò chơi'
+  description:
+    'Nền tảng cá cược bao gồm Authentication, Game & Cược, Tài chính, Thông báo, Referral, và Quản trị toàn diện.',
+  openGraph: {
+    title: 'VinBet - Cá cược hiện đại',
+    description:
+      'Khám phá hệ thống nhiều module: Quản lý người dùng, Game & Cược, Tài chính, Thông báo, Referral, và Admin Dashboard cho quản trị toàn diện.',
+    url: 'https://vinbet.netlify.app',
+    images: [
+      {
+        url: '/images/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'VinBet Online Betting'
+      }
+    ]
+  },
+  twitter: {
+    card: 'summary_large_image',
+    site: '@VinBet',
+    title: 'VinBet - Nền tảng cá cược tích hợp đa tính năng',
+    description:
+      'Cung cấp các chức năng gồm đăng nhập, đăng ký, quản lý tài khoản, nạp/rút tiền, đặt cược, thông báo, giới thiệu bạn bè, và hệ thống admin mạnh mẽ.',
+    images: ['/images/og-image.jpg']
+  }
 }
 
 export default function RootLayout({ children }) {

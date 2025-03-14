@@ -194,3 +194,18 @@ CREATE INDEX IF NOT EXISTS idx_admin_sessions_last_active ON admin_sessions(last
 CREATE INDEX IF NOT EXISTS idx_admin_logs_admin_id ON admin_logs(admin_id);
 CREATE INDEX IF NOT EXISTS idx_admin_logs_action ON admin_logs(action);
 CREATE INDEX IF NOT EXISTS idx_admin_logs_created_at ON admin_logs(created_at);
+
+-- Tạo bảng xác thực Telegram
+CREATE TABLE IF NOT EXISTS telegram_verification (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  profile_id UUID REFERENCES profiles(id) NOT NULL,
+  code VARCHAR(8) UNIQUE NOT NULL,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  is_used BOOLEAN DEFAULT FALSE,
+  used_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tạo index cho hiệu suất truy vấn
+CREATE INDEX IF NOT EXISTS idx_telegram_verification_code ON telegram_verification(code);
+CREATE INDEX IF NOT EXISTS idx_telegram_verification_profile_id ON telegram_verification(profile_id);

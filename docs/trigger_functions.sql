@@ -1766,3 +1766,40 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function tạo mã xác thực Telegram mới
+CREATE OR REPLACE FUNCTION create_telegram_verification_code(p_profile_id UUID)
+RETURNS TEXT AS $$
+DECLARE
+  verification_code TEXT;
+  expiry_time TIMESTAMP WITH TIME ZONE;
+BEGIN
+  -- Tạo mã xác thực ngẫu nhiên 8 ký tự
+  verification_code := upper(substring(md5(random()::text), 1, 8));
+  
+  -- Đặt thời gian hết hạn 30 phút từ bây giờ
+  expiry_time := NOW() + INTERVAL '30 minutes';
+  
+  -- Hủy mã xác thực cũ nếu có
+  UPDATE telegram_verification
+  SET is_used = TRUE
+  WHERE profile_id = p_profile_id AND is_used = FALSE;
+  
+  -- Tạo mã xác thực mới
+  INSERT INTO telegram_verification (
+    profile_id,
+    code,
+    expires_at,
+    is_used,
+    created_at
+  ) VALUES (
+    p_profile_id,
+    verification_code,
+    expiry_time,
+    FALSE,
+    NOW()
+  );
+  
+  RETURN verification_code;
+END;
+$$ LANGUAGE plpgsql;

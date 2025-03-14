@@ -1,16 +1,9 @@
-// src/utils/telegram.ts
-import axios from 'axios'
+// src/utils/telegram.js
 
-// Lấy token từ biến môi trường
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
-const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`
-
-/**
- * Gửi tin nhắn qua Telegram Bot API
- */
-export async function sendTelegramMessage(message) {
+// Function gửi thông báo qua Telegram
+async function sendTelegramMessage(message) {
   try {
-    if (!TELEGRAM_BOT_TOKEN) {
+    if (!process.env.TELEGRAM_BOT_TOKEN) {
       console.error('TELEGRAM_BOT_TOKEN chưa được cấu hình')
       return false
     }
@@ -21,10 +14,17 @@ export async function sendTelegramMessage(message) {
       parse_mode: message.parse_mode || 'HTML'
     }
 
-    const response = await axios.post(`${TELEGRAM_API_URL}/sendMessage`, finalMessage)
+    const response = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(finalMessage)
+    })
 
-    if (response.status !== 200 || !response.data.ok) {
-      console.error('Telegram API error:', response.data)
+    if (response.status !== 200 || !response.ok) {
+      const errorData = await response.json()
+      console.error('Telegram API error:', errorData)
       return false
     }
 
@@ -34,3 +34,5 @@ export async function sendTelegramMessage(message) {
     return false
   }
 }
+
+export { sendTelegramMessage }

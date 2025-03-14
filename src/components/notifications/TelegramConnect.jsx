@@ -2,331 +2,316 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  AlertTriangle,
-  Check,
-  Copy,
-  ExternalLink,
-  Info,
-  Loader2,
-  MessageSquare,
-  QrCode,
-  Smartphone,
-  X,
-  Settings
-} from 'lucide-react'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Steps, Step } from '@/components/ui/steps'
 import { useToast } from '@/hooks/useToast'
-import {
-  useTelegramStatusQuery,
-  useConnectTelegramMutation,
-  useDisconnectTelegramMutation
-} from '@/hooks/queries/useNotificationQueries'
-import Link from 'next/link'
+import { Copy, AlertCircle, Check, Loader2 } from 'lucide-react'
+import { fetchData, postData } from '@/utils/fetchUtils'
 
-const TELEGRAM_BOT_USERNAME = 'VinBet_notification_bot'
-
-// Component con cho trạng thái đã kết nối
-const ConnectedState = ({ telegramStatus, handleDisconnect, isDisconnecting, copyToClipboard }) => (
-  <div className='space-y-4'>
-    <Alert variant='success' className='bg-green-50 border-green-200'>
-      <Check className='h-5 w-5 text-green-600' />
-      <AlertDescription className='text-green-600'>
-        Tài khoản Telegram của bạn đã được kết nối thành công.
-      </AlertDescription>
-    </Alert>
-
-    <div className='border rounded-lg p-4'>
-      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
-        <div className='space-y-1'>
-          <h3 className='text-sm font-medium'>ID Telegram đã kết nối</h3>
-          <p className='text-xs text-muted-foreground flex items-center'>
-            {telegramStatus.telegram_id}
-            <Button
-              variant='ghost'
-              size='icon'
-              className='h-5 w-5 ml-1'
-              onClick={() => copyToClipboard(telegramStatus.telegram_id)}
-            >
-              <Copy className='h-3 w-3' />
-            </Button>
-          </p>
-        </div>
-
-        <Button variant='outline' size='sm' onClick={handleDisconnect} disabled={isDisconnecting}>
-          {isDisconnecting ? (
-            <Loader2 className='h-4 w-4 animate-spin' />
-          ) : (
-            <>
-              <X className='h-4 w-4 mr-2' />
-              Ngắt kết nối
-            </>
-          )}
-        </Button>
-      </div>
-    </div>
-
-    <div className='mt-4 space-y-2'>
-      <h3 className='text-sm font-medium'>Bot Telegram VinBet</h3>
-      <p className='text-sm text-muted-foreground'>Bạn sẽ nhận được thông báo từ bot Telegram chính thức của VinBet.</p>
-
-      <div className='flex flex-col sm:flex-row gap-2 mt-2'>
-        <Button variant='outline' size='sm' className='flex-1' asChild>
-          <a
-            href={`https://t.me/${TELEGRAM_BOT_USERNAME}`}
-            target='_blank'
-            rel='noopener noreferrer'
-            className='flex items-center justify-center'
-          >
-            <MessageSquare className='h-4 w-4 mr-2' />
-            Mở bot trên Telegram
-            <ExternalLink className='h-3 w-3 ml-2' />
-          </a>
-        </Button>
-
-        <Button variant='outline' size='sm' className='flex-1' asChild>
-          <Link href='/notifications/settings' className='flex items-center justify-center'>
-            <Settings className='h-4 w-4 mr-2' />
-            Cài đặt thông báo
-          </Link>
-        </Button>
-      </div>
-    </div>
-
-    <Alert className='bg-amber-50 border-amber-200 mt-6'>
-      <AlertTriangle className='h-5 w-5 text-amber-600' />
-      <AlertDescription className='text-amber-700'>
-        Nếu bạn không nhận được thông báo, hãy đảm bảo rằng bạn chưa chặn bot VinBet trên Telegram.
-      </AlertDescription>
-    </Alert>
-  </div>
-)
-
-// Component con nút kết nối được tái sử dụng
-const ConnectButton = ({ telegramId, isConnecting, handleConnect }) => (
-  <Button variant='primary' onClick={handleConnect} disabled={!telegramId.trim() || isConnecting}>
-    {isConnecting ? <Loader2 className='h-4 w-4 animate-spin' /> : 'Kết nối'}
-  </Button>
-)
-
-export function TelegramConnect() {
-  const { toast } = useToast()
-  const { data: telegramStatus, isLoading: isStatusLoading } = useTelegramStatusQuery()
-  const connectMutation = useConnectTelegramMutation()
-  const disconnectMutation = useDisconnectTelegramMutation()
-
+export default function TelegramConnect() {
+  const [loading, setLoading] = useState(true)
+  const [telegramStatus, setTelegramStatus] = useState(null)
   const [telegramId, setTelegramId] = useState('')
-  const [connectMethod, setConnectMethod] = useState('chat')
+  const [verificationCode, setVerificationCode] = useState(null)
+  const [activeTab, setActiveTab] = useState('chatid')
+  const [connecting, setConnecting] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
+  const { toast } = useToast()
 
-  // Set Telegram ID if already connected
+  // Fetch current Telegram status
   useEffect(() => {
-    if (telegramStatus?.telegram_id) {
-      setTelegramId(telegramStatus.telegram_id)
+    const fetchTelegramStatus = async () => {
+      try {
+        setLoading(true)
+        const response = await fetchData('/api/notifications/telegram')
+        setTelegramStatus(response.connected)
+        if (response.telegram_id) {
+          setTelegramId(response.telegram_id)
+        }
+      } catch (error) {
+        console.error('Error fetching Telegram status:', error)
+        toast({
+          variant: 'destructive',
+          title: 'Lỗi kết nối',
+          description: 'Không thể kiểm tra trạng thái kết nối Telegram'
+        })
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [telegramStatus])
 
-  const handleConnect = async () => {
-    if (!telegramId.trim()) return
+    fetchTelegramStatus()
+  }, [toast])
 
+  // Generate verification code
+  const generateVerificationCode = async () => {
     try {
-      await connectMutation.mutateAsync(telegramId)
+      setConnecting(true)
+      const response = await postData('/api/notifications/telegram/generate-code', {})
+
+      if (response.code) {
+        setVerificationCode(response.code)
+        setActiveTab('code')
+        toast({
+          title: 'Đã tạo mã xác thực',
+          description: 'Mã xác thực có hiệu lực trong 30 phút'
+        })
+      }
     } catch (error) {
+      console.error('Error generating code:', error)
       toast({
-        title: 'Không thể kết nối Telegram',
-        description: error.message || 'Vui lòng thử lại sau',
-        variant: 'destructive'
+        variant: 'destructive',
+        title: 'Lỗi tạo mã',
+        description: 'Không thể tạo mã xác thực. Vui lòng thử lại sau'
       })
+    } finally {
+      setConnecting(false)
     }
   }
 
-  const handleDisconnect = async () => {
+  // Connect with Chat ID
+  const connectWithChatId = async () => {
+    if (!telegramId) {
+      toast({
+        variant: 'destructive',
+        title: 'Thiếu thông tin',
+        description: 'Vui lòng nhập Telegram Chat ID'
+      })
+      return
+    }
+
     try {
-      await disconnectMutation.mutateAsync()
+      setConnecting(true)
+      const response = await postData('/api/notifications/telegram', {
+        telegram_id: telegramId
+      })
+
+      setTelegramStatus(true)
+      toast({
+        title: 'Kết nối thành công',
+        description: 'Telegram đã được kết nối với tài khoản của bạn'
+      })
+    } catch (error) {
+      console.error('Error connecting:', error)
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi kết nối',
+        description: error.message || 'Không thể kết nối với Telegram'
+      })
+    } finally {
+      setConnecting(false)
+    }
+  }
+
+  // Disconnect Telegram
+  const disconnectTelegram = async () => {
+    try {
+      setDisconnecting(true)
+      await fetchData('/api/notifications/telegram', {
+        method: 'DELETE'
+      })
+
+      setTelegramStatus(false)
       setTelegramId('')
-    } catch (error) {
       toast({
-        title: 'Không thể ngắt kết nối Telegram',
-        description: error.message || 'Vui lòng thử lại sau',
-        variant: 'destructive'
+        title: 'Ngắt kết nối thành công',
+        description: 'Telegram đã được ngắt kết nối khỏi tài khoản của bạn'
       })
+    } catch (error) {
+      console.error('Error disconnecting:', error)
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi ngắt kết nối',
+        description: 'Không thể ngắt kết nối Telegram'
+      })
+    } finally {
+      setDisconnecting(false)
     }
   }
 
+  // Copy to clipboard
   const copyToClipboard = text => {
     navigator.clipboard.writeText(text)
     toast({
       title: 'Đã sao chép',
-      description: 'Đã sao chép vào clipboard',
-      variant: 'success'
+      description: 'Nội dung đã được sao chép vào clipboard'
     })
   }
 
+  if (loading) {
+    return (
+      <Card className='w-full'>
+        <CardHeader className='space-y-1'>
+          <CardTitle>Kết nối Telegram</CardTitle>
+          <CardDescription>Đang tải thông tin...</CardDescription>
+        </CardHeader>
+        <CardContent className='flex justify-center p-6'>
+          <Loader2 className='h-10 w-10 animate-spin text-muted-foreground' />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Already connected
+  if (telegramStatus) {
+    return (
+      <Card className='w-full'>
+        <CardHeader className='space-y-1'>
+          <CardTitle className='flex items-center'>
+            <Check className='mr-2 h-5 w-5 text-green-500' />
+            Telegram đã kết nối
+          </CardTitle>
+          <CardDescription>Bạn đang nhận thông báo qua Telegram</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert className='bg-green-50 border-green-200'>
+            <Check className='h-4 w-4 text-green-500' />
+            <AlertTitle>Kết nối đang hoạt động</AlertTitle>
+            <AlertDescription>Chat ID: {telegramId}</AlertDescription>
+          </Alert>
+        </CardContent>
+        <CardFooter>
+          <Button variant='destructive' onClick={disconnectTelegram} disabled={disconnecting}>
+            {disconnecting && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+            Ngắt kết nối Telegram
+          </Button>
+        </CardFooter>
+      </Card>
+    )
+  }
+
+  // Not connected
   return (
     <Card className='w-full'>
-      <CardContent className='pb-6'>
-        {isStatusLoading ? (
-          <div className='flex items-center justify-center py-8'>
-            <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
-          </div>
-        ) : telegramStatus?.connected ? (
-          <ConnectedState
-            telegramStatus={telegramStatus}
-            handleDisconnect={handleDisconnect}
-            isDisconnecting={disconnectMutation.isLoading}
-            copyToClipboard={copyToClipboard}
-          />
-        ) : (
-          <Tabs value={connectMethod} onValueChange={setConnectMethod} className='w-full'>
-            <TabsList className='w-full grid grid-cols-2'>
-              <TabsTrigger value='chat'>Chat với Bot</TabsTrigger>
-              <TabsTrigger value='qr'>Quét mã QR</TabsTrigger>
-            </TabsList>
+      <CardHeader className='space-y-1'>
+        <CardTitle>Kết nối Telegram</CardTitle>
+        <CardDescription>Nhận thông báo tức thời qua Telegram</CardDescription>
+      </CardHeader>
+      <CardContent className='space-y-4'>
+        <Alert>
+          <AlertCircle className='h-4 w-4' />
+          <AlertTitle>Telegram chưa được kết nối</AlertTitle>
+          <AlertDescription>
+            Kết nối Telegram để nhận thông báo về nạp/rút tiền, kết quả trò chơi và các cập nhật quan trọng khác.
+          </AlertDescription>
+        </Alert>
 
-            <TabsContent value='chat' className='pt-6 space-y-6'>
-              <Steps>
-                <Step title='Mở bot trên Telegram' description='Tìm bot VinBet theo username @VinBet_notification_bot'>
-                  <div className='flex flex-col space-y-2 mt-2'>
-                    <div className='flex items-center gap-2'>
-                      <Input value={`@${TELEGRAM_BOT_USERNAME}`} readOnly className='flex-1 bg-muted' />
-                      <Button
-                        variant='outline'
-                        size='icon'
-                        onClick={() => copyToClipboard(`@${TELEGRAM_BOT_USERNAME}`)}
-                      >
-                        <Copy className='h-4 w-4' />
-                      </Button>
-                    </div>
+        <Tabs defaultValue='chatid' value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className='grid w-full grid-cols-2'>
+            <TabsTrigger value='chatid'>Dùng Chat ID</TabsTrigger>
+            <TabsTrigger value='code'>Dùng mã xác thực</TabsTrigger>
+          </TabsList>
 
-                    <Button variant='secondary' className='w-full' asChild>
-                      <a
-                        href={`https://t.me/${TELEGRAM_BOT_USERNAME}`}
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        className='flex items-center justify-center'
-                      >
-                        <MessageSquare className='h-4 w-4 mr-2' />
-                        Mở trên Telegram
-                        <ExternalLink className='h-3 w-3 ml-2' />
-                      </a>
+          <TabsContent value='chatid' className='space-y-4'>
+            <div className='space-y-2'>
+              <h4 className='text-sm font-medium'>Bước 1: Kết nối với bot</h4>
+              <p className='text-sm text-muted-foreground'>Mở Telegram và trò chuyện với bot của chúng tôi:</p>
+              <div className='flex items-center space-x-2'>
+                <Input value='@vinbet_notifications_bot' readOnly />
+                <Button size='icon' variant='outline' onClick={() => copyToClipboard('@vinbet_notifications_bot')}>
+                  <Copy className='h-4 w-4' />
+                </Button>
+              </div>
+              <p className='text-sm text-muted-foreground mt-1'>
+                Hoặc{' '}
+                <a
+                  href='https://t.me/vinbet_notifications_bot'
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className='text-primary underline'
+                >
+                  nhấp vào đây
+                </a>{' '}
+                để mở bot trong Telegram.
+              </p>
+            </div>
+
+            <div className='space-y-2'>
+              <h4 className='text-sm font-medium'>Bước 2: Lấy Chat ID</h4>
+              <p className='text-sm text-muted-foreground'>Gửi lệnh /start và lấy Chat ID từ bot.</p>
+            </div>
+
+            <div className='space-y-2'>
+              <h4 className='text-sm font-medium'>Bước 3: Nhập Chat ID</h4>
+              <Input
+                placeholder='Nhập Chat ID từ bot'
+                value={telegramId}
+                onChange={e => setTelegramId(e.target.value)}
+              />
+            </div>
+
+            <Button className='w-full' onClick={connectWithChatId} disabled={!telegramId || connecting}>
+              {connecting && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+              Kết nối với Chat ID
+            </Button>
+          </TabsContent>
+
+          <TabsContent value='code' className='space-y-4'>
+            {verificationCode ? (
+              <div className='space-y-4'>
+                <div className='space-y-2'>
+                  <h4 className='text-sm font-medium'>Mã xác thực của bạn:</h4>
+                  <div className='flex items-center space-x-2'>
+                    <Input value={verificationCode} readOnly className='font-mono text-center' />
+                    <Button size='icon' variant='outline' onClick={() => copyToClipboard(verificationCode)}>
+                      <Copy className='h-4 w-4' />
                     </Button>
                   </div>
-                </Step>
+                </div>
 
-                <Step title='Gửi lệnh bắt đầu' description='Gửi lệnh /start cho bot để nhận ID kết nối'>
-                  <div className='max-w-xs mx-auto mt-3'>
-                    <div className='border rounded-lg p-3 bg-muted/30'>
-                      <div className='text-xs text-muted-foreground mb-2'>Gửi tin nhắn này cho bot:</div>
-                      <div className='flex justify-between items-center'>
-                        <code className='bg-primary/10 text-primary px-2 py-1 rounded text-sm'>/start</code>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='h-6 w-6'
-                          onClick={() => copyToClipboard('/start')}
-                        >
-                          <Copy className='h-3 w-3' />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </Step>
+                <div className='space-y-2'>
+                  <h4 className='text-sm font-medium'>Bước 1: Kết nối với bot</h4>
+                  <p className='text-sm text-muted-foreground'>
+                    <a
+                      href='https://t.me/vinbet_notifications_bot'
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='text-primary underline'
+                    >
+                      Mở bot Telegram
+                    </a>{' '}
+                    hoặc tìm @vinbet_notifications_bot trong Telegram.
+                  </p>
+                </div>
 
-                <Step title='Nhập ID Telegram' description='Nhập ID Telegram mà bot cung cấp cho bạn'>
-                  <div className='space-y-2 mt-2'>
-                    <div className='flex items-center gap-2'>
-                      <Input
-                        value={telegramId}
-                        onChange={e => setTelegramId(e.target.value)}
-                        placeholder='Nhập Telegram ID của bạn'
-                        className='flex-1'
-                      />
-                      <ConnectButton
-                        telegramId={telegramId}
-                        isConnecting={connectMutation.isLoading}
-                        handleConnect={handleConnect}
-                      />
-                    </div>
-                    <p className='text-xs text-muted-foreground'>
-                      Bot sẽ cung cấp cho bạn một ID duy nhất để kết nối tài khoản
-                    </p>
-                  </div>
-                </Step>
-              </Steps>
-
-              <Alert>
-                <Info className='h-4 w-4' />
-                <AlertDescription>
-                  Sau khi kết nối, bạn sẽ nhận được thông báo về các hoạt động quan trọng trên tài khoản VinBet.
-                </AlertDescription>
-              </Alert>
-            </TabsContent>
-
-            <TabsContent value='qr' className='pt-6 space-y-6'>
-              <div className='flex flex-col items-center'>
-                <div className='border-2 border-primary/20 rounded-lg p-2 bg-white max-w-[200px] mx-auto'>
-                  <div className='relative aspect-square w-full'>
-                    <div className='absolute inset-0 flex items-center justify-center bg-primary/5'>
-                      <QrCode className='w-2/3 h-2/3 text-primary/20' />
-                      <div className='absolute inset-0 flex items-center justify-center'>
-                        <img
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=https://t.me/${TELEGRAM_BOT_USERNAME}?start=connect`}
-                          alt='QR Code'
-                          className='w-2/3 h-2/3'
-                        />
-                      </div>
-                    </div>
+                <div className='space-y-2'>
+                  <h4 className='text-sm font-medium'>Bước 2: Gửi lệnh xác thực</h4>
+                  <p className='text-sm text-muted-foreground'>Sao chép và gửi lệnh này cho bot:</p>
+                  <div className='flex items-center space-x-2'>
+                    <Input value={`/verify_${verificationCode}`} readOnly className='font-mono' />
+                    <Button
+                      size='icon'
+                      variant='outline'
+                      onClick={() => copyToClipboard(`/verify_${verificationCode}`)}
+                    >
+                      <Copy className='h-4 w-4' />
+                    </Button>
                   </div>
                 </div>
 
-                <p className='text-sm text-muted-foreground mt-4 text-center max-w-xs'>
-                  Sử dụng ứng dụng Telegram trên điện thoại để quét mã QR và bắt đầu kết nối
-                </p>
-
-                <div className='w-full mt-6 space-y-2'>
-                  <Label htmlFor='qr-telegram-id'>Nhập ID Telegram nhận được từ bot</Label>
-                  <div className='flex items-center gap-2'>
-                    <Input
-                      id='qr-telegram-id'
-                      value={telegramId}
-                      onChange={e => setTelegramId(e.target.value)}
-                      placeholder='Nhập Telegram ID từ bot'
-                    />
-                    <ConnectButton
-                      telegramId={telegramId}
-                      isConnecting={connectMutation.isLoading}
-                      handleConnect={handleConnect}
-                    />
-                  </div>
-                </div>
+                <Alert>
+                  <AlertCircle className='h-4 w-4' />
+                  <AlertTitle>Lưu ý</AlertTitle>
+                  <AlertDescription>Mã xác thực có hiệu lực trong 30 phút.</AlertDescription>
+                </Alert>
               </div>
-
-              <Alert>
-                <Smartphone className='h-4 w-4' />
-                <AlertDescription>Bạn cần cài đặt ứng dụng Telegram trên điện thoại để quét mã QR.</AlertDescription>
-              </Alert>
-            </TabsContent>
-          </Tabs>
-        )}
+            ) : (
+              <div className='space-y-4'>
+                <p className='text-sm text-muted-foreground'>
+                  Tạo mã xác thực để kết nối Telegram mà không cần nhập Chat ID thủ công.
+                </p>
+                <Button className='w-full' onClick={generateVerificationCode} disabled={connecting}>
+                  {connecting && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+                  Tạo mã xác thực
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </CardContent>
-
-      <CardFooter className='border-t px-6 py-4 flex justify-between'>
-        <Button variant='ghost' asChild>
-          <Link href='/notifications/settings'>Quay lại cài đặt</Link>
-        </Button>
-
-        <Button variant='outline' asChild>
-          <a href='https://telegram.org/faq' target='_blank' rel='noopener noreferrer' className='flex items-center'>
-            Trợ giúp
-            <ExternalLink className='ml-2 h-3 w-3' />
-          </a>
-        </Button>
-      </CardFooter>
     </Card>
   )
 }
