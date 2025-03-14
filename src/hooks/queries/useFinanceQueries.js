@@ -4,6 +4,7 @@ import { toast } from 'react-hot-toast'
 import { fetchData, postData, buildQueryString } from '@/utils/fetchUtils'
 import { AUTH_QUERY_KEYS } from './useAuthQueries'
 import { useRouter } from 'next/navigation'
+import { getBrowserInfo } from '@/utils/getBrowserInfo'
 
 // Query keys
 export const FINANCE_QUERY_KEYS = {
@@ -127,10 +128,40 @@ export function useCreateWithdrawalMutation() {
   return useMutation({
     mutationFn: async data => {
       try {
+        // Kiểm tra số tiền có lớn không
+        const isLargeAmount = data.amount >= 10000000 // 10 triệu VND
+
+        // Thực hiện rút tiền
         const response = await postData('/api/payment-requests/withdraw', data)
+
+        // Nếu là số tiền lớn, gửi cảnh báo bảo mật qua Telegram
+        if (isLargeAmount) {
+          try {
+            // Sử dụng session để lấy userId
+            const session = await fetchData('/api/auth/session')
+            if (session && session.user) {
+              const deviceInfo = getBrowserInfo()
+
+              await postData('/api/telegram/send', {
+                notificationType: 'security',
+                userId: session.user.id,
+                alertType: 'large_withdrawal',
+                details: {
+                  amount: data.amount,
+                  device: deviceInfo,
+                  time: new Date().toLocaleString('vi-VN')
+                }
+              })
+            }
+          } catch (error) {
+            console.error('Error sending security alert:', error)
+            // Không ảnh hưởng đến luồng chính
+          }
+        }
+
         return response
       } catch (error) {
-        // Phân loại lỗi để có thông báo phù hợp
+        // Phân loại lỗi để thông báo phù hợp
         if (error.status === 400) {
           throw new Error('Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.')
         } else if (error.status === 401) {
@@ -146,14 +177,17 @@ export function useCreateWithdrawalMutation() {
     },
     onSuccess: data => {
       toast.success('Yêu cầu rút tiền đã được tạo thành công')
+
       // Cập nhật query cache để UI hiển thị dữ liệu mới nhất
       queryClient.invalidateQueries({
         queryKey: FINANCE_QUERY_KEYS.withdrawalRequests()
       })
+
       // Cập nhật balance của user
       queryClient.invalidateQueries({
         queryKey: AUTH_QUERY_KEYS.profile
       })
+
       return data
     },
     onError: error => {

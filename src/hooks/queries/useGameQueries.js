@@ -179,13 +179,50 @@ export function useSetGameResultMutation() {
 
   return useMutation({
     mutationFn: ({ gameId, data }) => adminApi.setGameResult(gameId, data),
-    onSuccess: (_, variables) => {
+    onSuccess: async (_, variables) => {
       toast.success('Kết quả đã được cập nhật thành công')
+
+      // Invalidate queries
       queryClient.invalidateQueries({
         queryKey: GAME_QUERY_KEYS.gameDetail(variables.gameId)
       })
-      queryClient.invalidateQueries({ queryKey: GAME_QUERY_KEYS.gamesList() })
-      queryClient.invalidateQueries({ queryKey: GAME_QUERY_KEYS.activeGames })
+
+      queryClient.invalidateQueries({
+        queryKey: GAME_QUERY_KEYS.gamesList()
+      })
+
+      queryClient.invalidateQueries({
+        queryKey: GAME_QUERY_KEYS.activeGames
+      })
+
+      // Gửi thông báo Telegram cho người trúng thưởng
+      try {
+        // Lấy danh sách người thắng cuộc
+        const winners = await fetchData(`/api/game-rounds/${variables.gameId}/winners`)
+
+        if (winners && winners.winners && winners.winners.length > 0) {
+          // Gửi thông báo cho từng người thắng
+          winners.winners.forEach(winner => {
+            // Kiểm tra profile tồn tại
+            if (winner.profiles && winner.profiles.id) {
+              postData('/api/telegram/send', {
+                notificationType: 'win',
+                userId: winner.profiles.id,
+                amount: winner.potential_win,
+                gameId: variables.gameId,
+                betInfo: {
+                  chosenNumber: winner.chosen_number,
+                  result: variables.data.result
+                }
+              }).catch(error => {
+                console.error('Failed to send win notification:', error)
+              })
+            }
+          })
+        }
+      } catch (error) {
+        console.error('Error fetching winners for notifications:', error)
+      }
     },
     onError: error => {
       toast.error(error.message || 'Không thể cập nhật kết quả')

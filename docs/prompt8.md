@@ -14,8 +14,6 @@ Tôi dự định sẽ làm thêm tính năng gửi thông báo thông qua Teleg
 Dựa trên phân tích mã nguồn và cấu trúc dữ liệu của VinBet, dưới đây là các trường hợp quan trọng cần triển khai gửi thông báo qua Telegram cho người dùng đã kết nối:
 
 ## 1. Liên quan đến tài khoản
-
-- **Đăng nhập từ thiết bị lạ/vị trí mới**: Thông báo khi phát hiện đăng nhập từ thiết bị hoặc địa điểm mới để tăng cường bảo mật
 - **Thay đổi mật khẩu**: Khi người dùng hoặc admin reset mật khẩu
 - **Cập nhật thông tin tài khoản**: Khi thông tin cá nhân quan trọng được thay đổi (email, số điện thoại)
 - **Trạng thái tài khoản**: Khi tài khoản bị khóa/mở khóa
@@ -29,11 +27,7 @@ Dựa trên phân tích mã nguồn và cấu trúc dữ liệu của VinBet, d�
 - **Tiền thưởng giới thiệu**: Khi người dùng nhận được thưởng từ chương trình giới thiệu
 
 ## 3. Game và cá cược
-
-- **Thắng cược lớn**: Thông báo khi người dùng thắng số tiền lớn (vượt ngưỡng cài đặt)
 - **Kết quả trò chơi**: Thông báo kết quả các vòng chơi khi kết thúc
-- **Thông báo jackpot**: Cập nhật khi jackpot đạt mức cao hoặc sắp được trao
-- **Game mới/sự kiện đặc biệt**: Thông báo khi có sự kiện đặc biệt hoặc trò chơi mới
 
 ## 4. Thông báo hệ thống
 

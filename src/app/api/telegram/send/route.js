@@ -2,85 +2,93 @@
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { z } from 'zod'
 import {
   sendCustomNotification,
   sendDepositNotification,
+  sendWithdrawalApprovedNotification,
   sendWinNotification,
-  sendLoginNotification
+  sendLoginNotification,
+  sendSecurityAlert
 } from '@/utils/telegramBot'
 import { handleApiError } from '@/utils/errorHandler'
-import { z } from 'zod'
 
-// Schema cho thông báo tùy chỉnh
-const customNotificationSchema = z.object({
-  userId: z.string().uuid('User ID phải là UUID hợp lệ'),
-  title: z.string().min(1, 'Tiêu đề không được trống'),
-  message: z.string().min(1, 'Nội dung không được trống'),
-  type: z.enum(['system', 'transaction', 'game', 'admin'])
-})
-
-// Schema cho thông báo nạp tiền
-const depositNotificationSchema = z.object({
-  userId: z.string().uuid('User ID phải là UUID hợp lệ'),
-  amount: z.number().positive('Số tiền phải lớn hơn 0'),
-  transactionId: z.string()
-})
-
-// Schema cho thông báo thắng cược
-const winNotificationSchema = z.object({
-  userId: z.string().uuid('User ID phải là UUID hợp lệ'),
-  amount: z.number().positive('Số tiền phải lớn hơn 0'),
-  gameId: z.string(),
-  betInfo: z.object({
-    chosenNumber: z.string(),
-    result: z.string()
+// Schema validation tùy theo loại thông báo
+const notificationSchemas = {
+  custom: z.object({
+    userId: z.string().uuid('User ID phải là UUID'),
+    title: z.string().min(1, 'Tiêu đề không được trống'),
+    message: z.string().min(1, 'Nội dung không được trống')
+  }),
+  deposit: z.object({
+    userId: z.string().uuid('User ID phải là UUID'),
+    amount: z.number().positive('Số tiền phải lớn hơn 0'),
+    transactionId: z.string()
+  }),
+  withdrawal: z.object({
+    userId: z.string().uuid('User ID phải là UUID'),
+    amount: z.number().positive('Số tiền phải lớn hơn 0'),
+    paymentMethod: z.string()
+  }),
+  win: z.object({
+    userId: z.string().uuid('User ID phải là UUID'),
+    amount: z.number().positive('Số tiền phải lớn hơn 0'),
+    gameId: z.string(),
+    betInfo: z.object({
+      chosenNumber: z.string(),
+      result: z.string()
+    })
+  }),
+  login: z.object({
+    userId: z.string().uuid('User ID phải là UUID'),
+    device: z.string(),
+    location: z.string(),
+    time: z.string()
+  }),
+  security: z.object({
+    userId: z.string().uuid('User ID phải là UUID'),
+    alertType: z.enum(['login_new_device', 'password_changed', 'large_withdrawal']),
+    details: z.record(z.any()).optional()
   })
-})
-
-// Schema cho thông báo đăng nhập
-const loginNotificationSchema = z.object({
-  userId: z.string().uuid('User ID phải là UUID hợp lệ'),
-  device: z.string(),
-  location: z.string(),
-  time: z.string()
-})
+}
 
 export async function POST(request) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    // Kiểm tra quyền admin hoặc system
+    // Kiểm tra quyền gửi thông báo
     const { data: sessionData } = await supabase.auth.getSession()
     if (!sessionData.session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Kiểm tra quyền admin (có thể bỏ qua nếu là API internal)
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', sessionData.session.user.id)
-      .single()
-
-    if (!profileData?.is_admin) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 })
-    }
-
-    // Parse và validate body request
+    // Parse body và xác định loại thông báo
     const body = await request.json()
-
-    // Xác định loại thông báo từ notificationType
     const notificationType = body.notificationType
 
-    // Tạo biến để lưu kết quả gửi
-    let sendResult = false
-    let validatedData
+    // Validate body theo schema tương ứng
+    if (!notificationType || !notificationSchemas[notificationType]) {
+      return NextResponse.json({ error: 'Không hỗ trợ loại thông báo này' }, { status: 400 })
+    }
 
-    // Lấy Telegram ID
+    let validatedData
+    try {
+      validatedData = notificationSchemas[notificationType].parse(body)
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error: 'Dữ liệu không hợp lệ',
+          details: error.errors
+        },
+        { status: 400 }
+      )
+    }
+
+    // Lấy Telegram ID từ database
     const { data: userData, error: userError } = await supabase
       .from('profiles')
-      .select('telegram_id')
-      .eq('id', body.userId)
+      .select('telegram_id, telegram_settings')
+      .eq('id', validatedData.userId)
       .single()
 
     if (userError || !userData?.telegram_id) {
@@ -93,31 +101,44 @@ export async function POST(request) {
     }
 
     const telegramId = userData.telegram_id
+    const telegramSettings = userData.telegram_settings || {}
 
-    // Xử lý theo loại thông báo
+    // Kiểm tra user có chọn nhận loại thông báo này không
+    const notificationMap = {
+      deposit: 'receive_deposit_notifications',
+      withdrawal: 'receive_withdrawal_notifications',
+      win: 'receive_win_notifications',
+      login: 'receive_login_alerts',
+      security: 'receive_login_alerts',
+      custom: 'receive_system_notifications'
+    }
+
+    const settingKey = notificationMap[notificationType]
+    if (settingKey && telegramSettings[settingKey] === false) {
+      return NextResponse.json({
+        success: false,
+        message: 'Người dùng đã tắt nhận thông báo loại này'
+      })
+    }
+
+    // Gửi thông báo theo loại
+    let sendResult = false
+
     switch (notificationType) {
       case 'custom':
-        validatedData = customNotificationSchema.parse(body)
         sendResult = await sendCustomNotification(telegramId, validatedData.title, validatedData.message)
-
-        // Tạo thông báo trong database
-        if (sendResult) {
-          await supabase.rpc('create_notification', {
-            p_profile_id: validatedData.userId,
-            p_title: validatedData.title,
-            p_content: validatedData.message,
-            p_type: validatedData.type
-          })
-        }
         break
-
       case 'deposit':
-        validatedData = depositNotificationSchema.parse(body)
         sendResult = await sendDepositNotification(telegramId, validatedData.amount, validatedData.transactionId)
         break
-
+      case 'withdrawal':
+        sendResult = await sendWithdrawalApprovedNotification(
+          telegramId,
+          validatedData.amount,
+          validatedData.paymentMethod
+        )
+        break
       case 'win':
-        validatedData = winNotificationSchema.parse(body)
         sendResult = await sendWinNotification(
           telegramId,
           validatedData.amount,
@@ -125,9 +146,7 @@ export async function POST(request) {
           validatedData.betInfo
         )
         break
-
       case 'login':
-        validatedData = loginNotificationSchema.parse(body)
         sendResult = await sendLoginNotification(
           telegramId,
           validatedData.device,
@@ -135,40 +154,54 @@ export async function POST(request) {
           validatedData.time
         )
         break
-
-      default:
-        return NextResponse.json(
-          {
-            error: 'Không hỗ trợ loại thông báo này'
-          },
-          { status: 400 }
-        )
+      case 'security':
+        sendResult = await sendSecurityAlert(telegramId, validatedData.alertType, validatedData.details)
+        break
     }
 
-    if (!sendResult) {
-      return NextResponse.json(
-        {
-          error: 'Không thể gửi thông báo'
-        },
-        { status: 500 }
-      )
+    // Cập nhật thống kê gửi thông báo nếu thành công
+    if (sendResult) {
+      await updateTelegramStats('notifications_sent')
     }
 
     return NextResponse.json({
-      success: true,
-      message: 'Đã gửi thông báo thành công'
+      success: sendResult,
+      message: sendResult ? 'Đã gửi thông báo thành công' : 'Không thể gửi thông báo'
     })
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: 'Lỗi dữ liệu đầu vào',
-          details: error.errors
-        },
-        { status: 400 }
-      )
+    return handleApiError(error, 'Không thể gửi thông báo Telegram')
+  }
+}
+
+// Helper function để cập nhật thống kê Telegram
+async function updateTelegramStats(metric) {
+  try {
+    const supabase = createRouteHandlerClient({ cookies })
+    const today = new Date().toISOString().split('T')[0]
+
+    // Kiểm tra bản ghi cho ngày hôm nay
+    const { data, error } = await supabase.from('telegram_stats').select('*').eq('date', today).single()
+
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116: not found
+      console.error('Error checking telegram stats:', error)
+      return
     }
 
-    return handleApiError(error, 'Không thể gửi thông báo Telegram')
+    if (data) {
+      // Update bản ghi hiện có
+      await supabase
+        .from('telegram_stats')
+        .update({ [metric]: data[metric] + 1 })
+        .eq('id', data.id)
+    } else {
+      // Tạo bản ghi mới cho ngày hôm nay
+      await supabase.from('telegram_stats').insert({
+        date: today,
+        [metric]: 1
+      })
+    }
+  } catch (error) {
+    console.error('Error updating telegram stats:', error)
   }
 }

@@ -43,7 +43,7 @@ Hoặc sử dụng mã xác thực từ trang cài đặt với lệnh:
 Gõ /help để xem thêm thông tin.
 `
 
-    await ctx.replyWithMarkdown(welcomeMessage)
+    await ctx.replyWithMarkdownV2(welcomeMessage)
 
     console.log(`User started bot: ${username}, ChatID: ${chatId}`)
   } catch (error) {
@@ -73,7 +73,7 @@ bot.help(ctx => {
 - Thắc mắc trợ giúp: support@vinbet.com
 `
 
-  ctx.replyWithMarkdown(helpMessage)
+  ctx.replyWithMarkdownV2(helpMessage)
 })
 
 // Xử lý xác thực tài khoản theo mã
@@ -128,7 +128,7 @@ bot.hears(/\/verify_([a-zA-Z0-9]{6,})/, async ctx => {
       .eq('code', verificationCode)
 
     // Gửi thông báo thành công
-    await ctx.replyWithMarkdown(`
+    await ctx.replyWithMarkdownV2(`
 ✅ *Xác thực thành công!*
 
 Tài khoản VinBet của bạn đã được liên kết với Telegram Bot.
@@ -169,7 +169,7 @@ bot.command('status', async ctx => {
       .single()
 
     if (error || !data) {
-      return ctx.replyWithMarkdown(`
+      return ctx.replyWithMarkdownV2(`
 ❌ *Chưa kết nối*
 
 Telegram của bạn chưa được liên kết với tài khoản VinBet nào.
@@ -188,7 +188,7 @@ Telegram của bạn chưa được liên kết với tài khoản VinBet nào.
     const formattedDate = joinDate.toLocaleDateString('vi-VN')
 
     // Hiển thị thông tin
-    await ctx.replyWithMarkdown(`
+    await ctx.replyWithMarkdownV2V2(`
 ✅ *Đã kết nối*
 
 👤 Tài khoản: ${data.display_name || data.username}
@@ -244,7 +244,7 @@ bot.command('disconnect', async ctx => {
     })
 
     // Gửi thông báo thành công
-    await ctx.replyWithMarkdown(`
+    await ctx.replyWithMarkdownV2(`
 ✅ *Ngắt kết nối thành công!*
 
 Tài khoản VinBet ${data.display_name || data.username} đã được ngắt kết nối khỏi Telegram Bot.
@@ -414,6 +414,145 @@ ${message}
     return false
   }
 }
+
+// Gửi cảnh báo bảo mật
+export async function sendSecurityAlert(telegramId, alertType, details = {}) {
+  try {
+    if (!telegramId) return false
+
+    let title, message
+    const now = new Date().toLocaleString('vi-VN')
+
+    switch (alertType) {
+      case 'login_new_device':
+        title = '🔐 Đăng nhập mới phát hiện'
+        message = `Tài khoản của bạn vừa được đăng nhập từ:
+        
+📱 Thiết bị: ${details.device || 'Không xác định'}
+📍 Vị trí: ${details.location || 'Không xác định'}
+🕒 Thời gian: ${details.time || now}
+
+❗ Nếu không phải bạn, hãy thay đổi mật khẩu ngay!`
+        break
+
+      case 'password_changed':
+        title = '🔑 Mật khẩu đã thay đổi'
+        message = `Mật khẩu tài khoản của bạn vừa được thay đổi vào ${details.time || now}.
+
+Nếu không phải bạn thực hiện thay đổi này, vui lòng liên hệ ngay với bộ phận hỗ trợ.`
+        break
+
+      case 'large_withdrawal': {
+        const formattedAmount = new Intl.NumberFormat('vi-VN', {
+          style: 'currency',
+          currency: 'VND'
+        }).format(details.amount || 0)
+
+        title = '💰 Rút tiền số lượng lớn'
+        message = `Có yêu cầu rút ${formattedAmount} từ tài khoản của bạn.
+        
+🕒 Thời gian: ${details.time || now}
+📱 Thiết bị: ${details.device || 'Không xác định'}
+
+Nếu không phải bạn, hãy liên hệ ngay với bộ phận hỗ trợ.`
+        break
+      }
+
+      default:
+        title = '⚠️ Cảnh báo bảo mật'
+        message = 'Phát hiện hoạt động bất thường trên tài khoản của bạn. Vui lòng kiểm tra và xác nhận.'
+    }
+
+    await bot.telegram.sendMessage(telegramId, `*${title}*\n\n${message}`, { parse_mode: 'Markdown' })
+
+    return true
+  } catch (error) {
+    console.error(`Lỗi gửi cảnh báo bảo mật:`, error)
+    return false
+  }
+}
+
+// Helper functions
+function getTransactionTypeName(type) {
+  const types = {
+    deposit: 'Nạp tiền',
+    withdrawal: 'Rút tiền',
+    bet: 'Đặt cược',
+    win: 'Thắng cược',
+    referral_reward: 'Thưởng giới thiệu'
+  }
+  return types[type] || type
+}
+
+function getTransactionStatusName(status) {
+  const statuses = {
+    completed: 'Hoàn thành',
+    pending: 'Đang xử lý',
+    failed: 'Thất bại',
+    cancelled: 'Đã hủy'
+  }
+  return statuses[status] || status
+}
+
+// Bot command để xem giao dịch gần đây
+bot.command('transactions', async ctx => {
+  try {
+    const chatId = ctx.chat.id
+
+    // Kiểm tra tài khoản đã liên kết chưa
+    const { data: profile, error } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('telegram_id', chatId.toString())
+      .single()
+
+    if (error || !profile) {
+      return ctx.reply(
+        '❌ Không tìm thấy tài khoản liên kết với Telegram này. Vui lòng kết nối tài khoản trên web trước.'
+      )
+    }
+
+    // Lấy 5 giao dịch gần đây nhất
+    const { data: transactions, error: txError } = await supabaseAdmin
+      .from('transactions')
+      .select('*')
+      .eq('profile_id', profile.id)
+      .order('created_at', { ascending: false })
+      .limit(5)
+
+    if (txError) {
+      return ctx.reply('❌ Không thể lấy thông tin giao dịch. Vui lòng thử lại sau.')
+    }
+
+    if (!transactions || transactions.length === 0) {
+      return ctx.reply('👀 Bạn chưa có giao dịch nào gần đây.')
+    }
+
+    // Format thông tin giao dịch
+    const messageLines = ['*5 Giao dịch gần đây nhất của bạn:*\n']
+
+    transactions.forEach((tx, index) => {
+      const date = new Date(tx.created_at).toLocaleString('vi-VN')
+      const type = getTransactionTypeName(tx.type)
+
+      const amount =
+        tx.type === 'deposit' || tx.type === 'win' || tx.type === 'referral_reward'
+          ? `+${tx.amount.toLocaleString('vi-VN')} VND`
+          : `-${tx.amount.toLocaleString('vi-VN')} VND`
+
+      messageLines.push(`${index + 1}. ${type}: ${amount}`)
+      messageLines.push(`   ${date}`)
+      messageLines.push(`   Trạng thái: ${getTransactionStatusName(tx.status)}\n`)
+    })
+
+    messageLines.push('💻 Xem chi tiết tại: vinbet.com/finance/transactions')
+
+    await ctx.replyWithMarkdownV2(messageLines.join('\n'))
+  } catch (error) {
+    console.error('Lỗi xử lý lệnh transactions:', error)
+    ctx.reply('❌ Đã xảy ra lỗi khi xử lý yêu cầu. Vui lòng thử lại sau.')
+  }
+})
 
 export {
   bot,
