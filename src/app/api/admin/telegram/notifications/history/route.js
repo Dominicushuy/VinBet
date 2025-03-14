@@ -16,16 +16,17 @@ export const GET = createAdminApiHandler(async (request, _, { supabase }) => {
     let query = supabase
       .from('admin_logs')
       .select(
-        `
-        id,
-        admin_id,
-        action,
-        entity_type,
-        entity_id,
-        details,
-        created_at,
-        admin:profiles!admin_logs_admin_id_fkey(id, username, display_name, avatar_url)
-      `
+        `  
+        id,  
+        admin_id,  
+        action,  
+        entity_type,  
+        entity_id,  
+        details,  
+        created_at,  
+        admin:profiles!admin_logs_admin_id_fkey(id, username, display_name, avatar_url)  
+        `,
+        { count: 'exact' } // Add count parameter here
       )
       .eq('action', 'SEND_NOTIFICATION')
       .order('created_at', { ascending: false })
@@ -43,8 +44,8 @@ export const GET = createAdminApiHandler(async (request, _, { supabase }) => {
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
 
-    // Thực hiện truy vấn và đếm tổng số
-    const [{ data, error }, { count }] = await Promise.all([query.range(from, to), query.count('exact')])
+    // Execute the query (with count included)
+    const { data, error, count } = await query.range(from, to)
 
     if (error) {
       throw error

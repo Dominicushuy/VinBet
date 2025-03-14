@@ -1,7 +1,6 @@
-// src/components/admin/telegram/NotificationForm.jsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { toast } from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
@@ -13,7 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { fetchData, postData } from '@/utils/fetchUtils'
-import { AlertCircle, Send, Users } from 'lucide-react'
+import { AlertCircle, Send, Users, Loader2, Search, X, CheckCircle, AlertTriangle } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 const NOTIFICATION_TEMPLATES = [
   {
@@ -54,13 +56,24 @@ export function NotificationForm() {
   const [sendToAll, setSendToAll] = useState(true)
   const [selectedUsers, setSelectedUsers] = useState([])
   const [activeTab, setActiveTab] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [error, setError] = useState('')
 
-  const { data: usersData, isLoading: loadingUsers } = useQuery({
+  // Lấy danh sách người dùng đã kết nối Telegram
+  const {
+    data: usersData,
+    isLoading: loadingUsers,
+    error: usersError,
+    refetch: refetchUsers
+  } = useQuery({
     queryKey: ['admin', 'telegram-connected-users'],
     queryFn: () => fetchData('/api/admin/telegram/users?connected=true'),
-    enabled: !sendToAll
+    enabled: !sendToAll,
+    staleTime: 5 * 60 * 1000, // 5 phút
+    retry: 2
   })
 
+  // Gửi thông báo mutation
   const sendNotificationMutation = useMutation({
     mutationFn: data => postData('/api/admin/notifications/send', data),
     onSuccess: () => {
@@ -71,47 +84,40 @@ export function NotificationForm() {
       setNotificationType('system')
       setSendToAll(true)
       setSelectedUsers([])
+      setActiveTab('all')
+      setError('')
     },
     onError: error => {
+      setError(`Không thể gửi thông báo: ${error.message || 'Lỗi không xác định'}`)
       toast.error(`Không thể gửi thông báo: ${error.message || 'Lỗi không xác định'}`)
     }
   })
 
-  const users = usersData?.users || []
+  // Memoize danh sách người dùng
+  const users = useMemo(() => usersData?.users || [], [usersData?.users])
 
-  const handleTemplateChange = templateId => {
-    if (templateId === 'all') return
+  // Memoize danh sách đã lọc để tránh tính toán lại khi render
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      // Lọc theo search query
+      const matchesSearch =
+        searchQuery === '' ||
+        (user.username && user.username.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (user.display_name && user.display_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (user.email && user.email.toLowerCase().includes(searchQuery.toLowerCase()))
 
-    const template = NOTIFICATION_TEMPLATES.find(t => t.id === templateId)
-    if (template) {
-      setTitle(template.title)
-      setContent(template.content)
-      setNotificationType(template.type)
-    }
-  }
+      // Tab "selected" chỉ hiển thị người dùng đã chọn
+      if (activeTab === 'selected') {
+        return selectedUsers.includes(user.id)
+      }
 
-  const handleSendNotification = () => {
-    if (!title.trim()) {
-      toast.error('Vui lòng nhập tiêu đề thông báo')
-      return
-    }
+      // Tab "all" hiển thị tất cả người dùng phù hợp với search query
+      return matchesSearch
+    })
+  }, [users, activeTab, searchQuery, selectedUsers])
 
-    if (!content.trim()) {
-      toast.error('Vui lòng nhập nội dung thông báo')
-      return
-    }
-
-    const payload = {
-      title,
-      content,
-      type: notificationType,
-      userIds: sendToAll ? [] : selectedUsers
-    }
-
-    sendNotificationMutation.mutate(payload)
-  }
-
-  const handleUserSelection = userId => {
+  // Chọn/bỏ chọn người dùng
+  const handleUserSelection = useCallback(userId => {
     setSelectedUsers(prev => {
       if (prev.includes(userId)) {
         return prev.filter(id => id !== userId)
@@ -119,7 +125,80 @@ export function NotificationForm() {
         return [...prev, userId]
       }
     })
-  }
+  }, [])
+
+  // Xử lý thay đổi template
+  const handleTemplateChange = useCallback(templateId => {
+    if (templateId === 'custom') return
+
+    const template = NOTIFICATION_TEMPLATES.find(t => t.id === templateId)
+    if (template) {
+      setTitle(template.title)
+      setContent(template.content)
+      setNotificationType(template.type)
+    }
+  }, [])
+
+  // Xử lý gửi thông báo
+  const handleSendNotification = useCallback(() => {
+    // Validate input
+    setError('')
+
+    if (!title.trim()) {
+      setError('Vui lòng nhập tiêu đề thông báo')
+      toast.error('Vui lòng nhập tiêu đề thông báo')
+      return
+    }
+
+    if (!content.trim()) {
+      setError('Vui lòng nhập nội dung thông báo')
+      toast.error('Vui lòng nhập nội dung thông báo')
+      return
+    }
+
+    // Validate selected users nếu không gửi cho tất cả
+    if (!sendToAll && selectedUsers.length === 0) {
+      setError('Vui lòng chọn ít nhất một người dùng hoặc chọn gửi cho tất cả')
+      toast.error('Vui lòng chọn ít nhất một người dùng hoặc chọn gửi cho tất cả')
+      return
+    }
+
+    // Prepare payload
+    const payload = {
+      title,
+      content,
+      type: notificationType,
+      userIds: sendToAll ? [] : selectedUsers
+    }
+
+    // Send notification
+    sendNotificationMutation.mutate(payload)
+  }, [title, content, notificationType, sendToAll, selectedUsers, sendNotificationMutation])
+
+  // Xóa tất cả người dùng đã chọn
+  const clearSelectedUsers = useCallback(() => {
+    setSelectedUsers([])
+    toast.success('Đã xóa tất cả người dùng đã chọn')
+  }, [])
+
+  // Chọn tất cả người dùng đang hiển thị
+  const selectAllDisplayedUsers = useCallback(() => {
+    const newSelectedUsers = [...selectedUsers]
+    filteredUsers.forEach(user => {
+      if (!newSelectedUsers.includes(user.id)) {
+        newSelectedUsers.push(user.id)
+      }
+    })
+    setSelectedUsers(newSelectedUsers)
+    toast.success(`Đã chọn ${filteredUsers.length} người dùng`)
+  }, [filteredUsers, selectedUsers])
+
+  // Load lại danh sách user khi toggle sendToAll
+  useEffect(() => {
+    if (!sendToAll) {
+      refetchUsers()
+    }
+  }, [sendToAll, refetchUsers])
 
   return (
     <Card>
@@ -128,15 +207,23 @@ export function NotificationForm() {
         <CardDescription>Tạo và gửi thông báo đến người dùng qua Telegram</CardDescription>
       </CardHeader>
       <CardContent className='space-y-6'>
+        {error && (
+          <Alert variant='destructive'>
+            <AlertTriangle className='h-4 w-4 mr-2' />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         <div className='space-y-4'>
+          {/* Mẫu thông báo */}
           <div className='grid gap-2'>
             <Label htmlFor='template'>Mẫu thông báo</Label>
-            <Select onValueChange={handleTemplateChange}>
+            <Select onValueChange={handleTemplateChange} defaultValue='custom'>
               <SelectTrigger>
                 <SelectValue placeholder='Chọn mẫu thông báo hoặc tạo mới' />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value='all'>Thông báo tùy chỉnh</SelectItem>
+                <SelectItem value='custom'>Thông báo tùy chỉnh</SelectItem>
                 {NOTIFICATION_TEMPLATES.map(template => (
                   <SelectItem key={template.id} value={template.id}>
                     {template.name}
@@ -146,6 +233,7 @@ export function NotificationForm() {
             </Select>
           </div>
 
+          {/* Tiêu đề */}
           <div className='grid gap-2'>
             <Label htmlFor='title'>Tiêu đề</Label>
             <Input
@@ -156,6 +244,7 @@ export function NotificationForm() {
             />
           </div>
 
+          {/* Nội dung */}
           <div className='grid gap-2'>
             <Label htmlFor='content'>Nội dung</Label>
             <Textarea
@@ -167,6 +256,7 @@ export function NotificationForm() {
             />
           </div>
 
+          {/* Loại thông báo */}
           <div className='grid gap-2'>
             <Label htmlFor='type'>Loại thông báo</Label>
             <Select value={notificationType} onValueChange={setNotificationType}>
@@ -182,35 +272,103 @@ export function NotificationForm() {
             </Select>
           </div>
 
+          {/* Gửi cho tất cả */}
           <div className='flex items-center space-x-2'>
             <Switch id='sendToAll' checked={sendToAll} onCheckedChange={setSendToAll} />
             <Label htmlFor='sendToAll'>Gửi cho tất cả người dùng đã kết nối Telegram</Label>
           </div>
 
+          {/* Chọn người nhận */}
           {!sendToAll && (
             <div className='border rounded-md p-4'>
               <div className='flex items-center justify-between mb-4'>
                 <h3 className='font-medium'>Chọn người nhận</h3>
-                <span className='text-sm text-muted-foreground'>Đã chọn {selectedUsers.length} người dùng</span>
+                <div className='flex items-center gap-2'>
+                  <span className='text-sm text-muted-foreground'>
+                    Đã chọn{' '}
+                    <Badge variant='outline' className='ml-1'>
+                      {selectedUsers.length}
+                    </Badge>{' '}
+                    người dùng
+                  </span>
+                  {selectedUsers.length > 0 && (
+                    <Button size='sm' variant='outline' className='h-8' onClick={clearSelectedUsers}>
+                      <X className='h-3.5 w-3.5 mr-1' />
+                      Xóa tất cả
+                    </Button>
+                  )}
+                </div>
               </div>
 
+              {/* Tìm kiếm */}
+              <div className='relative mb-4'>
+                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground' />
+                <Input
+                  placeholder='Tìm kiếm người dùng...'
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className='pl-9 pr-4'
+                />
+                {searchQuery && (
+                  <Button
+                    variant='ghost'
+                    size='sm'
+                    className='absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0'
+                    onClick={() => setSearchQuery('')}
+                  >
+                    <X className='h-4 w-4' />
+                  </Button>
+                )}
+              </div>
+
+              {/* Các tab */}
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className='mb-4'>
-                  <TabsTrigger value='all'>Tất cả</TabsTrigger>
-                  <TabsTrigger value='selected'>Đã chọn</TabsTrigger>
-                </TabsList>
+                <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2'>
+                  <TabsList>
+                    <TabsTrigger value='all'>Tất cả</TabsTrigger>
+                    <TabsTrigger value='selected'>Đã chọn</TabsTrigger>
+                  </TabsList>
+
+                  {activeTab === 'all' && filteredUsers.length > 0 && (
+                    <Button size='sm' variant='outline' className='h-8' onClick={selectAllDisplayedUsers}>
+                      <CheckCircle className='h-3.5 w-3.5 mr-1' />
+                      Chọn tất cả
+                    </Button>
+                  )}
+                </div>
 
                 <TabsContent value='all'>
                   {loadingUsers ? (
-                    <div className='text-center py-4'>Đang tải danh sách người dùng...</div>
-                  ) : users.length === 0 ? (
-                    <div className='text-center py-4'>Không có người dùng nào đã kết nối Telegram</div>
+                    <div className='space-y-2 py-2'>
+                      <Skeleton className='h-12 w-full' />
+                      <Skeleton className='h-12 w-full' />
+                      <Skeleton className='h-12 w-full' />
+                    </div>
+                  ) : usersError ? (
+                    <Alert variant='destructive' className='my-4'>
+                      <AlertCircle className='h-4 w-4 mr-2' />
+                      <AlertDescription>Không thể tải danh sách người dùng</AlertDescription>
+                    </Alert>
+                  ) : filteredUsers.length === 0 ? (
+                    <div className='text-center py-8'>
+                      <Users className='h-12 w-12 mx-auto text-muted-foreground mb-2' />
+                      <p className='text-muted-foreground'>
+                        {searchQuery
+                          ? 'Không tìm thấy người dùng phù hợp'
+                          : 'Không có người dùng nào đã kết nối Telegram'}
+                      </p>
+                      {searchQuery && (
+                        <Button variant='link' className='mt-2' onClick={() => setSearchQuery('')}>
+                          Xóa tìm kiếm
+                        </Button>
+                      )}
+                    </div>
                   ) : (
-                    <div className='max-h-60 overflow-y-auto space-y-2 pr-2'>
-                      {users.map(user => (
+                    <div className='max-h-60 overflow-y-auto space-y-2 pr-2 mt-2'>
+                      {filteredUsers.map(user => (
                         <div
                           key={user.id}
-                          className={`flex items-center justify-between p-2 rounded-md ${
+                          className={`flex items-center justify-between p-2 rounded-md transition-colors ${
                             selectedUsers.includes(user.id) ? 'bg-primary/10' : 'hover:bg-secondary'
                           }`}
                         >
@@ -226,7 +384,9 @@ export function NotificationForm() {
                             </div>
                             <div>
                               <div className='font-medium'>{user.display_name || user.username}</div>
-                              <div className='text-xs text-muted-foreground'>{user.email}</div>
+                              <div className='text-xs text-muted-foreground truncate max-w-[150px] sm:max-w-xs'>
+                                {user.email}
+                              </div>
                             </div>
                           </div>
                           <Switch
@@ -241,9 +401,15 @@ export function NotificationForm() {
 
                 <TabsContent value='selected'>
                   {selectedUsers.length === 0 ? (
-                    <div className='text-center py-4'>Chưa chọn người dùng nào</div>
+                    <div className='text-center py-8'>
+                      <AlertCircle className='h-12 w-12 mx-auto text-muted-foreground mb-2' />
+                      <p className='text-muted-foreground'>Chưa chọn người dùng nào</p>
+                      <Button variant='link' className='mt-2' onClick={() => setActiveTab('all')}>
+                        Quay lại danh sách
+                      </Button>
+                    </div>
                   ) : (
-                    <div className='max-h-60 overflow-y-auto space-y-2 pr-2'>
+                    <div className='max-h-60 overflow-y-auto space-y-2 pr-2 mt-2'>
                       {users
                         .filter(user => selectedUsers.includes(user.id))
                         .map(user => (
@@ -260,11 +426,18 @@ export function NotificationForm() {
                               </div>
                               <div>
                                 <div className='font-medium'>{user.display_name || user.username}</div>
-                                <div className='text-xs text-muted-foreground'>{user.email}</div>
+                                <div className='text-xs text-muted-foreground truncate max-w-[150px] sm:max-w-xs'>
+                                  {user.email}
+                                </div>
                               </div>
                             </div>
-                            <Button variant='ghost' size='sm' onClick={() => handleUserSelection(user.id)}>
-                              Xóa
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              className='h-8'
+                              onClick={() => handleUserSelection(user.id)}
+                            >
+                              <X className='h-4 w-4' />
                             </Button>
                           </div>
                         ))}
@@ -293,14 +466,17 @@ export function NotificationForm() {
         </div>
         <Button
           onClick={handleSendNotification}
-          disabled={sendNotificationMutation.isLoading || (!sendToAll && selectedUsers.length === 0)}
+          disabled={
+            sendNotificationMutation.isPending || (!sendToAll && selectedUsers.length === 0) || !title || !content
+          }
         >
-          {sendNotificationMutation.isLoading ? (
-            <>Đang gửi...</>
+          {sendNotificationMutation.isPending ? (
+            <>
+              <Loader2 className='h-4 w-4 mr-2 animate-spin' /> Đang gửi...
+            </>
           ) : (
             <>
-              <Send className='h-4 w-4 mr-2' />
-              Gửi thông báo
+              <Send className='h-4 w-4 mr-2' /> Gửi thông báo
             </>
           )}
         </Button>
