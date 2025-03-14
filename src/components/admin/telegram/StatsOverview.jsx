@@ -4,6 +4,7 @@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
+import { Users, Bell } from 'lucide-react'
 
 export function StatsOverview({ stats, isLoading }) {
   if (isLoading) {
@@ -24,6 +25,7 @@ export function StatsOverview({ stats, isLoading }) {
     )
   }
 
+  // Ensure we have valid data with fallbacks
   const summary = stats?.summary || {
     total_notifications_sent: 0,
     total_new_connections: 0,
@@ -52,12 +54,20 @@ export function StatsOverview({ stats, isLoading }) {
         </CardHeader>
         <CardContent className='space-y-4'>
           <div className='flex justify-between items-center'>
-            <span className='text-sm font-medium'>Kết nối mới</span>
-            <span className='text-2xl font-bold'>{summary.total_new_connections}</span>
+            <span className='text-sm font-medium flex items-center'>
+              <Users className='h-4 w-4 mr-2 text-green-500' />
+              Kết nối mới
+            </span>
+            <span className='text-2xl font-bold'>{summary.total_new_connections.toLocaleString()}</span>
           </div>
           <div className='flex justify-between items-center'>
-            <span className='text-sm font-medium'>Ngắt kết nối</span>
-            <span className='text-2xl font-bold text-muted-foreground'>{summary.total_disconnections}</span>
+            <span className='text-sm font-medium flex items-center'>
+              <Users className='h-4 w-4 mr-2 text-red-500' />
+              Ngắt kết nối
+            </span>
+            <span className='text-2xl font-bold text-muted-foreground'>
+              {summary.total_disconnections.toLocaleString()}
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -69,12 +79,15 @@ export function StatsOverview({ stats, isLoading }) {
         </CardHeader>
         <CardContent className='space-y-4'>
           <div className='flex justify-between items-center'>
-            <span className='text-sm font-medium'>Thông báo đã gửi</span>
-            <span className='text-2xl font-bold'>{summary.total_notifications_sent}</span>
+            <span className='text-sm font-medium flex items-center'>
+              <Bell className='h-4 w-4 mr-2 text-blue-500' />
+              Thông báo đã gửi
+            </span>
+            <span className='text-2xl font-bold'>{summary.total_notifications_sent.toLocaleString()}</span>
           </div>
           <div className='flex justify-between items-center'>
             <span className='text-sm font-medium'>Tương tác với bot</span>
-            <span className='text-2xl font-bold'>{summary.total_bot_interactions}</span>
+            <span className='text-2xl font-bold'>{summary.total_bot_interactions.toLocaleString()}</span>
           </div>
         </CardContent>
       </Card>

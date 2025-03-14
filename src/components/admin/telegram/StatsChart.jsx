@@ -19,6 +19,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export function StatsChart({ data = [] }) {
   const [timeRange, setTimeRange] = useState('7days')
@@ -44,7 +45,7 @@ export function StatsChart({ data = [] }) {
 
     const cutoffDate = subDays(new Date(), days)
     return data
-      .filter(item => new Date(item.date) >= cutoffDate)
+      .filter(item => item && item.date && new Date(item.date) >= cutoffDate)
       .sort((a, b) => new Date(a.date) - new Date(b.date))
       .map(item => ({
         ...item,
@@ -53,6 +54,8 @@ export function StatsChart({ data = [] }) {
   }, [data, timeRange])
 
   const chartData = useMemo(() => {
+    if (!filteredData.length) return []
+
     if (chartView === 'notifications') {
       return filteredData.map(item => ({
         date: item.date,
@@ -78,6 +81,14 @@ export function StatsChart({ data = [] }) {
   }, [filteredData, chartView])
 
   const renderChart = () => {
+    if (chartData.length === 0) {
+      return (
+        <div className='flex items-center justify-center h-[350px] border rounded-md'>
+          <p className='text-muted-foreground'>Không có dữ liệu cho khoảng thời gian này</p>
+        </div>
+      )
+    }
+
     if (chartView === 'connections') {
       return (
         <ResponsiveContainer width='100%' height={350}>
@@ -111,10 +122,24 @@ export function StatsChart({ data = [] }) {
     )
   }
 
+  if (!data || data.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Biểu đồ hoạt động Telegram</CardTitle>
+          <CardDescription>Thống kê hoạt động Telegram theo thời gian</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Skeleton className='h-[350px] w-full' />
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card>
       <CardHeader>
-        <div className='flex items-center justify-between'>
+        <div className='flex items-center justify-between flex-wrap gap-4'>
           <div>
             <CardTitle>Biểu đồ hoạt động Telegram</CardTitle>
             <CardDescription>Thống kê hoạt động Telegram theo thời gian</CardDescription>
@@ -135,20 +160,14 @@ export function StatsChart({ data = [] }) {
       </CardHeader>
       <CardContent>
         <Tabs value={chartView} onValueChange={setChartView} className='mb-4'>
-          <TabsList>
+          <TabsList className='w-full sm:w-auto'>
             <TabsTrigger value='notifications'>Thông báo</TabsTrigger>
             <TabsTrigger value='connections'>Kết nối</TabsTrigger>
             <TabsTrigger value='all'>Tổng hợp</TabsTrigger>
           </TabsList>
         </Tabs>
 
-        {filteredData.length === 0 ? (
-          <div className='flex items-center justify-center h-[350px] border rounded-md'>
-            <p className='text-muted-foreground'>Không có dữ liệu cho khoảng thời gian này</p>
-          </div>
-        ) : (
-          renderChart()
-        )}
+        {renderChart()}
       </CardContent>
       <CardFooter className='text-sm text-muted-foreground border-t px-6 py-4'>
         {timeRange === '7days' ? '7 ngày gần đây' : timeRange === '30days' ? '30 ngày gần đây' : '90 ngày gần đây'}

@@ -2,17 +2,18 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { createAdminApiHandler } from '@/utils/adminAuthHandler'
+import { subDays } from 'date-fns'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { handleApiError } from '@/utils/errorHandler'
 
-export const GET = createAdminApiHandler(async (request, _, { supabase }) => {
+export async function GET() {
   try {
-    const url = new URL(request.url)
-    const startDate =
-      url.searchParams.get('startDate') || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    const endDate = url.searchParams.get('endDate') || new Date().toISOString().split('T')[0]
+    // Tự động thiết lập khoảng thời gian là 30 ngày gần đây nếu không được chỉ định
+    const startDate = subDays(new Date(), 30).toISOString().split('T')[0]
+    const endDate = new Date().toISOString().split('T')[0]
 
-    // Lấy thống kê từ bảng telegram_stats
-    const { data, error } = await supabase
+    // Lấy dữ liệu thống kê theo ngày
+    const { data: stats, error } = await supabaseAdmin
       .from('telegram_stats')
       .select('*')
       .gte('date', startDate)
@@ -20,44 +21,66 @@ export const GET = createAdminApiHandler(async (request, _, { supabase }) => {
       .order('date', { ascending: false })
 
     if (error) {
-      console.error('Error fetching Telegram stats:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return handleApiError(error, 'Không thể lấy thống kê Telegram')
     }
 
-    // Tính tổng số liệu
-    const summary = data.reduce(
-      (acc, day) => {
-        acc.total_notifications += day.notifications_sent || 0
-        acc.total_connections += day.new_connections || 0
-        acc.total_disconnections += day.disconnections || 0
-        acc.total_interactions += day.bot_interactions || 0
-        return acc
-      },
-      {
-        total_notifications: 0,
-        total_connections: 0,
-        total_disconnections: 0,
-        total_interactions: 0
-      }
-    )
+    // Tính tổng số liệu trong khoảng thời gian
+    const totalNotificationsSent = stats.reduce((total, day) => total + (day.notifications_sent || 0), 0)
+    const totalNewConnections = stats.reduce((total, day) => total + (day.new_connections || 0), 0)
+    const totalDisconnections = stats.reduce((total, day) => total + (day.disconnections || 0), 0)
+    const totalBotInteractions = stats.reduce((total, day) => total + (day.bot_interactions || 0), 0)
 
-    // Lấy tỷ lệ người dùng liên kết
-    const { count: totalUsers } = await supabase.from('profiles').select('*', { count: 'exact', head: true })
+    // Tính tỷ lệ kết nối
+    const { count: totalUsers, error: totalError } = await supabaseAdmin
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
 
-    const { count: telegramUsers } = await supabase
+    if (totalError) {
+      return handleApiError(totalError, 'Không thể lấy số lượng người dùng')
+    }
+
+    const { count: connectedUsers, error: connectedError } = await supabaseAdmin
       .from('profiles')
       .select('*', { count: 'exact', head: true })
       .not('telegram_id', 'is', null)
 
-    summary.connection_rate = totalUsers > 0 ? ((telegramUsers / totalUsers) * 100).toFixed(2) : 0
+    if (connectedError) {
+      return handleApiError(connectedError, 'Không thể lấy số lượng người dùng kết nối Telegram')
+    }
 
+    const connectionRate = totalUsers > 0 ? (connectedUsers / totalUsers) * 100 : 0
+
+    // Tính tổng kết nối
+    const { data: connections, error: connectionsError } = await supabaseAdmin.rpc('count_telegram_connections')
+
+    if (connectionsError) {
+      console.warn('Error getting telegram connections:', connectionsError)
+    }
+
+    // Thêm trường total_activity vào mỗi ngày
+    const statsWithTotalActivity = stats.map(day => ({
+      ...day,
+      total_activity:
+        (day.notifications_sent || 0) +
+        (day.new_connections || 0) +
+        (day.disconnections || 0) +
+        (day.bot_interactions || 0)
+    }))
+
+    // Trả về kết quả
     return NextResponse.json({
-      daily: data,
-      summary,
-      period: { startDate, endDate }
+      stats: statsWithTotalActivity,
+      summary: {
+        total_notifications_sent: totalNotificationsSent,
+        total_new_connections: totalNewConnections,
+        total_disconnections: totalDisconnections,
+        total_bot_interactions: totalBotInteractions,
+        total_connections: connections?.count || connectedUsers,
+        total_users: totalUsers,
+        connection_rate: connectionRate
+      }
     })
   } catch (error) {
-    console.error('Error in Telegram stats:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'Không thể lấy thống kê Telegram')
   }
-})
+}
