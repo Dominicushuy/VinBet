@@ -8,18 +8,26 @@ import { Input } from '@/components/ui/input'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/useToast'
-import { Copy, AlertCircle, Check, Loader2 } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
+import { Copy, AlertCircle, Check, Loader2, Send, QrCode } from 'lucide-react'
 import { fetchData, postData } from '@/utils/fetchUtils'
+import { Badge } from '@/components/ui/badge'
 
 export default function TelegramConnect() {
   const [loading, setLoading] = useState(true)
   const [telegramStatus, setTelegramStatus] = useState(null)
   const [telegramId, setTelegramId] = useState('')
+  const [telegramUsername, setTelegramUsername] = useState('')
   const [verificationCode, setVerificationCode] = useState(null)
   const [activeTab, setActiveTab] = useState('chatid')
   const [connecting, setConnecting] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
+  const [testingConnection, setTestingConnection] = useState(false)
   const { toast } = useToast()
+
+  // Bot username - used for QR code and links
+  const botUsername = 'vinbet_notifications_bot'
+  const botUrl = `https://t.me/${botUsername}`
 
   // Fetch current Telegram status
   useEffect(() => {
@@ -30,6 +38,9 @@ export default function TelegramConnect() {
         setTelegramStatus(response.connected)
         if (response.telegram_id) {
           setTelegramId(response.telegram_id)
+        }
+        if (response.telegram_username) {
+          setTelegramUsername(response.telegram_username)
         }
       } catch (error) {
         console.error('Error fetching Telegram status:', error)
@@ -116,6 +127,7 @@ export default function TelegramConnect() {
 
       setTelegramStatus(false)
       setTelegramId('')
+      setTelegramUsername('')
       toast({
         title: 'Ngắt kết nối thành công',
         description: 'Telegram đã được ngắt kết nối khỏi tài khoản của bạn'
@@ -129,6 +141,27 @@ export default function TelegramConnect() {
       })
     } finally {
       setDisconnecting(false)
+    }
+  }
+
+  // Test connection by sending a test message
+  const testConnection = async () => {
+    try {
+      setTestingConnection(true)
+      await postData('/api/telegram/send/test', {})
+      toast({
+        title: 'Thông báo thử nghiệm đã gửi',
+        description: 'Vui lòng kiểm tra Telegram của bạn'
+      })
+    } catch (error) {
+      console.error('Error testing connection:', error)
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi gửi thông báo',
+        description: 'Không thể gửi thông báo thử nghiệm'
+      })
+    } finally {
+      setTestingConnection(false)
     }
   }
 
@@ -160,21 +193,58 @@ export default function TelegramConnect() {
     return (
       <Card className='w-full'>
         <CardHeader className='space-y-1'>
-          <CardTitle className='flex items-center'>
-            <Check className='mr-2 h-5 w-5 text-green-500' />
-            Telegram đã kết nối
-          </CardTitle>
-          <CardDescription>Bạn đang nhận thông báo qua Telegram</CardDescription>
+          <div className='flex items-center justify-between'>
+            <CardTitle className='flex items-center'>
+              <Check className='mr-2 h-5 w-5 text-green-500' />
+              Telegram đã kết nối
+            </CardTitle>
+            <Badge variant='success' className='px-3 py-1'>
+              Kết nối hoạt động
+            </Badge>
+          </div>
+          <CardDescription>
+            {telegramUsername
+              ? `Đã kết nối với tài khoản @${telegramUsername}`
+              : 'Bạn đang nhận thông báo qua Telegram'}
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className='space-y-4'>
           <Alert className='bg-green-50 border-green-200'>
             <Check className='h-4 w-4 text-green-500' />
-            <AlertTitle>Kết nối đang hoạt động</AlertTitle>
-            <AlertDescription>Chat ID: {telegramId}</AlertDescription>
+            <AlertTitle>Thông tin kết nối</AlertTitle>
+            <AlertDescription className='pt-2'>
+              <div className='flex flex-col space-y-2'>
+                <div className='flex justify-between'>
+                  <span className='font-medium'>Chat ID:</span>
+                  <span>{telegramId}</span>
+                </div>
+                {telegramUsername && (
+                  <div className='flex justify-between'>
+                    <span className='font-medium'>Tên người dùng:</span>
+                    <span>@{telegramUsername}</span>
+                  </div>
+                )}
+              </div>
+            </AlertDescription>
           </Alert>
         </CardContent>
-        <CardFooter>
-          <Button variant='destructive' onClick={disconnectTelegram} disabled={disconnecting}>
+        <CardFooter className='flex flex-col sm:flex-row gap-3'>
+          <Button
+            variant='outline'
+            onClick={testConnection}
+            disabled={testingConnection || disconnecting}
+            className='w-full sm:w-auto'
+          >
+            {testingConnection && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+            <Send className='w-4 h-4 mr-2' />
+            Gửi tin nhắn thử nghiệm
+          </Button>
+          <Button
+            variant='destructive'
+            onClick={disconnectTelegram}
+            disabled={disconnecting || testingConnection}
+            className='w-full sm:w-auto'
+          >
             {disconnecting && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
             Ngắt kết nối Telegram
           </Button>
@@ -187,7 +257,12 @@ export default function TelegramConnect() {
   return (
     <Card className='w-full'>
       <CardHeader className='space-y-1'>
-        <CardTitle>Kết nối Telegram</CardTitle>
+        <div className='flex items-center justify-between'>
+          <CardTitle>Kết nối Telegram</CardTitle>
+          <Badge variant='destructive' className='px-3 py-1'>
+            Chưa kết nối
+          </Badge>
+        </div>
         <CardDescription>Nhận thông báo tức thời qua Telegram</CardDescription>
       </CardHeader>
       <CardContent className='space-y-4'>
@@ -200,9 +275,10 @@ export default function TelegramConnect() {
         </Alert>
 
         <Tabs defaultValue='chatid' value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className='grid w-full grid-cols-2'>
+          <TabsList className='grid w-full grid-cols-3'>
             <TabsTrigger value='chatid'>Dùng Chat ID</TabsTrigger>
             <TabsTrigger value='code'>Dùng mã xác thực</TabsTrigger>
+            <TabsTrigger value='qrcode'>QR Code</TabsTrigger>
           </TabsList>
 
           <TabsContent value='chatid' className='space-y-4'>
@@ -210,19 +286,14 @@ export default function TelegramConnect() {
               <h4 className='text-sm font-medium'>Bước 1: Kết nối với bot</h4>
               <p className='text-sm text-muted-foreground'>Mở Telegram và trò chuyện với bot của chúng tôi:</p>
               <div className='flex items-center space-x-2'>
-                <Input value='@vinbet_notifications_bot' readOnly />
-                <Button size='icon' variant='outline' onClick={() => copyToClipboard('@vinbet_notifications_bot')}>
+                <Input value={`@${botUsername}`} readOnly />
+                <Button size='icon' variant='outline' onClick={() => copyToClipboard(`@${botUsername}`)}>
                   <Copy className='h-4 w-4' />
                 </Button>
               </div>
               <p className='text-sm text-muted-foreground mt-1'>
                 Hoặc{' '}
-                <a
-                  href='https://t.me/vinbet_notifications_bot'
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  className='text-primary underline'
-                >
+                <a href={botUrl} target='_blank' rel='noopener noreferrer' className='text-primary underline'>
                   nhấp vào đây
                 </a>{' '}
                 để mở bot trong Telegram.
@@ -265,15 +336,10 @@ export default function TelegramConnect() {
                 <div className='space-y-2'>
                   <h4 className='text-sm font-medium'>Bước 1: Kết nối với bot</h4>
                   <p className='text-sm text-muted-foreground'>
-                    <a
-                      href='https://t.me/vinbet_notifications_bot'
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      className='text-primary underline'
-                    >
+                    <a href={botUrl} target='_blank' rel='noopener noreferrer' className='text-primary underline'>
                       Mở bot Telegram
                     </a>{' '}
-                    hoặc tìm @vinbet_notifications_bot trong Telegram.
+                    hoặc tìm @{botUsername} trong Telegram.
                   </p>
                 </div>
 
@@ -292,8 +358,8 @@ export default function TelegramConnect() {
                   </div>
                 </div>
 
-                <Alert>
-                  <AlertCircle className='h-4 w-4' />
+                <Alert className='bg-amber-50 border-amber-200'>
+                  <AlertCircle className='h-4 w-4 text-amber-500' />
                   <AlertTitle>Lưu ý</AlertTitle>
                   <AlertDescription>Mã xác thực có hiệu lực trong 30 phút.</AlertDescription>
                 </Alert>
@@ -309,6 +375,38 @@ export default function TelegramConnect() {
                 </Button>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value='qrcode' className='space-y-4'>
+            <div className='flex flex-col items-center justify-center space-y-4'>
+              <div className='border p-4 rounded-lg bg-white'>
+                <QRCodeSVG
+                  value={verificationCode ? `https://t.me/${botUsername}?start=verify_${verificationCode}` : botUrl}
+                  size={200}
+                  bgColor={'#ffffff'}
+                  fgColor={'#000000'}
+                  level={'M'}
+                  includeMargin={true}
+                />
+              </div>
+
+              <div className='text-center space-y-2'>
+                <h4 className='font-medium'>Quét mã QR để kết nối</h4>
+                <p className='text-sm text-muted-foreground max-w-sm'>
+                  {verificationCode
+                    ? 'Mã QR này đã được liên kết với tài khoản của bạn. Chỉ cần quét và gửi lệnh xác thực.'
+                    : 'Quét mã QR để mở bot và nhận Chat ID. Sau đó sử dụng ID để kết nối.'}
+                </p>
+              </div>
+
+              {!verificationCode && (
+                <Button onClick={generateVerificationCode} disabled={connecting} variant='outline' className='mt-2'>
+                  {connecting && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+                  <QrCode className='h-4 w-4 mr-2' />
+                  Tạo QR Code với mã xác thực
+                </Button>
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </CardContent>
