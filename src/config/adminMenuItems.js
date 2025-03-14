@@ -1,4 +1,5 @@
 // src/config/adminMenuItems.js
+import { MessageSquare } from 'lucide-react'
 import {
   LayoutDashboard,
   Users,
@@ -92,6 +93,18 @@ export const adminMenuItems = [
       }
     ]
   },
+  {
+    title: 'Cài đặt',
+    icon: <Settings className='w-5 h-5' />,
+    href: '/admin/settings'
+  },
+  // Thêm mục Telegram
+  {
+    title: 'Telegram',
+    icon: <MessageSquare className='w-5 h-5' />,
+    href: '/admin/telegram'
+  },
+
   {
     title: 'Cài đặt',
     icon: <Settings className='w-5 h-5' />,

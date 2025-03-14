@@ -18,42 +18,49 @@ export const POST = createAdminApiHandler(async (request, _, { supabase, user })
     const validatedData = sendNotificationSchema.parse(body)
     const { title, content, type, userIds } = validatedData
 
-    // Nếu userIds trống, lấy tất cả người dùng (trừ admin nếu cần)
+    // Nếu userIds trống, lấy tất cả người dùng có kết nối Telegram
     let targetUserIds = [...userIds]
 
     if (targetUserIds.length === 0) {
-      // Lấy danh sách tất cả ID người dùng
-      const { data: allUsers, error: usersError } = await supabase.from('profiles').select('id').eq('is_blocked', false) // Chỉ lấy tài khoản chưa bị khóa
+      // Lấy danh sách tất cả người dùng đã kết nối Telegram
+      const { data: connectedUsers, error: usersError } = await supabase
+        .from('profiles')
+        .select('id')
+        .not('telegram_id', 'is', null)
+        .eq('is_blocked', false) // Chỉ lấy tài khoản chưa bị khóa
 
       if (usersError) {
         return NextResponse.json({ error: 'Lỗi khi lấy danh sách người dùng' }, { status: 500 })
       }
 
-      targetUserIds = allUsers.map(user => user.id)
+      targetUserIds = connectedUsers.map(user => user.id)
     } else {
-      // Validate users exist
-      const { data: users, error: userError } = await supabase.from('profiles').select('id').in('id', targetUserIds)
+      // Validate users tồn tại và đã kết nối Telegram
+      const { data: users, error: userError } = await supabase
+        .from('profiles')
+        .select('id, telegram_id')
+        .in('id', targetUserIds)
+        .not('telegram_id', 'is', null)
 
       if (userError) {
         return NextResponse.json({ error: 'Lỗi khi kiểm tra người dùng' }, { status: 500 })
       }
 
-      if (users.length === 0) {
-        return NextResponse.json({ error: 'Không tìm thấy người dùng' }, { status: 404 })
-      }
-
-      // Chỉ lấy ID của những người dùng thực sự tồn tại
+      // Chỉ lấy ID của những người dùng thực sự tồn tại và đã kết nối Telegram
       targetUserIds = users.map(user => user.id)
     }
 
     if (targetUserIds.length === 0) {
-      return NextResponse.json({ error: 'Không có người dùng nào để gửi thông báo' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Không có người dùng nào đã kết nối Telegram để gửi thông báo' },
+        { status: 400 }
+      )
     }
 
     const adminId = user.id
     const now = new Date().toISOString()
 
-    // Tạo thông báo
+    // Tạo thông báo trong hệ thống
     const notifications = targetUserIds.map(profileId => ({
       profile_id: profileId,
       title,
@@ -69,40 +76,26 @@ export const POST = createAdminApiHandler(async (request, _, { supabase, user })
       return NextResponse.json({ error: 'Lỗi khi tạo thông báo' }, { status: 500 })
     }
 
-    // Gửi thông báo qua Telegram cho những user đã liên kết
-    const { data: connectedUsers, error: telegramError } = await supabase
-      .from('profiles')
-      .select('id, telegram_id')
-      .in('id', targetUserIds)
-      .not('telegram_id', 'is', null)
-
-    if (telegramError) {
-      console.error('Error fetching telegram connected users:', telegramError)
-    }
-
+    // Gửi thông báo qua Telegram cho những user
     let telegramSentCount = 0
-    if (connectedUsers && connectedUsers.length > 0) {
-      // Gửi thông báo Telegram
-      const telegramResults = await Promise.allSettled(
-        connectedUsers.map(async user => {
-          if (user.telegram_id) {
-            return fetch('/api/telegram/send', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                notificationType: 'custom',
-                userId: user.id,
-                title,
-                message: content
-              })
-            })
-          }
-        })
-      )
 
-      // Đếm số lượng thông báo Telegram gửi thành công
-      telegramSentCount = telegramResults.filter(result => result.status === 'fulfilled').length
-    }
+    const telegramResults = await Promise.allSettled(
+      targetUserIds.map(async userId => {
+        return fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/telegram/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            notificationType: 'custom',
+            userId,
+            title,
+            message: content
+          })
+        })
+      })
+    )
+
+    // Đếm số lượng thông báo Telegram gửi thành công
+    telegramSentCount = telegramResults.filter(result => result.status === 'fulfilled').length
 
     // Create admin log
     await supabase.from('admin_logs').insert({
@@ -115,6 +108,7 @@ export const POST = createAdminApiHandler(async (request, _, { supabase, user })
         telegram_sent: telegramSentCount,
         type,
         title,
+        content,
         time: now
       }
     })
