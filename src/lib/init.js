@@ -11,7 +11,18 @@ export async function initializeServices() {
 
   try {
     // Khởi tạo Telegram Bot
-    const botResult = await initializeTelegramBot()
+    let botResult
+    try {
+      botResult = await initializeTelegramBot()
+    } catch (telegramError) {
+      console.error('❌ Lỗi khi khởi tạo Telegram Bot:', telegramError)
+      botResult = { success: false, error: telegramError.message }
+    }
+
+    // Đảm bảo botResult luôn là một object
+    if (!botResult) {
+      botResult = { success: false, error: 'Không nhận được kết quả từ initializeTelegramBot' }
+    }
 
     if (botResult.success) {
       console.log('🤖 Telegram Bot: Đã khởi động thành công')
@@ -25,16 +36,19 @@ export async function initializeServices() {
     } else if (botResult.reason === 'disabled') {
       console.log('⚠️ Telegram Bot đã bị tắt qua biến môi trường')
       isInitialized = true // Vẫn đánh dấu là đã khởi tạo
+    } else if (botResult.reason === 'conflict') {
+      console.error('⚠️ Lỗi 409: Bot đã được khởi động ở nơi khác.')
+      console.error('⚠️ Hãy gọi API /api/telegram/force-disconnect và khởi động lại ứng dụng')
+      isInitialized = true // Đánh dấu là đã khởi tạo để không lặp lại
     } else {
       console.error('❌ Không thể khởi động Telegram Bot:', botResult.error || 'Unknown error')
-      // Vẫn đánh dấu là đã khởi tạo để không thử lại trong vòng đời của request hiện tại
       isInitialized = true
     }
 
     console.log('✅ Đã khởi tạo xong các dịch vụ!')
   } catch (err) {
     console.error('❌ Lỗi khởi tạo dịch vụ:', err)
-    isInitialized = true // Vẫn đánh dấu là đã khởi tạo để tránh lặp lại lỗi
+    isInitialized = true
   }
 }
 

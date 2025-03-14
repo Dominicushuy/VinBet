@@ -13,7 +13,6 @@ globalAny.botInstance = globalAny.botInstance || {
 class TelegramBotService {
   constructor() {
     this.isInitialized = false
-    // Sử dụng biến global thay vì instance variable
     this.instanceToken = Date.now().toString() // Để nhận dạng instance này
   }
 
@@ -48,83 +47,55 @@ class TelegramBotService {
     }
 
     try {
-      // Nếu có bot instance trước đó, hãy dừng nó
-      if (globalAny.botInstance.bot && globalAny.botInstance.isRunning) {
-        console.log('🔄 Dừng bot cũ trước khi khởi động lại...')
-        try {
-          await globalAny.botInstance.bot.stop()
-        } catch (stopError) {
-          console.warn('⚠️ Không thể dừng bot cũ:', stopError.message)
-        }
+      // Tạo bot tạm thời để cleanup trước
+      const cleanupBot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN)
 
-        // Đặt thời gian chờ ngắn để đảm bảo polling cũ được dừng hoàn toàn
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        globalAny.botInstance.isRunning = false
+      try {
+        // Xóa webhook nếu có
+        await cleanupBot.telegram.deleteWebhook({ drop_pending_updates: true })
+
+        // Gọi getUpdates với timeout=0 và offset=-1 để reset kết nối
+        await cleanupBot.telegram.getUpdates(0, 100, -1)
+
+        // Đợi một chút để đảm bảo kết nối cũ đã bị hủy
+        await new Promise(resolve => setTimeout(resolve, 2000))
+      } catch (cleanupError) {
+        console.warn('⚠️ Lỗi khi cleanup bot cũ:', cleanupError.message)
       }
 
       // Tạo bot mới
       const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN)
 
-      // Thêm các handlers mặc định
+      // Thêm các handlers
       this._setupHandlers(bot)
 
       // Cập nhật biến global
       globalAny.botInstance.bot = bot
 
-      // Debug polling logs nếu cần
-      if (process.env.TELEGRAM_BOT_DEBUG === 'true') {
-        this._setupDebugPolling(bot)
-      }
-
-      // Khởi động bot tùy theo môi trường
-      if (process.env.NODE_ENV !== 'production') {
-        // Thêm try-catch cho launch để xử lý lỗi 409
-        try {
-          await bot.launch({
-            allowedUpdates: ['message', 'callback_query', 'my_chat_member', 'chat_member'],
-            dropPendingUpdates: true // Quan trọng: bỏ qua các updates đang chờ để tránh xung đột
-          })
-          console.log('⚡ Telegram bot đã khởi động với long polling (dev mode)')
-          globalAny.botInstance.isRunning = true
-        } catch (launchError) {
-          if (launchError.message && launchError.message.includes('409')) {
-            console.warn('⚠️ Lỗi 409: Bot đã được khởi động ở nơi khác. Thử lại sau 5 giây...')
-            // Thử lại sau 5 giây
-            setTimeout(() => this.initialize(), 5000)
-            return null
-          }
-          throw launchError
-        }
-      } else if (process.env.TELEGRAM_WEBHOOK_URL) {
-        await bot.telegram.setWebhook(`${process.env.TELEGRAM_WEBHOOK_URL}/api/telegram/webhook`, {
-          drop_pending_updates: true
+      // Khởi động bot với tùy chọn
+      try {
+        await bot.launch({
+          allowedUpdates: ['message', 'callback_query', 'my_chat_member', 'chat_member'],
+          dropPendingUpdates: true
         })
-        console.log('⚡ Telegram webhook đã được thiết lập')
+        console.log('⚡ Telegram bot đã khởi động với long polling')
         globalAny.botInstance.isRunning = true
-      } else {
-        console.warn('⚠️ Không có webhook URL trong production, fallback về polling')
-        try {
-          await bot.launch({
-            dropPendingUpdates: true,
-            allowedUpdates: ['message', 'callback_query', 'my_chat_member', 'chat_member']
-          })
-          globalAny.botInstance.isRunning = true
-        } catch (launchError) {
-          if (launchError.message && launchError.message.includes('409')) {
-            console.warn('⚠️ Lỗi 409: Bot đã được khởi động ở nơi khác. Thử lại sau 5 giây...')
-            setTimeout(() => this.initialize(), 5000)
-            return null
+      } catch (launchError) {
+        if (launchError.message && launchError.message.includes('409')) {
+          console.warn('⚠️ Lỗi 409: Bot đã được khởi động ở nơi khác.')
+          console.warn('⚠️ Sử dụng API /api/telegram/force-disconnect và khởi động lại')
+
+          return {
+            success: false,
+            retryNeeded: false,
+            error: 'Lỗi 409: Bot đã được khởi động ở nơi khác',
+            reason: 'conflict'
           }
-          throw launchError
         }
+        throw launchError
       }
 
       this.isInitialized = true
-
-      // Xử lý tắt bot đúng cách
-      process.once('SIGINT', () => this.stop('SIGINT'))
-      process.once('SIGTERM', () => this.stop('SIGTERM'))
-
       return bot
     } catch (error) {
       console.error('❌ Lỗi khởi tạo Telegram bot:', error)
@@ -170,63 +141,70 @@ class TelegramBotService {
     bot.start(async ctx => {
       try {
         const chatId = ctx.chat.id
-        const username = ctx.from.username || 'người dùng'
+        const username = ctx.from?.username || 'người dùng'
 
-        const welcomeMessage = `
-👋 *Xin chào ${username}!*
+        // Sử dụng HTML thay vì Markdown để tránh lỗi
+        const welcomeMessage = `  
+<b>👋 Xin chào ${username}!</b>  
 
-Chào mừng đến với *VinBet Notifications Bot*
+Chào mừng đến với <b>VinBet Notifications Bot</b>  
 
-🔔 Bot sẽ gửi thông báo tự động về:
-- Trạng thái nạp/rút tiền
-- Kết quả trò chơi và phần thưởng
-- Cảnh báo đăng nhập và bảo mật
-- Thông báo hệ thống quan trọng
+🔔 Bot sẽ gửi thông báo tự động về:  
+- Trạng thái nạp/rút tiền  
+- Kết quả trò chơi và phần thưởng  
+- Cảnh báo đăng nhập và bảo mật  
+- Thông báo hệ thống quan trọng  
 
-🔗 *Cách liên kết tài khoản:*
-1️⃣ Đăng nhập vào trang web VinBet
-2️⃣ Vào Cài đặt > Thông báo > Telegram
-3️⃣ Nhập Chat ID: \`${chatId}\`
+<b>🔗 Cách liên kết tài khoản:</b>  
+1️⃣ Đăng nhập vào trang web VinBet  
+2️⃣ Vào Cài đặt > Thông báo > Telegram  
+3️⃣ Nhập Chat ID: <code>${chatId}</code>  
 
-🆔 *Chat ID của bạn là:* \`${chatId}\`
+<b>🆔 Chat ID của bạn là:</b> <code>${chatId}</code>  
 
-Hoặc sử dụng mã xác thực từ trang cài đặt với lệnh:
-/verify_XXXXXX (thay XXXXXX bằng mã xác thực)
+Hoặc sử dụng mã xác thực từ trang cài đặt với lệnh:  
+/verify_XXXXXX (thay XXXXXX bằng mã xác thực)  
 
-Gõ /help để xem thêm thông tin.
+Gõ /help để xem thêm thông tin.  
 `
 
-        await ctx.reply(welcomeMessage, { parse_mode: 'Markdown' })
+        await ctx.reply(welcomeMessage, { parse_mode: 'HTML' })
         console.log(`👤 User khởi động bot: ${username}, ChatID: ${chatId}`)
       } catch (error) {
         console.error('❌ Lỗi trong lệnh start:', error)
+        // Nếu gặp lỗi, thử gửi tin nhắn không có định dạng
         ctx.reply('❌ Đã xảy ra lỗi khi bắt đầu. Vui lòng thử lại sau.')
       }
     })
 
     // Xử lý /help
     bot.help(ctx => {
-      const helpMessage = `
-📋 *Hướng dẫn sử dụng VinBet Bot*
+      try {
+        const helpMessage = `  
+<b>📋 Hướng dẫn sử dụng VinBet Bot</b>  
 
-*Các lệnh:*
-/start - Khởi động bot và nhận thông tin
-/help - Hiển thị hướng dẫn này
-/status - Kiểm tra trạng thái kết nối
-/verify_XXXXXX - Xác thực tài khoản với mã từ web
-/disconnect - Hủy kết nối với tài khoản
-/ping - Kiểm tra bot còn hoạt động không
+<b>Các lệnh:</b>  
+/start - Khởi động bot và nhận thông tin  
+/help - Hiển thị hướng dẫn này  
+/status - Kiểm tra trạng thái kết nối  
+/verify_XXXXXX - Xác thực tài khoản với mã từ web  
+/disconnect - Hủy kết nối với tài khoản  
+/ping - Kiểm tra bot còn hoạt động không  
 
-*Trạng thái:*
-- Chat ID của bạn: \`${ctx.chat.id}\`
-- Sử dụng Chat ID này để liên kết tài khoản trên web
+<b>Trạng thái:</b>  
+- Chat ID của bạn: <code>${ctx.chat.id}</code>  
+- Sử dụng Chat ID này để liên kết tài khoản trên web  
 
-*Lưu ý:*
-- Bot không lưu nội dung trò chuyện
-- Thắc mắc trợ giúp: support@vinbet.com
+<b>Lưu ý:</b>  
+- Bot không lưu nội dung trò chuyện  
+- Thắc mắc trợ giúp: support@vinbet.com  
 `
 
-      ctx.reply(helpMessage, { parse_mode: 'Markdown' })
+        ctx.reply(helpMessage, { parse_mode: 'HTML' })
+      } catch (error) {
+        console.error('❌ Lỗi trong lệnh help:', error)
+        ctx.reply('Đã xảy ra lỗi khi hiển thị hướng dẫn. Vui lòng thử lại sau.')
+      }
     })
 
     // Xử lý /ping để kiểm tra bot còn live không
@@ -285,22 +263,22 @@ Gõ /help để xem thêm thông tin.
           })
           .eq('code', verificationCode)
 
-        // Gửi thông báo thành công
+        // Gửi thông báo thành công - sử dụng HTML
         await ctx.reply(
-          `
-✅ *Xác thực thành công!*
+          `  
+<b>✅ Xác thực thành công!</b>  
 
-Tài khoản VinBet của bạn đã được liên kết với Telegram Bot.
-Từ giờ bạn sẽ nhận được các thông báo quan trọng về:
+Tài khoản VinBet của bạn đã được liên kết với Telegram Bot.  
+Từ giờ bạn sẽ nhận được các thông báo quan trọng về:  
 
-- Trạng thái nạp/rút tiền
-- Kết quả các lượt cược
-- Thông báo đăng nhập
-- Các thông báo hệ thống quan trọng
+- Trạng thái nạp/rút tiền  
+- Kết quả các lượt cược  
+- Thông báo đăng nhập  
+- Các thông báo hệ thống quan trọng  
 
-Cám ơn bạn đã sử dụng dịch vụ của VinBet! 🎮
+Cám ơn bạn đã sử dụng dịch vụ của VinBet! 🎮  
 `,
-          { parse_mode: 'Markdown' }
+          { parse_mode: 'HTML' }
         )
 
         // Tạo thông báo trong Supabase
@@ -331,19 +309,19 @@ Cám ơn bạn đã sử dụng dịch vụ của VinBet! 🎮
 
         if (error || !data) {
           return ctx.reply(
-            `
-❌ *Chưa kết nối*
+            `  
+<b>❌ Chưa kết nối</b>  
 
-Telegram của bạn chưa được liên kết với tài khoản VinBet nào.
+Telegram của bạn chưa được liên kết với tài khoản VinBet nào.  
 
-🆔 Chat ID của bạn: \`${chatId}\`
+<b>🆔 Chat ID của bạn:</b> <code>${chatId}</code>  
 
-Để kết nối, vui lòng:
-1. Đăng nhập vào website VinBet
-2. Vào Cài đặt > Thông báo > Telegram
-3. Nhập Chat ID này và làm theo hướng dẫn
+Để kết nối, vui lòng:  
+1. Đăng nhập vào website VinBet  
+2. Vào Cài đặt > Thông báo > Telegram  
+3. Nhập Chat ID này và làm theo hướng dẫn  
 `,
-            { parse_mode: 'Markdown' }
+            { parse_mode: 'HTML' }
           )
         }
 
@@ -353,17 +331,17 @@ Telegram của bạn chưa được liên kết với tài khoản VinBet nào.
 
         // Hiển thị thông tin
         await ctx.reply(
-          `
-✅ *Đã kết nối*
+          `  
+<b>✅ Đã kết nối</b>  
 
-👤 Tài khoản: ${data.display_name || data.username}
-📅 Ngày tham gia: ${formattedDate}
-🆔 Chat ID: \`${chatId}\`
+<b>👤 Tài khoản:</b> ${data.display_name || data.username}  
+<b>📅 Ngày tham gia:</b> ${formattedDate}  
+<b>🆔 Chat ID:</b> <code>${chatId}</code>  
 
-Bot đang gửi thông báo cho tài khoản này.
-Để ngắt kết nối, sử dụng lệnh /disconnect
+Bot đang gửi thông báo cho tài khoản này.  
+Để ngắt kết nối, sử dụng lệnh /disconnect  
 `,
-          { parse_mode: 'Markdown' }
+          { parse_mode: 'HTML' }
         )
       } catch (error) {
         console.error('Lỗi kiểm tra trạng thái:', error)
@@ -412,15 +390,15 @@ Bot đang gửi thông báo cho tài khoản này.
 
         // Gửi thông báo thành công
         await ctx.reply(
-          `
-✅ *Ngắt kết nối thành công!*
+          `  
+<b>✅ Ngắt kết nối thành công!</b>  
 
-Tài khoản VinBet ${data.display_name || data.username} đã được ngắt kết nối khỏi Telegram Bot.
-Bạn sẽ không nhận được thông báo qua Telegram nữa.
+Tài khoản VinBet ${data.display_name || data.username} đã được ngắt kết nối khỏi Telegram Bot.  
+Bạn sẽ không nhận được thông báo qua Telegram nữa.  
 
-Để kết nối lại, hãy truy cập trang web VinBet và làm theo hướng dẫn.
+Để kết nối lại, hãy truy cập trang web VinBet và làm theo hướng dẫn.  
 `,
-          { parse_mode: 'Markdown' }
+          { parse_mode: 'HTML' }
         )
       } catch (error) {
         console.error('Lỗi khi ngắt kết nối:', error)
@@ -462,8 +440,8 @@ Bạn sẽ không nhận được thông báo qua Telegram nữa.
           return ctx.reply('👀 Bạn chưa có giao dịch nào gần đây.')
         }
 
-        // Format thông tin giao dịch
-        const messageLines = ['*5 Giao dịch gần đây nhất của bạn:*\n']
+        // Format thông tin giao dịch với HTML
+        const messageLines = ['<b>5 Giao dịch gần đây nhất của bạn:</b>\n']
 
         transactions.forEach((tx, index) => {
           const date = new Date(tx.created_at).toLocaleString('vi-VN')
@@ -474,14 +452,14 @@ Bạn sẽ không nhận được thông báo qua Telegram nữa.
               ? `+${tx.amount.toLocaleString('vi-VN')} VND`
               : `-${tx.amount.toLocaleString('vi-VN')} VND`
 
-          messageLines.push(`${index + 1}. ${type}: ${amount}`)
+          messageLines.push(`${index + 1}. <b>${type}:</b> ${amount}`)
           messageLines.push(`   ${date}`)
           messageLines.push(`   Trạng thái: ${this._getTransactionStatusName(tx.status)}\n`)
         })
 
         messageLines.push('💻 Xem chi tiết tại: vinbet.com/finance/transactions')
 
-        await ctx.reply(messageLines.join('\n'), { parse_mode: 'Markdown' })
+        await ctx.reply(messageLines.join('\n'), { parse_mode: 'HTML' })
       } catch (error) {
         console.error('Lỗi xử lý lệnh transactions:', error)
         ctx.reply('❌ Đã xảy ra lỗi khi xử lý yêu cầu. Vui lòng thử lại sau.')

@@ -5,39 +5,42 @@ import botService from '@/lib/telegram/botService'
 
 export async function POST() {
   try {
-    // Dừng bot hiện tại nếu đang chạy
-    await botService.stop('manual_restart')
+    // Tạo một Promise với timeout
+    const botStartPromise = (async () => {
+      // Dừng bot hiện tại nếu đang chạy
+      await botService.stop('manual_restart')
 
-    // Đợi 3 giây - quan trọng để đảm bảo session polling cũ đã hết hạn
-    await new Promise(resolve => setTimeout(resolve, 3000))
+      // Đợi 1 giây
+      await new Promise(r => setTimeout(r, 1000))
 
-    // Khởi động lại bot
-    const bot = await botService.initialize()
+      // Khởi động lại bot
+      const bot = await botService.initialize()
+      return bot
+    })()
 
+    // Thêm timeout 10 giây
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Bot initialization timed out after 10 seconds')), 10000)
+    })
+
+    // Chạy race giữa khởi tạo bot và timeout
+    const bot = await Promise.race([botStartPromise, timeoutPromise])
+
+    // Nếu thành công và có bot
     if (bot) {
       try {
-        // Lấy thông tin bot để xác nhận đang chạy
         const botInfo = await bot.telegram.getMe()
-
         return NextResponse.json({
           success: true,
           message: 'Bot đã được khởi động lại thành công',
-          status: 'online',
-          bot_info: {
-            id: botInfo.id,
-            username: botInfo.username,
-            first_name: botInfo.first_name
-          }
+          bot_info: botInfo
         })
       } catch (error) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: 'Bot đã khởi động nhưng không thể lấy thông tin',
-            error: error.message
-          },
-          { status: 500 }
-        )
+        return NextResponse.json({
+          success: false,
+          message: 'Bot khởi động nhưng không lấy được thông tin',
+          error: error.message
+        })
       }
     } else {
       return NextResponse.json(
@@ -53,7 +56,8 @@ export async function POST() {
     return NextResponse.json(
       {
         success: false,
-        error: error.message
+        error: error.message,
+        suggestion: 'Đây là môi trường dev, nên có thể tắt bot với TELEGRAM_BOT_ENABLED=false'
       },
       { status: 500 }
     )

@@ -34,16 +34,16 @@ export async function sendDepositNotification(telegramId, amount, transactionId)
   try {
     await bot.telegram.sendMessage(
       telegramId,
-      `
-💰 *Nạp tiền thành công*
+      `  
+<b>💰 Nạp tiền thành công</b>  
 
-✅ Số tiền: +${amount.toLocaleString('vi-VN')} VND
-🕒 Thời gian: ${new Date().toLocaleString('vi-VN')}
-🔢 Mã giao dịch: ${transactionId}
+✅ Số tiền: +${amount.toLocaleString('vi-VN')} VND  
+🕒 Thời gian: ${new Date().toLocaleString('vi-VN')}  
+🔢 Mã giao dịch: ${transactionId}  
 
-Số tiền đã được cộng vào tài khoản của bạn.
+Số tiền đã được cộng vào tài khoản của bạn.  
 `,
-      { parse_mode: 'Markdown' }
+      { parse_mode: 'HTML' }
     )
 
     // Cập nhật thống kê gửi thông báo
@@ -63,18 +63,18 @@ export async function sendWinNotification(telegramId, amount, gameId, betInfo) {
   try {
     await bot.telegram.sendMessage(
       telegramId,
-      `
-🎉 *Chúc mừng! Bạn đã thắng cược*
+      `  
+<b>🎉 Chúc mừng! Bạn đã thắng cược</b>  
 
-💵 Tiền thắng: +${amount.toLocaleString('vi-VN')} VND
-🎮 Mã trò chơi: #${gameId}
-🎯 Số đặt: ${betInfo.chosenNumber}
-🎲 Kết quả: ${betInfo.result}
-🕒 Thời gian: ${new Date().toLocaleString('vi-VN')}
+💵 Tiền thắng: +${amount.toLocaleString('vi-VN')} VND  
+🎮 Mã trò chơi: #${gameId}  
+🎯 Số đặt: ${betInfo.chosenNumber}  
+🎲 Kết quả: ${betInfo.result}  
+🕒 Thời gian: ${new Date().toLocaleString('vi-VN')}  
 
-Số tiền đã được cộng vào tài khoản của bạn.
+Số tiền đã được cộng vào tài khoản của bạn.  
 `,
-      { parse_mode: 'Markdown' }
+      { parse_mode: 'HTML' }
     )
 
     // Cập nhật thống kê gửi thông báo
@@ -94,16 +94,16 @@ export async function sendLoginNotification(telegramId, device, location, time) 
   try {
     await bot.telegram.sendMessage(
       telegramId,
-      `
-🔐 *Đăng nhập mới phát hiện*
+      `  
+<b>🔐 Đăng nhập mới phát hiện</b>  
 
-📱 Thiết bị: ${device}
-📍 Vị trí: ${location}
-🕒 Thời gian: ${time}
+📱 Thiết bị: ${device}  
+📍 Vị trí: ${location}  
+🕒 Thời gian: ${time}  
 
-❗ Nếu không phải bạn, hãy thay đổi mật khẩu ngay!
+❗ Nếu không phải bạn, hãy thay đổi mật khẩu ngay!  
 `,
-      { parse_mode: 'Markdown' }
+      { parse_mode: 'HTML' }
     )
 
     // Cập nhật thống kê gửi thông báo
@@ -123,16 +123,16 @@ export async function sendWithdrawalApprovedNotification(telegramId, amount, pay
   try {
     await bot.telegram.sendMessage(
       telegramId,
-      `
-💸 *Yêu cầu rút tiền được duyệt*
+      `  
+<b>💸 Yêu cầu rút tiền được duyệt</b>  
 
-✅ Số tiền: ${amount.toLocaleString('vi-VN')} VND
-💳 Phương thức: ${paymentMethod}
-🕒 Thời gian: ${new Date().toLocaleString('vi-VN')}
+✅ Số tiền: ${amount.toLocaleString('vi-VN')} VND  
+💳 Phương thức: ${paymentMethod}  
+🕒 Thời gian: ${new Date().toLocaleString('vi-VN')}  
 
-Số tiền sẽ được chuyển trong vòng 24 giờ.
+Số tiền sẽ được chuyển trong vòng 24 giờ.  
 `,
-      { parse_mode: 'Markdown' }
+      { parse_mode: 'HTML' }
     )
 
     // Cập nhật thống kê gửi thông báo
@@ -152,14 +152,14 @@ export async function sendCustomNotification(telegramId, title, message) {
   try {
     await bot.telegram.sendMessage(
       telegramId,
-      `
-*${title}*
+      `  
+<b>${title}</b>  
 
-${message}
+${message}  
 
-🕒 ${new Date().toLocaleString('vi-VN')}
+🕒 ${new Date().toLocaleString('vi-VN')}  
 `,
-      { parse_mode: 'Markdown' }
+      { parse_mode: 'HTML' }
     )
 
     // Cập nhật thống kê gửi thông báo
@@ -183,18 +183,18 @@ export async function sendSecurityAlert(telegramId, alertType, details = {}) {
     switch (alertType) {
       case 'login_new_device':
         title = '🔐 Đăng nhập mới phát hiện'
-        message = `Tài khoản của bạn vừa được đăng nhập từ:
+        message = `Tài khoản của bạn vừa được đăng nhập từ:  
         
-📱 Thiết bị: ${details.device || 'Không xác định'}
-📍 Vị trí: ${details.location || 'Không xác định'}
-🕒 Thời gian: ${details.time || now}
+📱 Thiết bị: ${details.device || 'Không xác định'}  
+📍 Vị trí: ${details.location || 'Không xác định'}  
+🕒 Thời gian: ${details.time || now}  
 
 ❗ Nếu không phải bạn, hãy thay đổi mật khẩu ngay!`
         break
 
       case 'password_changed':
         title = '🔑 Mật khẩu đã thay đổi'
-        message = `Mật khẩu tài khoản của bạn vừa được thay đổi vào ${details.time || now}.
+        message = `Mật khẩu tài khoản của bạn vừa được thay đổi vào ${details.time || now}.  
 
 Nếu không phải bạn thực hiện thay đổi này, vui lòng liên hệ ngay với bộ phận hỗ trợ.`
         break
@@ -205,10 +205,10 @@ Nếu không phải bạn thực hiện thay đổi này, vui lòng liên hệ n
           : '0 VND'
 
         title = '💰 Rút tiền số lượng lớn'
-        message = `Có yêu cầu rút ${formattedAmount} từ tài khoản của bạn.
+        message = `Có yêu cầu rút ${formattedAmount} từ tài khoản của bạn.  
         
-🕒 Thời gian: ${details.time || now}
-📱 Thiết bị: ${details.device || 'Không xác định'}
+🕒 Thời gian: ${details.time || now}  
+📱 Thiết bị: ${details.device || 'Không xác định'}  
 
 Nếu không phải bạn, hãy liên hệ ngay với bộ phận hỗ trợ.`
         break
@@ -219,7 +219,7 @@ Nếu không phải bạn, hãy liên hệ ngay với bộ phận hỗ trợ.`
         message = 'Phát hiện hoạt động bất thường trên tài khoản của bạn. Vui lòng kiểm tra và xác nhận.'
     }
 
-    await bot.telegram.sendMessage(telegramId, `*${title}*\n\n${message}`, { parse_mode: 'Markdown' })
+    await bot.telegram.sendMessage(telegramId, `<b>${title}</b>\n\n${message}`, { parse_mode: 'HTML' })
 
     // Cập nhật thống kê gửi thông báo
     await updateTelegramStats('notifications_sent')
