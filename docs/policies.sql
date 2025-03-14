@@ -392,3 +392,25 @@ CREATE POLICY telegram_verification_delete_policy ON telegram_verification
   FOR DELETE USING (
     profile_id = auth.uid() OR auth.is_admin()
   );
+
+-- Xóa policies nếu đã tồn tại
+DROP POLICY IF EXISTS telegram_stats_select_policy ON telegram_stats;
+DROP POLICY IF EXISTS telegram_stats_insert_policy ON telegram_stats;
+DROP POLICY IF EXISTS telegram_stats_update_policy ON telegram_stats;
+DROP POLICY IF EXISTS telegram_stats_delete_policy ON telegram_stats;
+
+-- Chỉ admin mới có thể xem thống kê
+CREATE POLICY telegram_stats_select_policy ON telegram_stats
+  FOR SELECT USING (auth.is_admin());
+
+-- Chỉ admin mới có thể thêm thống kê
+CREATE POLICY telegram_stats_insert_policy ON telegram_stats
+  FOR INSERT WITH CHECK (auth.is_admin());
+
+-- Chỉ admin mới có thể cập nhật thống kê
+CREATE POLICY telegram_stats_update_policy ON telegram_stats
+  FOR UPDATE USING (auth.is_admin());
+
+-- Chỉ admin mới có thể xóa thống kê
+CREATE POLICY telegram_stats_delete_policy ON telegram_stats
+  FOR DELETE USING (auth.is_admin());

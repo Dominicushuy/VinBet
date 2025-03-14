@@ -234,7 +234,22 @@ CREATE TABLE IF NOT EXISTS telegram_verification (
   is_used BOOLEAN DEFAULT FALSE,  
   used_at TIMESTAMP WITH TIME ZONE,  
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()  
-);  
+);
+
+/**  
+ * Bảng telegram_stats - Thống kê hiệu quả Telegram  
+ * Lưu trữ số liệu hàng ngày để phân tích hiệu quả của kênh Telegram  
+ * Bao gồm số thông báo gửi đi, số lượng kết nối mới, ngắt kết nối và tương tác  
+ */  
+CREATE TABLE IF NOT EXISTS telegram_stats (  
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),  
+  date DATE NOT NULL UNIQUE,  
+  notifications_sent INTEGER DEFAULT 0,  
+  new_connections INTEGER DEFAULT 0,  
+  disconnections INTEGER DEFAULT 0,  
+  bot_interactions INTEGER DEFAULT 0,  
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()  
+);
 
 -- ============================================================================  
 -- PHẦN 4: TẠO CÁC CHỈ MỤC (INDEXES)  
@@ -291,3 +306,6 @@ CREATE INDEX IF NOT EXISTS idx_admin_sessions_is_current ON admin_sessions(is_cu
 CREATE INDEX IF NOT EXISTS idx_telegram_verification_code ON telegram_verification(code);  
 CREATE INDEX IF NOT EXISTS idx_telegram_verification_profile_id ON telegram_verification(profile_id);  
 CREATE INDEX IF NOT EXISTS idx_telegram_verification_expires_at ON telegram_verification(expires_at); 
+
+-- Index cho bảng telegram_stats
+CREATE INDEX IF NOT EXISTS idx_telegram_stats_date ON telegram_stats(date);

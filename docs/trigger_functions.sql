@@ -1827,3 +1827,126 @@ BEGIN
   RETURN verification_code;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Function để cập nhật thống kê Telegram
+CREATE OR REPLACE FUNCTION update_telegram_stats(p_metric TEXT)
+RETURNS BOOLEAN AS $$
+DECLARE
+  today DATE := CURRENT_DATE;
+  v_record_exists BOOLEAN;
+BEGIN
+  -- Kiểm tra nếu đã có record cho ngày hôm nay
+  SELECT EXISTS(SELECT 1 FROM telegram_stats WHERE date = today) INTO v_record_exists;
+  
+  IF v_record_exists THEN
+    -- Cập nhật counter cho metric tương ứng
+    EXECUTE format('
+      UPDATE telegram_stats 
+      SET %I = %I + 1,
+          created_at = NOW()
+      WHERE date = $1
+    ', p_metric, p_metric) USING today;
+  ELSE
+    -- Tạo record mới cho ngày hôm nay
+    EXECUTE format('
+      INSERT INTO telegram_stats (date, %I)
+      VALUES ($1, 1)
+    ', p_metric) USING today;
+  END IF;
+  
+  RETURN TRUE;
+EXCEPTION WHEN OTHERS THEN
+  RETURN FALSE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function để lấy thống kê Telegram theo khoảng thời gian
+CREATE OR REPLACE FUNCTION get_telegram_stats(
+  p_start_date DATE DEFAULT CURRENT_DATE - INTERVAL '30 days',
+  p_end_date DATE DEFAULT CURRENT_DATE
+)
+RETURNS TABLE (
+  date DATE,
+  notifications_sent INTEGER,
+  new_connections INTEGER, 
+  disconnections INTEGER,
+  bot_interactions INTEGER,
+  total_activity INTEGER
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    ts.date,
+    ts.notifications_sent,
+    ts.new_connections,
+    ts.disconnections,
+    ts.bot_interactions,
+    (ts.notifications_sent + ts.new_connections + ts.disconnections + ts.bot_interactions) AS total_activity
+  FROM 
+    telegram_stats ts
+  WHERE 
+    ts.date BETWEEN p_start_date AND p_end_date
+  ORDER BY 
+    ts.date DESC;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger cập nhật thống kê khi kết nối/ngắt kết nối Telegram
+CREATE OR REPLACE FUNCTION track_telegram_connection_changes()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Kết nối mới
+  IF NEW.telegram_id IS NOT NULL AND (OLD.telegram_id IS NULL OR OLD.telegram_id != NEW.telegram_id) THEN
+    PERFORM update_telegram_stats('new_connections');
+  END IF;
+  
+  -- Ngắt kết nối
+  IF OLD.telegram_id IS NOT NULL AND NEW.telegram_id IS NULL THEN
+    PERFORM update_telegram_stats('disconnections');
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Tạo trigger
+DROP TRIGGER IF EXISTS telegram_connection_tracker ON profiles;
+CREATE TRIGGER telegram_connection_tracker
+AFTER UPDATE OF telegram_id ON profiles
+FOR EACH ROW
+EXECUTE FUNCTION track_telegram_connection_changes();
+
+-- Trigger tự động gửi thông báo chào mừng khi kết nối Telegram thành công
+CREATE OR REPLACE FUNCTION send_telegram_welcome_notification()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Chỉ xử lý khi telegram_id được thêm mới (không phải null)
+  IF NEW.telegram_id IS NOT NULL AND (OLD.telegram_id IS NULL OR OLD.telegram_id != NEW.telegram_id) THEN
+    -- Tạo thông báo trong hệ thống
+    INSERT INTO notifications (
+      profile_id,
+      title,
+      content,
+      type,
+      is_read,
+      created_at
+    ) VALUES (
+      NEW.id,
+      'Kết nối Telegram thành công',
+      'Tài khoản của bạn đã được kết nối thành công với Telegram Bot. Bạn sẽ nhận được thông báo quan trọng qua Telegram từ bây giờ.',
+      'system',
+      FALSE,
+      NOW()
+    );
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Tạo trigger
+DROP TRIGGER IF EXISTS telegram_welcome_notification ON profiles;
+CREATE TRIGGER telegram_welcome_notification
+AFTER UPDATE OF telegram_id ON profiles
+FOR EACH ROW
+EXECUTE FUNCTION send_telegram_welcome_notification();
