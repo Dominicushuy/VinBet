@@ -30,8 +30,8 @@ export function UserFilters({ filters, onFilterChange, onReset }) {
 
   const handleReset = () => {
     const resetFilters = {
-      role: '',
-      status: '',
+      role: 'all',
+      status: 'all',
       sortBy: 'created_at',
       sortOrder: 'desc'
     }
@@ -59,12 +59,12 @@ export function UserFilters({ filters, onFilterChange, onReset }) {
             <label htmlFor='role' className='text-right'>
               Vai trò
             </label>
-            <Select value={localFilters.role || ''} onValueChange={value => handleFilterChange('role', value)}>
+            <Select value={localFilters.role || 'all'} onValueChange={value => handleFilterChange('role', value)}>
               <SelectTrigger className='col-span-3'>
                 <SelectValue placeholder='Tất cả vai trò' />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value=''>Tất cả vai trò</SelectItem>
+                <SelectItem value='all'>Tất cả vai trò</SelectItem>
                 <SelectItem value='admin'>Admin</SelectItem>
                 <SelectItem value='user'>Người dùng</SelectItem>
               </SelectContent>
@@ -74,12 +74,12 @@ export function UserFilters({ filters, onFilterChange, onReset }) {
             <label htmlFor='status' className='text-right'>
               Trạng thái
             </label>
-            <Select value={localFilters.status || ''} onValueChange={value => handleFilterChange('status', value)}>
+            <Select value={localFilters.status || 'all'} onValueChange={value => handleFilterChange('status', value)}>
               <SelectTrigger className='col-span-3'>
                 <SelectValue placeholder='Tất cả trạng thái' />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value=''>Tất cả trạng thái</SelectItem>
+                <SelectItem value='all'>Tất cả trạng thái</SelectItem>
                 <SelectItem value='active'>Hoạt động</SelectItem>
                 <SelectItem value='blocked'>Đã khóa</SelectItem>
               </SelectContent>

@@ -15,8 +15,8 @@ import { Badge } from '@/components/ui/badge'
 export function TransactionAdvancedFilters({ onFilterChange, onResetFilters, initialFilters, activeFiltersCount = 0 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [filters, setFilters] = useState({
-    type: initialFilters.type || '',
-    status: initialFilters.status || '',
+    type: initialFilters.type || 'all',
+    status: initialFilters.status || 'all',
     startDate: initialFilters.startDate ? new Date(initialFilters.startDate) : undefined,
     endDate: initialFilters.endDate ? new Date(initialFilters.endDate) : undefined,
     minAmount: initialFilters.minAmount || '',
@@ -28,8 +28,8 @@ export function TransactionAdvancedFilters({ onFilterChange, onResetFilters, ini
   // Update filters when initialFilters changes
   useEffect(() => {
     setFilters({
-      type: initialFilters.type || '',
-      status: initialFilters.status || '',
+      type: initialFilters.type || 'all',
+      status: initialFilters.status || 'all',
       startDate: initialFilters.startDate ? new Date(initialFilters.startDate) : undefined,
       endDate: initialFilters.endDate ? new Date(initialFilters.endDate) : undefined,
       minAmount: initialFilters.minAmount || '',
@@ -61,8 +61,8 @@ export function TransactionAdvancedFilters({ onFilterChange, onResetFilters, ini
   // Reset bộ lọc
   const handleResetFilters = () => {
     const resetFilters = {
-      type: '',
-      status: '',
+      type: 'all',
+      status: 'all',
       startDate: undefined,
       endDate: undefined,
       minAmount: '',
@@ -130,7 +130,7 @@ export function TransactionAdvancedFilters({ onFilterChange, onResetFilters, ini
                     <SelectValue placeholder='Tất cả' />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value=''>Tất cả</SelectItem>
+                    <SelectItem value='all'>Tất cả</SelectItem>
                     <SelectItem value='deposit'>Nạp tiền</SelectItem>
                     <SelectItem value='withdrawal'>Rút tiền</SelectItem>
                     <SelectItem value='bet'>Đặt cược</SelectItem>
@@ -153,7 +153,7 @@ export function TransactionAdvancedFilters({ onFilterChange, onResetFilters, ini
                     <SelectValue placeholder='Tất cả' />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value=''>Tất cả</SelectItem>
+                    <SelectItem value='all'>Tất cả</SelectItem>
                     <SelectItem value='completed'>Hoàn thành</SelectItem>
                     <SelectItem value='pending'>Đang xử lý</SelectItem>
                     <SelectItem value='failed'>Thất bại</SelectItem>

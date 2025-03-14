@@ -80,7 +80,7 @@ export function NotificationForm() {
   const users = usersData?.users || []
 
   const handleTemplateChange = templateId => {
-    if (templateId === '') return
+    if (templateId === 'all') return
 
     const template = NOTIFICATION_TEMPLATES.find(t => t.id === templateId)
     if (template) {
@@ -136,7 +136,7 @@ export function NotificationForm() {
                 <SelectValue placeholder='Chọn mẫu thông báo hoặc tạo mới' />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value=''>Thông báo tùy chỉnh</SelectItem>
+                <SelectItem value='all'>Thông báo tùy chỉnh</SelectItem>
                 {NOTIFICATION_TEMPLATES.map(template => (
                   <SelectItem key={template.id} value={template.id}>
                     {template.name}

@@ -1950,3 +1950,106 @@ CREATE TRIGGER telegram_welcome_notification
 AFTER UPDATE OF telegram_id ON profiles
 FOR EACH ROW
 EXECUTE FUNCTION send_telegram_welcome_notification();
+
+-- Function thống kê cài đặt thông báo Telegram
+CREATE OR REPLACE FUNCTION get_telegram_settings_stats()
+RETURNS JSON AS $$
+DECLARE
+  result JSON;
+BEGIN
+  WITH connected_users AS (
+    SELECT id, telegram_settings
+    FROM profiles
+    WHERE telegram_id IS NOT NULL
+  ),
+  win_notifications AS (
+    SELECT
+      COUNT(*) FILTER (WHERE telegram_settings->>'receive_win_notifications' IS NULL OR telegram_settings->>'receive_win_notifications' = 'true') AS win_enabled,
+      COUNT(*) FILTER (WHERE telegram_settings->>'receive_win_notifications' = 'false') AS win_disabled
+    FROM connected_users
+  ),
+  transaction_notifications AS (
+    SELECT
+      COUNT(*) FILTER (WHERE 
+        (telegram_settings->>'receive_deposit_notifications' IS NULL OR telegram_settings->>'receive_deposit_notifications' = 'true')
+        OR (telegram_settings->>'receive_withdrawal_notifications' IS NULL OR telegram_settings->>'receive_withdrawal_notifications' = 'true')
+      ) AS transaction_enabled,
+      COUNT(*) FILTER (WHERE 
+        telegram_settings->>'receive_deposit_notifications' = 'false'
+        AND telegram_settings->>'receive_withdrawal_notifications' = 'false'
+      ) AS transaction_disabled
+    FROM connected_users
+  ),
+  login_notifications AS (
+    SELECT
+      COUNT(*) FILTER (WHERE telegram_settings->>'receive_login_alerts' IS NULL OR telegram_settings->>'receive_login_alerts' = 'true') AS login_enabled,
+      COUNT(*) FILTER (WHERE telegram_settings->>'receive_login_alerts' = 'false') AS login_disabled
+    FROM connected_users
+  ),
+  system_notifications AS (
+    SELECT
+      COUNT(*) FILTER (WHERE telegram_settings->>'receive_system_notifications' IS NULL OR telegram_settings->>'receive_system_notifications' = 'true') AS system_enabled,
+      COUNT(*) FILTER (WHERE telegram_settings->>'receive_system_notifications' = 'false') AS system_disabled
+    FROM connected_users
+  )
+  SELECT json_build_object(
+    'win_enabled', win_enabled,
+    'win_disabled', win_disabled,
+    'transaction_enabled', transaction_enabled,
+    'transaction_disabled', transaction_disabled,
+    'login_enabled', login_enabled,
+    'login_disabled', login_disabled,
+    'system_enabled', system_enabled,
+    'system_disabled', system_disabled
+  ) INTO result
+  FROM win_notifications, transaction_notifications, login_notifications, system_notifications;
+  
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function thống kê loại thông báo đã gửi qua Telegram
+CREATE OR REPLACE FUNCTION get_telegram_notification_types()
+RETURNS TABLE (
+  type TEXT,
+  count BIGINT
+) AS $$
+BEGIN
+  RETURN QUERY
+  -- Đây là một giả lập vì chúng ta không lưu trữ loại thông báo đã gửi qua Telegram
+  -- Trong thực tế, bạn có thể muốn thêm một bảng để lưu trữ loại thông báo đã gửi
+  SELECT 'system'::TEXT, 
+    (SELECT COALESCE(SUM(notifications_sent) * 0.3, 0)::BIGINT FROM telegram_stats)
+  UNION ALL
+  SELECT 'transaction'::TEXT,
+    (SELECT COALESCE(SUM(notifications_sent) * 0.4, 0)::BIGINT FROM telegram_stats)
+  UNION ALL
+  SELECT 'game'::TEXT,
+    (SELECT COALESCE(SUM(notifications_sent) * 0.2, 0)::BIGINT FROM telegram_stats)
+  UNION ALL
+  SELECT 'admin'::TEXT,
+    (SELECT COALESCE(SUM(notifications_sent) * 0.1, 0)::BIGINT FROM telegram_stats);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function để đếm tổng số kết nối Telegram
+CREATE OR REPLACE FUNCTION count_telegram_connections()
+RETURNS JSON AS $$
+DECLARE
+  connected_count INTEGER;
+  result JSON;
+BEGIN
+  -- Đếm số lượng người dùng đã kết nối Telegram
+  SELECT COUNT(*)
+  INTO connected_count
+  FROM profiles
+  WHERE telegram_id IS NOT NULL;
+  
+  -- Tạo JSON result
+  SELECT json_build_object(
+    'count', connected_count
+  ) INTO result;
+  
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

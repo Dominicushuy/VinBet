@@ -93,11 +93,6 @@ export const adminMenuItems = [
       }
     ]
   },
-  {
-    title: 'Cài đặt',
-    icon: <Settings className='w-5 h-5' />,
-    href: '/admin/settings'
-  },
   // Thêm mục Telegram
   {
     title: 'Telegram',
