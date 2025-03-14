@@ -64,7 +64,7 @@ export async function POST(request) {
 
     // Parse body và xác định loại thông báo
     const body = await request.json()
-    const notificationType = body.notificationType
+    const { notificationType, userId, ...data } = body
 
     // Validate body theo schema tương ứng
     if (!notificationType || !notificationSchemas[notificationType]) {
@@ -94,7 +94,8 @@ export async function POST(request) {
     if (userError || !userData?.telegram_id) {
       return NextResponse.json(
         {
-          error: 'User không tồn tại hoặc chưa kết nối Telegram'
+          error: 'User không tồn tại hoặc chưa kết nối Telegram',
+          success: false
         },
         { status: 404 }
       )

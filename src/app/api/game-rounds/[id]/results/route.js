@@ -46,6 +46,40 @@ export async function GET(request, { params }) {
       return handleApiError(betStatsError, 'Lỗi khi lấy thống kê cược')
     }
 
+    // Thêm mới: Xử lý thông báo cho người thắng cuộc nếu game đã kết thúc
+    if (gameRound.status === 'completed') {
+      // Tìm và thông báo tới người thắng cuộc
+      const { data: winners } = await supabase
+        .from('bets')
+        .select('*,profiles:profile_id(id,telegram_id)')
+        .eq('game_round_id', gameRoundId)
+        .eq('status', 'won')
+
+      // Gửi thông báo Telegram
+      for (const winner of winners || []) {
+        if (winner.profiles?.telegram_id) {
+          try {
+            await fetch('/api/telegram/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                notificationType: 'win',
+                userId: winner.profile_id,
+                amount: winner.potential_win,
+                gameId: gameRoundId,
+                betInfo: {
+                  chosenNumber: winner.chosen_number,
+                  result: gameRound.result
+                }
+              })
+            })
+          } catch (error) {
+            console.error('Failed to send Telegram notification:', error)
+          }
+        }
+      }
+    }
+
     return NextResponse.json({
       gameRound,
       betStats: betStats || {

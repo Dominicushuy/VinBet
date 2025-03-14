@@ -91,6 +91,32 @@ export async function POST(request, { params }) {
         p_admin_id: sessionData.session.user.id,
         p_notes: validatedData.notes || null
       })
+
+      // Gửi thông báo Telegram nếu là deposit
+      if (paymentRequest.type === 'deposit') {
+        await fetch('/api/telegram/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            notificationType: 'deposit',
+            userId: paymentRequest.profile_id,
+            amount: paymentRequest.amount,
+            transactionId: paymentRequest.id
+          })
+        })
+      } // Gửi thông báo nếu là withdrawal
+      else if (paymentRequest.type === 'withdrawal') {
+        await fetch('/api/telegram/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            notificationType: 'withdrawal',
+            userId: paymentRequest.profile_id,
+            amount: paymentRequest.amount,
+            paymentMethod: paymentRequest.payment_method
+          })
+        })
+      }
     } else {
       result = await supabase.rpc('reject_payment_request', {
         p_request_id: requestId,

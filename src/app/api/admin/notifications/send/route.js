@@ -69,6 +69,41 @@ export const POST = createAdminApiHandler(async (request, _, { supabase, user })
       return NextResponse.json({ error: 'Lỗi khi tạo thông báo' }, { status: 500 })
     }
 
+    // Gửi thông báo qua Telegram cho những user đã liên kết
+    const { data: connectedUsers, error: telegramError } = await supabase
+      .from('profiles')
+      .select('id, telegram_id')
+      .in('id', targetUserIds)
+      .not('telegram_id', 'is', null)
+
+    if (telegramError) {
+      console.error('Error fetching telegram connected users:', telegramError)
+    }
+
+    let telegramSentCount = 0
+    if (connectedUsers && connectedUsers.length > 0) {
+      // Gửi thông báo Telegram
+      const telegramResults = await Promise.allSettled(
+        connectedUsers.map(async user => {
+          if (user.telegram_id) {
+            return fetch('/api/telegram/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                notificationType: 'custom',
+                userId: user.id,
+                title,
+                message: content
+              })
+            })
+          }
+        })
+      )
+
+      // Đếm số lượng thông báo Telegram gửi thành công
+      telegramSentCount = telegramResults.filter(result => result.status === 'fulfilled').length
+    }
+
     // Create admin log
     await supabase.from('admin_logs').insert({
       admin_id: adminId,
@@ -77,6 +112,7 @@ export const POST = createAdminApiHandler(async (request, _, { supabase, user })
       entity_id: targetUserIds[0], // Log first user ID
       details: {
         recipient_count: targetUserIds.length,
+        telegram_sent: telegramSentCount,
         type,
         title,
         time: now
@@ -85,7 +121,7 @@ export const POST = createAdminApiHandler(async (request, _, { supabase, user })
 
     return NextResponse.json({
       success: true,
-      message: `Đã gửi thông báo cho ${targetUserIds.length} người dùng`
+      message: `Đã gửi thông báo cho ${targetUserIds.length} người dùng (${telegramSentCount} qua Telegram)`
     })
   } catch (error) {
     console.error('Error sending notifications:', error)

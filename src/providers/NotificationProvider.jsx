@@ -6,7 +6,6 @@ import { createContext, useContext, useCallback, useEffect } from 'react'
 import { useNotificationCountQuery } from '@/hooks/queries/useNotificationQueries'
 import { useNotificationToast } from '@/components/notifications/NotificationToast'
 import { useAuth } from '@/hooks/useAuth'
-import { fetchData } from '@/utils/fetchUtils'
 import { getBrowserInfo } from '@/utils/getBrowserInfo'
 
 const NotificationContext = createContext(null)
@@ -24,27 +23,27 @@ export function NotificationProvider({ children }) {
     const checkAndSendLoginNotification = async () => {
       if (!user?.id || !profile?.telegram_id) return
 
-      // Kiểm tra xem đã lưu sessionId trong localStorage chưa
+      // Tạo session ID unique và check trong localStorage
       const sessionId = user.id + '_' + Date.now()
       const lastSession = localStorage.getItem('last_session_id')
 
-      // Nếu chưa có session hoặc session khác với lần trước
-      if (!lastSession) {
+      // Nếu chưa có hoặc session mới
+      if (!lastSession || lastSession !== sessionId) {
         localStorage.setItem('last_session_id', sessionId)
 
+        // Gửi thông báo đăng nhập
         try {
-          // Lấy thông tin thiết bị và vị trí
           const deviceInfo = {
             device: getBrowserInfo(),
             location: 'Không xác định (Riêng tư)',
             time: new Date().toLocaleString('vi-VN')
           }
 
-          // Kiểm tra thiết lập nhận thông báo đăng nhập
+          // Gửi thông báo Telegram
           if (profile.telegram_settings?.receive_login_alerts !== false) {
-            // Gửi thông báo
-            await fetchData('/api/telegram/send', {
+            await fetch('/api/telegram/send', {
               method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 notificationType: 'login',
                 userId: user.id,
