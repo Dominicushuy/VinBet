@@ -97,7 +97,30 @@ export const adminMenuItems = [
   {
     title: 'Telegram',
     icon: <MessageSquare className='w-5 h-5' />,
-    href: '/admin/telegram'
+    href: '/admin/telegram',
+    group: 'telegram',
+    subitems: [
+      {
+        title: 'Tổng quan',
+        href: '/admin/telegram/oveview'
+      },
+      {
+        title: 'Trạng thái Bot',
+        href: '/admin/telegram/status'
+      },
+      {
+        title: 'Kết nối',
+        href: '/admin/telegram/connections'
+      },
+      {
+        title: 'Thông báo',
+        href: '/admin/telegram/notifications'
+      },
+      {
+        title: 'Thống kê',
+        href: '/admin/telegram/stats'
+      }
+    ]
   },
 
   {

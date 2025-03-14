@@ -160,10 +160,10 @@ export default function TelegramStatsPage() {
 
         <TabsContent value='overview' className='space-y-4 mt-6'>
           <Card>
-            <CardHeader>
+            {/* <CardHeader>
               <CardTitle>Biểu đồ hoạt động</CardTitle>
               <CardDescription>Thống kê hoạt động Telegram theo thời gian</CardDescription>
-            </CardHeader>
+            </CardHeader> */}
             <CardContent>
               {loadingStats ? (
                 <div className='h-80 w-full flex items-center justify-center'>

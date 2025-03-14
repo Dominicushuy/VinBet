@@ -1075,7 +1075,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to get transaction summary
-CREATE FUNCTION get_transaction_summary(
+CREATE OR REPLACE FUNCTION get_transaction_summary(
   p_profile_id UUID DEFAULT NULL, -- NULL for admin view (all users)
   p_start_date TIMESTAMP WITH TIME ZONE DEFAULT NULL,
   p_end_date TIMESTAMP WITH TIME ZONE DEFAULT NULL
@@ -1343,60 +1343,68 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Redefine the function with a clear JSON return type
-CREATE FUNCTION get_admin_dashboard_summary()
-RETURNS JSON AS $$
+DROP FUNCTION IF EXISTS get_admin_dashboard_summary();
+CREATE OR REPLACE FUNCTION get_admin_dashboard_summary()
+RETURNS JSONB AS $$
 DECLARE
-  result_json JSON;
+  v_users JSONB;
+  v_games JSONB;
+  v_transactions JSONB;
+  v_betting JSONB;
+  result_jsonb JSONB;
 BEGIN
-  WITH user_stats AS (
-    SELECT 
-      COUNT(*) AS total_users,
-      COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) AS new_users_today,
-      COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days') AS new_users_week,
-      COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '30 days') AS new_users_month,
-      COUNT(*) FILTER (WHERE updated_at >= CURRENT_DATE - INTERVAL '7 days') AS active_users
-    FROM profiles
-  ),
-  game_stats AS (
-    SELECT 
-      COUNT(*) AS total_games,
-      COUNT(*) FILTER (WHERE status = 'active') AS active_games,
-      COUNT(*) FILTER (WHERE status = 'completed') AS completed_games,
-      COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) AS games_today,
-      COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days') AS games_week
-    FROM game_rounds
-  ),
-  transaction_stats AS (
-    SELECT 
-      COALESCE(SUM(amount) FILTER (WHERE type = 'deposit' AND status = 'completed'), 0) AS total_deposits,
-      COALESCE(SUM(amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed'), 0) AS total_withdrawals,
-      COALESCE(SUM(amount) FILTER (WHERE type = 'deposit' AND status = 'completed' AND created_at >= CURRENT_DATE), 0) AS deposits_today,
-      COALESCE(SUM(amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed' AND created_at >= CURRENT_DATE), 0) AS withdrawals_today,
-      COUNT(*) FILTER (WHERE type = 'deposit' AND status = 'pending') AS pending_deposits,
-      COUNT(*) FILTER (WHERE type = 'withdrawal' AND status = 'pending') AS pending_withdrawals
-    FROM transactions
-  ),
-  betting_stats AS (
-    SELECT 
-      COUNT(*) AS total_bets,
-      COALESCE(SUM(amount), 0) AS total_bet_amount,
-      COALESCE(SUM(CASE WHEN status = 'won' THEN potential_win ELSE 0 END), 0) AS total_winnings,
-      CASE WHEN COUNT(*) = 0 THEN 0 
-           ELSE (COUNT(*) FILTER (WHERE status = 'won') * 100.0 / COUNT(*)) 
-      END AS win_rate,
-      COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) AS bets_today,
-      COALESCE(SUM(amount) FILTER (WHERE created_at >= CURRENT_DATE), 0) AS bets_amount_today
-    FROM bets
-  )
-  SELECT json_build_object(
-    'users', row_to_json((SELECT * FROM user_stats)),
-    'games', row_to_json((SELECT * FROM game_stats)),
-    'transactions', row_to_json((SELECT * FROM transaction_stats)),
-    'betting', row_to_json((SELECT * FROM betting_stats)),
-    'timestamp', NOW()
-  ) INTO result_json;
+  -- Lấy thống kê người dùng
+  SELECT jsonb_build_object(
+    'total_users', COUNT(*),
+    'new_users_today', COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE),
+    'new_users_week', COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'),
+    'new_users_month', COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'),
+    'active_users', COUNT(*) FILTER (WHERE updated_at >= CURRENT_DATE - INTERVAL '7 days')
+  ) INTO v_users
+  FROM profiles;
 
-  RETURN result_json;
+  -- Lấy thống kê game
+  SELECT jsonb_build_object(
+    'total_games', COUNT(*),
+    'active_games', COUNT(*) FILTER (WHERE status = 'active'),
+    'completed_games', COUNT(*) FILTER (WHERE status = 'completed'),
+    'games_today', COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE),
+    'games_week', COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days')
+  ) INTO v_games
+  FROM game_rounds;
+
+  -- Lấy thống kê giao dịch
+  SELECT jsonb_build_object(
+    'total_deposits', COALESCE(SUM(amount) FILTER (WHERE type = 'deposit' AND status = 'completed'), 0),
+    'total_withdrawals', COALESCE(SUM(amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed'), 0),
+    'deposits_today', COALESCE(SUM(amount) FILTER (WHERE type = 'deposit' AND status = 'completed' AND created_at >= CURRENT_DATE), 0),
+    'withdrawals_today', COALESCE(SUM(amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed' AND created_at >= CURRENT_DATE), 0),
+    'pending_deposits', COUNT(*) FILTER (WHERE type = 'deposit' AND status = 'pending'),
+    'pending_withdrawals', COUNT(*) FILTER (WHERE type = 'withdrawal' AND status = 'pending')
+  ) INTO v_transactions
+  FROM transactions;
+
+  -- Lấy thống kê cược
+  SELECT jsonb_build_object(
+    'total_bets', COUNT(*),
+    'total_bet_amount', COALESCE(SUM(amount), 0),
+    'total_winnings', COALESCE(SUM(CASE WHEN status = 'won' THEN potential_win ELSE 0 END), 0),
+    'win_rate', CASE WHEN COUNT(*) = 0 THEN 0 ELSE (COUNT(*) FILTER (WHERE status = 'won') * 100.0 / COUNT(*)) END,
+    'bets_today', COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE),
+    'bets_amount_today', COALESCE(SUM(amount) FILTER (WHERE created_at >= CURRENT_DATE), 0)
+  ) INTO v_betting
+  FROM bets;
+
+  -- Tạo đối tượng JSON kết quả
+  result_jsonb := jsonb_build_object(
+    'users', v_users,
+    'games', v_games,
+    'transactions', v_transactions,
+    'betting', v_betting,
+    'timestamp', NOW()
+  );
+
+  RETURN result_jsonb;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -2051,5 +2059,28 @@ BEGIN
   ) INTO result;
   
   RETURN result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function để đếm tổng số thông báo đã gửi
+CREATE OR REPLACE FUNCTION count_telegram_notifications()
+RETURNS TABLE (total_notifications INTEGER) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT COALESCE(SUM(notifications_sent)::INTEGER, 0) AS total_notifications
+  FROM telegram_stats;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function để lấy số lượng thông báo theo loại
+CREATE OR REPLACE FUNCTION get_telegram_notification_types()
+RETURNS TABLE (type TEXT, count BIGINT) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT n.type, COUNT(*)
+  FROM notifications n
+  JOIN profiles p ON n.profile_id = p.id
+  WHERE p.telegram_id IS NOT NULL
+  GROUP BY n.type;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

@@ -114,8 +114,7 @@ export async function GET() {
 
     // Thống kê thông báo đã gửi
     const { data: notificationsData, error: notificationsError } = await supabaseAdmin
-      .from('telegram_stats')
-      .select('SUM(notifications_sent)::int as total_notifications')
+      .rpc('count_telegram_notifications')
       .single()
 
     if (notificationsError) throw notificationsError
