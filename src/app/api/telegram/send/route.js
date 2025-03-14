@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
+import { handleApiError } from '@/utils/errorHandler'
 import {
   sendCustomNotification,
   sendDepositNotification,
@@ -10,8 +11,7 @@ import {
   sendWinNotification,
   sendLoginNotification,
   sendSecurityAlert
-} from '@/utils/telegramBot'
-import { handleApiError } from '@/utils/errorHandler'
+} from '@/utils/telegramBotHelper' // Sử dụng helper mới
 
 // Schema validation tùy theo loại thông báo
 const notificationSchemas = {
@@ -122,7 +122,7 @@ export async function POST(request) {
       })
     }
 
-    // Gửi thông báo theo loại
+    // Gửi thông báo theo loại sử dụng helper mới
     let sendResult = false
 
     switch (notificationType) {
@@ -160,49 +160,11 @@ export async function POST(request) {
         break
     }
 
-    // Cập nhật thống kê gửi thông báo nếu thành công
-    if (sendResult) {
-      await updateTelegramStats('notifications_sent')
-    }
-
     return NextResponse.json({
       success: sendResult,
       message: sendResult ? 'Đã gửi thông báo thành công' : 'Không thể gửi thông báo'
     })
   } catch (error) {
     return handleApiError(error, 'Không thể gửi thông báo Telegram')
-  }
-}
-
-// Helper function để cập nhật thống kê Telegram
-async function updateTelegramStats(metric) {
-  try {
-    const supabase = createRouteHandlerClient({ cookies })
-    const today = new Date().toISOString().split('T')[0]
-
-    // Kiểm tra bản ghi cho ngày hôm nay
-    const { data, error } = await supabase.from('telegram_stats').select('*').eq('date', today).single()
-
-    if (error && error.code !== 'PGRST116') {
-      // PGRST116: not found
-      console.error('Error checking telegram stats:', error)
-      return
-    }
-
-    if (data) {
-      // Update bản ghi hiện có
-      await supabase
-        .from('telegram_stats')
-        .update({ [metric]: data[metric] + 1 })
-        .eq('id', data.id)
-    } else {
-      // Tạo bản ghi mới cho ngày hôm nay
-      await supabase.from('telegram_stats').insert({
-        date: today,
-        [metric]: 1
-      })
-    }
-  } catch (error) {
-    console.error('Error updating telegram stats:', error)
   }
 }

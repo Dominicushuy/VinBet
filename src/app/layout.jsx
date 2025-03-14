@@ -1,3 +1,4 @@
+// import '../lib/init'
 import { fontSans, fontHeading } from '@/lib/fonts'
 import { Inter } from 'next/font/google'
 import './globals.css'

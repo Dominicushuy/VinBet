@@ -1,20 +1,39 @@
-// src/app/api/telegram/webhook/route.js (cập nhật chi tiết)
 import { NextResponse } from 'next/server'
-import { bot } from '@/utils/telegramBot'
+import botService from '@/lib/telegram/botService'
 import { updateTelegramStats } from '@/utils/telegramStats'
 
 // Middleware xử lý các hành động bot
 async function handleBotAction(update) {
   try {
     // Kiểm tra xem có phải message không
-    if (!update.message) return false
+    if (!update.message && !update.callback_query) {
+      console.log('Webhook nhận update không phải message hoặc callback_query:', update)
+      return false
+    }
+
+    // Đảm bảo bot đã được khởi tạo
+    if (!botService.isReady()) {
+      console.log('Bot chưa sẵn sàng, đang khởi tạo...')
+      await botService.initialize()
+
+      // Kiểm tra lại sau khi khởi tạo
+      if (!botService.isReady()) {
+        console.error('Không thể khởi tạo bot để xử lý webhook')
+        return false
+      }
+    }
 
     // Cập nhật thống kê tương tác
     await updateTelegramStats('bot_interactions')
 
-    // Xử lý webhook
-    await bot.handleUpdate(update)
-    return true
+    // Xử lý webhook với bot từ service
+    const bot = botService.getBot()
+    if (bot) {
+      await bot.handleUpdate(update)
+      return true
+    }
+
+    return false
   } catch (error) {
     console.error('Lỗi xử lý webhook Telegram:', error)
     return false
@@ -36,10 +55,15 @@ export async function POST(request) {
       )
     }
 
-    // Xử lý webhook
-    await handleBotAction(body)
+    console.log('📨 Webhook nhận được update:', JSON.stringify(body, null, 2).substring(0, 200) + '...')
 
-    return NextResponse.json({ success: true })
+    // Xử lý webhook
+    const success = await handleBotAction(body)
+
+    return NextResponse.json({
+      success,
+      timestamp: new Date().toISOString()
+    })
   } catch (error) {
     console.error('Telegram webhook error:', error)
     return NextResponse.json(
@@ -55,10 +79,43 @@ export async function POST(request) {
 // Thêm xử lý GET để kiểm tra webhook đã được thiết lập đúng chưa
 export async function GET() {
   try {
+    // Đảm bảo bot đã được khởi tạo
+    if (!botService.isReady()) {
+      try {
+        await botService.initialize()
+      } catch (error) {
+        return NextResponse.json({
+          webhook_url: process.env.TELEGRAM_WEBHOOK_URL || 'Not configured',
+          bot_status: 'initialization_failed',
+          error: error.message,
+          environment: process.env.NODE_ENV
+        })
+      }
+    }
+
+    const bot = botService.getBot()
+    let botInfo = null
+    let webhookInfo = null
+
+    if (bot) {
+      try {
+        // Lấy thông tin bot
+        botInfo = await bot.telegram.getMe()
+
+        // Lấy thông tin webhook hiện tại
+        webhookInfo = await bot.telegram.getWebhookInfo()
+      } catch (err) {
+        console.error('Error getting bot or webhook info:', err)
+      }
+    }
+
     return NextResponse.json({
       webhook_url: process.env.TELEGRAM_WEBHOOK_URL || 'Not configured',
-      bot_username: process.env.TELEGRAM_BOT_TOKEN ? 'Configured' : 'Not configured',
-      message: 'Telegram webhook is ready'
+      webhook_info: webhookInfo,
+      bot_username: botInfo ? botInfo.username : 'Unknown',
+      bot_status: botService.isReady() ? 'Ready' : 'Not initialized',
+      environment: process.env.NODE_ENV,
+      current_time: new Date().toISOString()
     })
   } catch (error) {
     return NextResponse.json(

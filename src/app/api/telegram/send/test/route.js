@@ -4,9 +4,8 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { sendCustomNotification } from '@/utils/telegramBot'
 import { handleApiError } from '@/utils/errorHandler'
-import { updateTelegramStats } from '@/utils/telegramStats'
+import { sendCustomNotification } from '@/utils/telegramBotHelper'
 
 export async function POST() {
   try {
@@ -53,11 +52,6 @@ Cảm ơn bạn đã sử dụng dịch vụ của VinBet!`
 
     // Gửi thông báo
     const success = await sendCustomNotification(telegramId, title, message)
-
-    // Cập nhật thống kê
-    if (success) {
-      await updateTelegramStats('notifications_sent')
-    }
 
     return NextResponse.json({
       success,
