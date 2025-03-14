@@ -9,7 +9,7 @@ import {
   sendDepositNotification,
   sendWithdrawalApprovedNotification,
   sendWinNotification,
-  sendLoginNotification,
+  // sendLoginNotification,
   sendSecurityAlert
 } from '@/utils/telegramBotHelper' // Sử dụng helper mới
 
@@ -147,14 +147,14 @@ export async function POST(request) {
           validatedData.betInfo
         )
         break
-      case 'login':
-        sendResult = await sendLoginNotification(
-          telegramId,
-          validatedData.device,
-          validatedData.location,
-          validatedData.time
-        )
-        break
+      // case 'login':
+      //   sendResult = await sendLoginNotification(
+      //     telegramId,
+      //     validatedData.device,
+      //     validatedData.location,
+      //     validatedData.time
+      //   )
+      //   break
       case 'security':
         sendResult = await sendSecurityAlert(telegramId, validatedData.alertType, validatedData.details)
         break

@@ -102,7 +102,7 @@ export const adminMenuItems = [
     subitems: [
       {
         title: 'Tổng quan',
-        href: '/admin/telegram/oveview'
+        href: '/admin/telegram/overview'
       },
       {
         title: 'Trạng thái Bot',
