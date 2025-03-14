@@ -16,7 +16,7 @@ export const GET = createAdminApiHandler(async (request, _, { supabase, user }) 
     }
 
     // Get transaction summary (last 30 days)
-    const { data: transactionSummary, error: transactionError } = await supabase.rpc('get_admin_transaction_summary', {
+    const { data: transactionSummary, error: transactionError } = await supabase.rpc('get_transaction_summary', {
       p_start_date: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString(),
       p_end_date: new Date().toISOString()
     })

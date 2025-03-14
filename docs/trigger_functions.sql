@@ -10,20 +10,26 @@ DROP FUNCTION IF EXISTS complete_game_round();
 -- Function to update balance when a bet is placed
 CREATE OR REPLACE FUNCTION update_balance_on_bet()
 RETURNS TRIGGER AS $$
+DECLARE
+  v_balance DECIMAL(15, 2);
 BEGIN
-  -- Verify sufficient balance
-  IF (SELECT balance FROM profiles WHERE id = NEW.profile_id) < NEW.amount THEN
+  -- Khóa row và đọc số dư để tránh race condition
+  SELECT balance INTO v_balance FROM profiles 
+  WHERE id = NEW.profile_id 
+  FOR UPDATE;
+  
+  IF v_balance < NEW.amount THEN
     RAISE EXCEPTION 'Insufficient balance';
   END IF;
 
-  -- Deduct bet amount from user balance
+  -- Cập nhật số dư
   UPDATE profiles
   SET 
     balance = balance - NEW.amount,
     updated_at = NOW()
   WHERE id = NEW.profile_id;
   
-  -- Create transaction record
+  -- Tạo giao dịch
   INSERT INTO transactions (
     profile_id,
     amount,
@@ -50,77 +56,80 @@ AFTER INSERT ON bets
 FOR EACH ROW
 EXECUTE FUNCTION update_balance_on_bet();
 
--- Function to complete a game round and process results
+-- Function to complete a game round and process results (tối ưu hóa batch)
 CREATE OR REPLACE FUNCTION complete_game_round()
 RETURNS TRIGGER AS $$
-DECLARE
-  bet_record RECORD;
-  winning_amount DECIMAL(15, 2);
 BEGIN
-  -- Only process if status changed to completed
+  -- Chỉ xử lý khi trạng thái chuyển sang completed
   IF NEW.status = 'completed' AND OLD.status != 'completed' AND NEW.result IS NOT NULL THEN
-    -- Update bets status based on game result
-    FOR bet_record IN
-      SELECT * FROM bets WHERE game_round_id = NEW.id AND status = 'pending'
-    LOOP
-      IF bet_record.chosen_number = NEW.result THEN
-        -- Player won
-        winning_amount := bet_record.potential_win;
-        
-        -- Update bet status
+    BEGIN -- Bắt đầu transaction block
+      -- Cập nhật tất cả các cược thắng trong một query
+      WITH winning_bets AS (
         UPDATE bets
         SET 
           status = 'won',
           updated_at = NOW()
-        WHERE id = bet_record.id;
-        
-        -- Add winnings to user balance
-        UPDATE profiles
-        SET 
-          balance = balance + winning_amount,
-          updated_at = NOW()
-        WHERE id = bet_record.profile_id;
-        
-        -- Create transaction record
-        INSERT INTO transactions (
-          profile_id,
-          amount,
-          type,
-          status,
-          reference_id,
-          description
-        ) VALUES (
-          bet_record.profile_id,
-          winning_amount,
-          'win',
-          'completed',
-          bet_record.id,
-          'Win from game round ' || NEW.id
-        );
-        
-        -- Create notification
-        INSERT INTO notifications (
-          profile_id,
-          title,
-          content,
-          type,
-          reference_id
-        ) VALUES (
-          bet_record.profile_id,
-          'You won!',
-          'Congratulations! You won ' || winning_amount || ' from game round.',
-          'game',
-          NEW.id
-        );
-      ELSE
-        -- Player lost
-        UPDATE bets
-        SET 
-          status = 'lost',
-          updated_at = NOW()
-        WHERE id = bet_record.id;
-      END IF;
-    END LOOP;
+        WHERE 
+          game_round_id = NEW.id 
+          AND status = 'pending'
+          AND chosen_number = NEW.result
+        RETURNING id, profile_id, potential_win
+      )
+      -- Cộng tiền thắng vào số dư người dùng
+      UPDATE profiles p
+      SET 
+        balance = p.balance + wb.potential_win,
+        updated_at = NOW()
+      FROM winning_bets wb
+      WHERE p.id = wb.profile_id;
+
+      -- Tạo giao dịch cho tất cả người thắng
+      INSERT INTO transactions (
+        profile_id,
+        amount,
+        type,
+        status,
+        reference_id,
+        description
+      )
+      SELECT 
+        profile_id,
+        potential_win,
+        'win',
+        'completed',
+        id,
+        'Win from game round ' || NEW.id
+      FROM winning_bets;
+
+      -- Tạo thông báo cho tất cả người thắng
+      INSERT INTO notifications (
+        profile_id,
+        title,
+        content,
+        type,
+        reference_id
+      )
+      SELECT 
+        profile_id,
+        'You won!',
+        'Congratulations! You won ' || potential_win || ' from game round.',
+        'game',
+        NEW.id
+      FROM winning_bets;
+
+      -- Cập nhật tất cả cược thua trong một query
+      UPDATE bets
+      SET 
+        status = 'lost',
+        updated_at = NOW()
+      WHERE 
+        game_round_id = NEW.id 
+        AND status = 'pending'
+        AND chosen_number != NEW.result;
+      
+    EXCEPTION WHEN OTHERS THEN
+      RAISE;
+    END;
   END IF;
   
   RETURN NEW;
@@ -134,134 +143,152 @@ FOR EACH ROW
 EXECUTE FUNCTION complete_game_round();
 
 -- Function to handle payment request approval
-CREATE OR REPLACE FUNCTION handle_payment_request_approval()
+-- Create our consolidated function
+CREATE FUNCTION handle_payment_request()
 RETURNS TRIGGER AS $$
+DECLARE
+  v_profile_id UUID;
+  v_amount DECIMAL(15, 2);
 BEGIN
-  -- Only process if status changed to approved
-  IF NEW.status = 'approved' AND OLD.status != 'approved' THEN
-    IF NEW.type = 'deposit' THEN
-      -- Add amount to user balance for deposits
-      UPDATE profiles
-      SET 
-        balance = balance + NEW.amount,
-        updated_at = NOW()
-      WHERE id = NEW.profile_id;
+  -- Chỉ xử lý khi trạng thái thay đổi
+  IF NEW.status != OLD.status THEN
+    BEGIN
+      -- Lấy thông tin từ request
+      v_profile_id := NEW.profile_id;
+      v_amount := NEW.amount;
       
-      -- Create transaction record
-      INSERT INTO transactions (
-        profile_id,
-        amount,
-        type,
-        status,
-        payment_request_id,
-        description
-      ) VALUES (
-        NEW.profile_id,
-        NEW.amount,
-        'deposit',
-        'completed',
-        NEW.id,
-        'Deposit approved'
-      );
-      
-      -- Create notification
-      INSERT INTO notifications (
-        profile_id,
-        title,
-        content,
-        type,
-        reference_id
-      ) VALUES (
-        NEW.profile_id,
-        'Deposit Approved',
-        'Your deposit of ' || NEW.amount || ' has been approved.',
-        'transaction',
-        NEW.id
-      );
-    ELSIF NEW.type = 'withdrawal' THEN
-      -- Create transaction record for withdrawal
-      INSERT INTO transactions (
-        profile_id,
-        amount,
-        type,
-        status,
-        payment_request_id,
-        description
-      ) VALUES (
-        NEW.profile_id,
-        -NEW.amount,
-        'withdrawal',
-        'completed',
-        NEW.id,
-        'Withdrawal processed'
-      );
-      
-      -- Create notification
-      INSERT INTO notifications (
-        profile_id,
-        title,
-        content,
-        type,
-        reference_id
-      ) VALUES (
-        NEW.profile_id,
-        'Withdrawal Processed',
-        'Your withdrawal of ' || NEW.amount || ' has been processed.',
-        'transaction',
-        NEW.id
-      );
-    END IF;
-  ELSIF NEW.status = 'rejected' AND OLD.status != 'rejected' THEN
-    -- If withdrawal request is rejected, refund the balance
-    IF NEW.type = 'withdrawal' THEN
-      UPDATE profiles
-      SET 
-        balance = balance + NEW.amount,
-        updated_at = NOW()
-      WHERE id = NEW.profile_id;
-      
-      -- Create notification
-      INSERT INTO notifications (
-        profile_id,
-        title,
-        content,
-        type,
-        reference_id
-      ) VALUES (
-        NEW.profile_id,
-        'Withdrawal Rejected',
-        'Your withdrawal of ' || NEW.amount || ' has been rejected. The amount has been refunded to your balance.',
-        'transaction',
-        NEW.id
-      );
-    ELSIF NEW.type = 'deposit' THEN
-      -- Notification for rejected deposit
-      INSERT INTO notifications (
-        profile_id,
-        title,
-        content,
-        type,
-        reference_id
-      ) VALUES (
-        NEW.profile_id,
-        'Deposit Rejected',
-        'Your deposit of ' || NEW.amount || ' has been rejected. Please check the notes for details.',
-        'transaction',
-        NEW.id
-      );
-    END IF;
+      -- Xử lý approval
+      IF NEW.status = 'approved' THEN
+        IF NEW.type = 'deposit' THEN
+          -- Cập nhật số dư cho deposit
+          UPDATE profiles
+          SET 
+            balance = balance + v_amount,
+            updated_at = NOW()
+          WHERE id = v_profile_id;
+          
+          -- Tạo giao dịch
+          INSERT INTO transactions (
+            profile_id,
+            amount,
+            type,
+            status,
+            payment_request_id,
+            description
+          ) VALUES (
+            v_profile_id,
+            v_amount,
+            'deposit',
+            'completed',
+            NEW.id,
+            'Deposit approved'
+          );
+          
+          -- Tạo thông báo
+          INSERT INTO notifications (
+            profile_id,
+            title,
+            content,
+            type,
+            reference_id
+          ) VALUES (
+            v_profile_id,
+            'Deposit Approved',
+            'Your deposit of ' || v_amount || ' has been approved.',
+            'transaction',
+            NEW.id
+          );
+        ELSIF NEW.type = 'withdrawal' THEN
+          -- Tạo giao dịch cho withdrawal
+          INSERT INTO transactions (
+            profile_id,
+            amount,
+            type,
+            status,
+            payment_request_id,
+            description
+          ) VALUES (
+            v_profile_id,
+            -v_amount,
+            'withdrawal',
+            'completed',
+            NEW.id,
+            'Withdrawal processed'
+          );
+          
+          -- Tạo thông báo
+          INSERT INTO notifications (
+            profile_id,
+            title,
+            content,
+            type,
+            reference_id
+          ) VALUES (
+            v_profile_id,
+            'Withdrawal Processed',
+            'Your withdrawal of ' || v_amount || ' has been processed.',
+            'transaction',
+            NEW.id
+          );
+        END IF;
+      -- Xử lý rejection
+      ELSIF NEW.status = 'rejected' THEN
+        IF NEW.type = 'withdrawal' THEN
+          -- Hoàn lại tiền cho user nếu withdrawal bị từ chối
+          UPDATE profiles
+          SET 
+            balance = balance + v_amount,
+            updated_at = NOW()
+          WHERE id = v_profile_id;
+          
+          -- Tạo thông báo
+          INSERT INTO notifications (
+            profile_id,
+            title,
+            content,
+            type,
+            reference_id
+          ) VALUES (
+            v_profile_id,
+            'Withdrawal Rejected',
+            'Your withdrawal of ' || v_amount || ' has been rejected. The amount has been refunded to your balance.' || 
+            CASE WHEN NEW.notes IS NOT NULL THEN ' Reason: ' || NEW.notes ELSE '' END,
+            'transaction',
+            NEW.id
+          );
+        ELSIF NEW.type = 'deposit' THEN
+          -- Thông báo deposit bị từ chối
+          INSERT INTO notifications (
+            profile_id,
+            title,
+            content,
+            type,
+            reference_id
+          ) VALUES (
+            v_profile_id,
+            'Deposit Rejected',
+            'Your deposit of ' || v_amount || ' has been rejected.' ||
+            CASE WHEN NEW.notes IS NOT NULL THEN ' Reason: ' || NEW.notes ELSE '' END,
+            'transaction',
+            NEW.id
+          );
+        END IF;
+      END IF;
+    EXCEPTION WHEN OTHERS THEN
+      RAISE;
+    END;
   END IF;
   
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trigger for payment request approval/rejection
+-- Create new trigger
 DROP TRIGGER IF EXISTS on_payment_request_status_change ON payment_requests;
 CREATE TRIGGER on_payment_request_status_change
 AFTER UPDATE ON payment_requests
 FOR EACH ROW
-EXECUTE FUNCTION handle_payment_request_approval();
+EXECUTE FUNCTION handle_payment_request();
 
 -- Function to handle withdrawal request creation
 CREATE OR REPLACE FUNCTION process_withdrawal_request()
@@ -298,43 +325,25 @@ CREATE OR REPLACE FUNCTION process_referral()
 RETURNS TRIGGER AS $$
 DECLARE
   referrer_id UUID;
-  reward_settings RECORD;
-  reward_amount DECIMAL(15, 2) := 10.00; -- Giá trị mặc định
+  reward_amount DECIMAL(15, 2) := 10.00; -- Giá trị mặc định cố định
 BEGIN
-  -- Check if user was referred (has referred_by)
+  -- Kiểm tra nếu người dùng được giới thiệu
   IF NEW.referred_by IS NOT NULL THEN
     referrer_id := NEW.referred_by;
     
-    -- Check if referrer exists
+    -- Kiểm tra người giới thiệu tồn tại
     PERFORM id FROM profiles WHERE id = referrer_id;
     IF NOT FOUND THEN
-      RAISE WARNING 'Người giới thiệu với ID % không tồn tại', referrer_id;
+      RAISE WARNING 'Referrer with ID % does not exist', referrer_id;
       RETURN NEW;
     END IF;
     
-    -- Prevent self-referral
+    -- Ngăn chặn tự giới thiệu
     IF referrer_id = NEW.id THEN
-      RAISE WARNING 'Tự giới thiệu không được cho phép: %', NEW.id;
-      RETURN NEW;
+      RAISE EXCEPTION 'Self-referral is not allowed: %', NEW.id;
     END IF;
     
-    -- Try to get custom reward amount from settings (if exists)
-    BEGIN
-      SELECT value::jsonb->>'amount' INTO reward_amount 
-      FROM settings 
-      WHERE key = 'referral_reward_amount' 
-      LIMIT 1;
-      
-      -- Validate reward amount is a valid number
-      IF reward_amount IS NULL OR reward_amount <= 0 THEN
-        reward_amount := 10.00; -- Giá trị mặc định nếu thiết lập không hợp lệ
-      END IF;
-    EXCEPTION WHEN OTHERS THEN
-      -- Sử dụng giá trị mặc định nếu có lỗi
-      reward_amount := 10.00;
-    END;
-    
-    -- Create referral record
+    -- Tạo record giới thiệu
     INSERT INTO referrals (
       referrer_id,
       referred_id,
@@ -603,56 +612,93 @@ DECLARE
   v_potential_win DECIMAL(15, 2);
   v_user_balance DECIMAL(15, 2);
   v_new_bet_id UUID;
-  v_multiplier DECIMAL(15, 2) := 9.0; -- Hệ số nhân tiền thưởng, có thể điều chỉnh
+  v_multiplier DECIMAL(15, 2) := 9.0; -- Giá trị cố định
+  v_min_bet_amount DECIMAL(15, 2) := 1.00;
+  v_max_bet_amount DECIMAL(15, 2) := 1000000.00;
 BEGIN
-  -- Check if game round exists and is active
-  SELECT status INTO v_game_status
-  FROM game_rounds
-  WHERE id = p_game_round_id;
-  
-  IF v_game_status IS NULL THEN
-    RAISE EXCEPTION 'Game round not found';
+  -- Validation đầu vào
+  IF p_profile_id IS NULL THEN
+    RAISE EXCEPTION 'Profile ID cannot be null';
   END IF;
   
-  IF v_game_status != 'active' THEN
-    RAISE EXCEPTION 'Game round is not active for betting';
+  IF p_game_round_id IS NULL THEN
+    RAISE EXCEPTION 'Game round ID cannot be null';
   END IF;
   
-  -- Check if user has enough balance
-  SELECT balance INTO v_user_balance
-  FROM profiles
-  WHERE id = p_profile_id;
-  
-  IF v_user_balance < p_amount THEN
-    RAISE EXCEPTION 'Insufficient balance';
+  IF p_chosen_number IS NULL OR p_chosen_number = '' THEN
+    RAISE EXCEPTION 'Chosen number cannot be null or empty';
   END IF;
   
-  -- Calculate potential win
-  v_potential_win := p_amount * v_multiplier;
+  IF p_amount IS NULL OR p_amount <= 0 THEN
+    RAISE EXCEPTION 'Bet amount must be greater than zero';
+  END IF;
   
-  -- Create bet
-  INSERT INTO bets (
-    profile_id,
-    game_round_id,
-    chosen_number,
-    amount,
-    potential_win,
-    status,
-    created_at,
-    updated_at
-  ) VALUES (
-    p_profile_id,
-    p_game_round_id,
-    p_chosen_number,
-    p_amount,
-    v_potential_win,
-    'pending',
-    NOW(),
-    NOW()
-  ) RETURNING id INTO v_new_bet_id;
+  IF p_amount < v_min_bet_amount THEN
+    RAISE EXCEPTION 'Bet amount must be at least %', v_min_bet_amount;
+  END IF;
   
-  -- Return the new bet ID
-  RETURN v_new_bet_id;
+  IF p_amount > v_max_bet_amount THEN
+    RAISE EXCEPTION 'Bet amount cannot exceed %', v_max_bet_amount;
+  END IF;
+
+  -- Transaction block
+  BEGIN
+    -- Kiểm tra game round
+    SELECT status INTO v_game_status
+    FROM game_rounds
+    WHERE id = p_game_round_id
+    FOR UPDATE;
+    
+    IF v_game_status IS NULL THEN
+      RAISE EXCEPTION 'Game round not found';
+    END IF;
+    
+    IF v_game_status != 'active' THEN
+      RAISE EXCEPTION 'Game round is not active for betting (status: %)', v_game_status;
+    END IF;
+    
+    -- Kiểm tra số dư
+    SELECT balance INTO v_user_balance
+    FROM profiles
+    WHERE id = p_profile_id
+    FOR UPDATE;
+    
+    IF v_user_balance IS NULL THEN
+      RAISE EXCEPTION 'User profile not found';
+    END IF;
+    
+    IF v_user_balance < p_amount THEN
+      RAISE EXCEPTION 'Insufficient balance. Current: %, required: %', v_user_balance, p_amount;
+    END IF;
+    
+    -- Tính tiền thắng tiềm năng
+    v_potential_win := p_amount * v_multiplier;
+    
+    -- Tạo cược
+    INSERT INTO bets (
+      profile_id,
+      game_round_id,
+      chosen_number,
+      amount,
+      potential_win,
+      status,
+      created_at,
+      updated_at
+    ) VALUES (
+      p_profile_id,
+      p_game_round_id,
+      p_chosen_number,
+      p_amount,
+      v_potential_win,
+      'pending',
+      NOW(),
+      NOW()
+    ) RETURNING id INTO v_new_bet_id;
+    
+    RETURN v_new_bet_id;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE;
+  END;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -1029,8 +1075,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to get transaction summary
-CREATE OR REPLACE FUNCTION get_transaction_summary(
-  p_profile_id UUID,
+CREATE FUNCTION get_transaction_summary(
+  p_profile_id UUID DEFAULT NULL, -- NULL for admin view (all users)
   p_start_date TIMESTAMP WITH TIME ZONE DEFAULT NULL,
   p_end_date TIMESTAMP WITH TIME ZONE DEFAULT NULL
 )
@@ -1040,9 +1086,17 @@ RETURNS TABLE (
   total_bet DECIMAL(15, 2),
   total_win DECIMAL(15, 2),
   total_referral_reward DECIMAL(15, 2),
-  net_balance DECIMAL(15, 2)
+  net_balance DECIMAL(15, 2),
+  -- Chỉ cho admin view
+  system_profit DECIMAL(15, 2),
+  total_users_count BIGINT,
+  active_users_count BIGINT
 ) AS $$
+DECLARE
+  is_admin_view BOOLEAN := (p_profile_id IS NULL);
 BEGIN
+  -- Xác định nếu đây là admin view
+  -- Truy vấn cơ bản
   RETURN QUERY
   SELECT
     COALESCE(SUM(CASE WHEN type = 'deposit' AND status = 'completed' THEN amount ELSE 0 END), 0) AS total_deposit,
@@ -1058,13 +1112,25 @@ BEGIN
           ELSE 0
         END
       ELSE 0
-    END), 0) AS net_balance
+    END), 0) AS net_balance,
+    -- Thông tin bổ sung cho admin
+    CASE WHEN is_admin_view THEN
+      (COALESCE(SUM(CASE WHEN type = 'bet' AND status = 'completed' THEN amount ELSE 0 END), 0) - 
+       COALESCE(SUM(CASE WHEN type = 'win' AND status = 'completed' THEN amount ELSE 0 END), 0))
+    ELSE 0 END AS system_profit,
+    CASE WHEN is_admin_view THEN
+      (SELECT COUNT(DISTINCT profile_id) FROM transactions)
+    ELSE 0 END AS total_users_count,
+    CASE WHEN is_admin_view THEN
+      (SELECT COUNT(DISTINCT profile_id) FROM transactions 
+       WHERE created_at >= COALESCE(p_start_date, NOW() - INTERVAL '30 days'))
+    ELSE 0 END AS active_users_count
   FROM 
-    transactions
+    transactions t
   WHERE
-    profile_id = p_profile_id
-    AND (p_start_date IS NULL OR created_at >= p_start_date)
-    AND (p_end_date IS NULL OR created_at <= p_end_date);
+    (p_profile_id IS NULL OR t.profile_id = p_profile_id)
+    AND (p_start_date IS NULL OR t.created_at >= p_start_date)
+    AND (p_end_date IS NULL OR t.created_at <= p_end_date);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -1126,42 +1192,6 @@ BEGIN
     p_page_size
   OFFSET
     offset_val;
-END;
-$$ LANGUAGE plpgsql;
-
--- Function to get system-wide transaction summary for admin
-CREATE OR REPLACE FUNCTION get_admin_transaction_summary(
-  p_start_date TIMESTAMP WITH TIME ZONE DEFAULT NULL,
-  p_end_date TIMESTAMP WITH TIME ZONE DEFAULT NULL
-)
-RETURNS TABLE (
-  total_deposit DECIMAL(15, 2),
-  total_withdrawal DECIMAL(15, 2),
-  total_bet DECIMAL(15, 2),
-  total_win DECIMAL(15, 2),
-  total_referral_reward DECIMAL(15, 2),
-  system_profit DECIMAL(15, 2),
-  total_users_count BIGINT,
-  active_users_count BIGINT
-) AS $$
-BEGIN
-  RETURN QUERY
-  SELECT
-    COALESCE(SUM(CASE WHEN type = 'deposit' AND status = 'completed' THEN amount ELSE 0 END), 0) AS total_deposit,
-    COALESCE(SUM(CASE WHEN type = 'withdrawal' AND status = 'completed' THEN amount ELSE 0 END), 0) AS total_withdrawal,
-    COALESCE(SUM(CASE WHEN type = 'bet' AND status = 'completed' THEN amount ELSE 0 END), 0) AS total_bet,
-    COALESCE(SUM(CASE WHEN type = 'win' AND status = 'completed' THEN amount ELSE 0 END), 0) AS total_win,
-    COALESCE(SUM(CASE WHEN type = 'referral_reward' AND status = 'completed' THEN amount ELSE 0 END), 0) AS total_referral_reward,
-    (COALESCE(SUM(CASE WHEN type = 'bet' AND status = 'completed' THEN amount ELSE 0 END), 0) - 
-     COALESCE(SUM(CASE WHEN type = 'win' AND status = 'completed' THEN amount ELSE 0 END), 0)) AS system_profit,
-    (SELECT COUNT(DISTINCT profile_id) FROM transactions) AS total_users_count,
-    (SELECT COUNT(DISTINCT profile_id) FROM transactions 
-     WHERE created_at >= COALESCE(p_start_date, NOW() - INTERVAL '30 days')) AS active_users_count
-  FROM 
-    transactions
-  WHERE
-    (p_start_date IS NULL OR created_at >= p_start_date)
-    AND (p_end_date IS NULL OR created_at <= p_end_date);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -1312,65 +1342,61 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function to get admin dashboard summary
-CREATE OR REPLACE FUNCTION get_admin_dashboard_summary()
+-- Redefine the function with a clear JSON return type
+CREATE FUNCTION get_admin_dashboard_summary()
 RETURNS JSON AS $$
 DECLARE
-  user_stats JSON;
-  game_stats JSON;
-  transaction_stats JSON;
-  betting_stats JSON;
+  result_json JSON;
 BEGIN
-  -- Get user statistics
+  WITH user_stats AS (
+    SELECT 
+      COUNT(*) AS total_users,
+      COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) AS new_users_today,
+      COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days') AS new_users_week,
+      COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '30 days') AS new_users_month,
+      COUNT(*) FILTER (WHERE updated_at >= CURRENT_DATE - INTERVAL '7 days') AS active_users
+    FROM profiles
+  ),
+  game_stats AS (
+    SELECT 
+      COUNT(*) AS total_games,
+      COUNT(*) FILTER (WHERE status = 'active') AS active_games,
+      COUNT(*) FILTER (WHERE status = 'completed') AS completed_games,
+      COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) AS games_today,
+      COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days') AS games_week
+    FROM game_rounds
+  ),
+  transaction_stats AS (
+    SELECT 
+      COALESCE(SUM(amount) FILTER (WHERE type = 'deposit' AND status = 'completed'), 0) AS total_deposits,
+      COALESCE(SUM(amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed'), 0) AS total_withdrawals,
+      COALESCE(SUM(amount) FILTER (WHERE type = 'deposit' AND status = 'completed' AND created_at >= CURRENT_DATE), 0) AS deposits_today,
+      COALESCE(SUM(amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed' AND created_at >= CURRENT_DATE), 0) AS withdrawals_today,
+      COUNT(*) FILTER (WHERE type = 'deposit' AND status = 'pending') AS pending_deposits,
+      COUNT(*) FILTER (WHERE type = 'withdrawal' AND status = 'pending') AS pending_withdrawals
+    FROM transactions
+  ),
+  betting_stats AS (
+    SELECT 
+      COUNT(*) AS total_bets,
+      COALESCE(SUM(amount), 0) AS total_bet_amount,
+      COALESCE(SUM(CASE WHEN status = 'won' THEN potential_win ELSE 0 END), 0) AS total_winnings,
+      CASE WHEN COUNT(*) = 0 THEN 0 
+           ELSE (COUNT(*) FILTER (WHERE status = 'won') * 100.0 / COUNT(*)) 
+      END AS win_rate,
+      COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) AS bets_today,
+      COALESCE(SUM(amount) FILTER (WHERE created_at >= CURRENT_DATE), 0) AS bets_amount_today
+    FROM bets
+  )
   SELECT json_build_object(
-    'total_users', COUNT(*),
-    'new_users_today', COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE),
-    'new_users_week', COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'),
-    'new_users_month', COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'),
-    'active_users', COUNT(*) FILTER (WHERE updated_at >= CURRENT_DATE - INTERVAL '7 days')
-  ) INTO user_stats
-  FROM profiles;
-
-  -- Get game statistics
-  SELECT json_build_object(
-    'total_games', COUNT(*),
-    'active_games', COUNT(*) FILTER (WHERE status = 'active'),
-    'completed_games', COUNT(*) FILTER (WHERE status = 'completed'),
-    'games_today', COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE),
-    'games_week', COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days')
-  ) INTO game_stats
-  FROM game_rounds;
-
-  -- Get transaction statistics
-  SELECT json_build_object(
-    'total_deposits', SUM(amount) FILTER (WHERE type = 'deposit' AND status = 'completed'),
-    'total_withdrawals', SUM(amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed'),
-    'deposits_today', SUM(amount) FILTER (WHERE type = 'deposit' AND status = 'completed' AND created_at >= CURRENT_DATE),
-    'withdrawals_today', SUM(amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed' AND created_at >= CURRENT_DATE),
-    'pending_deposits', COUNT(*) FILTER (WHERE type = 'deposit' AND status = 'pending'),
-    'pending_withdrawals', COUNT(*) FILTER (WHERE type = 'withdrawal' AND status = 'pending')
-  ) INTO transaction_stats
-  FROM transactions;
-
-  -- Get betting statistics
-  SELECT json_build_object(
-    'total_bets', COUNT(*),
-    'total_bet_amount', SUM(amount),
-    'total_winnings', SUM(CASE WHEN status = 'won' THEN potential_win ELSE 0 END),
-    'win_rate', (COUNT(*) FILTER (WHERE status = 'won') * 100.0 / NULLIF(COUNT(*), 0)),
-    'bets_today', COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE),
-    'bets_amount_today', SUM(amount) FILTER (WHERE created_at >= CURRENT_DATE)
-  ) INTO betting_stats
-  FROM bets;
-
-  -- Return combined statistics
-  RETURN json_build_object(
-    'users', user_stats,
-    'games', game_stats,
-    'transactions', transaction_stats,
-    'betting', betting_stats,
+    'users', row_to_json((SELECT * FROM user_stats)),
+    'games', row_to_json((SELECT * FROM game_stats)),
+    'transactions', row_to_json((SELECT * FROM transaction_stats)),
+    'betting', row_to_json((SELECT * FROM betting_stats)),
     'timestamp', NOW()
-  );
+  ) INTO result_json;
+
+  RETURN result_json;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -1578,9 +1604,9 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION calculate_current_jackpot()
 RETURNS JSON AS $$
 DECLARE
-    base_jackpot DECIMAL(15, 2) := 50000000; -- Giá trị jackpot cơ bản (50 triệu VND)
-    jackpot_contribution_rate DECIMAL(5, 4) := 0.0500; -- 5% từ mỗi lượt đặt cược đóng góp vào jackpot
-    active_multiplier DECIMAL(5, 4) := 1.1000; -- Hệ số nhân cho jackpot khi có nhiều người chơi (10%)
+    base_jackpot DECIMAL(15, 2) := 50000000; -- Giá trị jackpot cơ bản cố định
+    jackpot_contribution_rate DECIMAL(5, 4) := 0.0500; -- 5% cố định
+    active_multiplier DECIMAL(5, 4) := 1.1000; -- 10% cố định
     jackpot_amount DECIMAL(15, 2) := 0;
     active_bets_count INTEGER := 0;
     total_bet_amount DECIMAL(15, 2) := 0;
@@ -1592,19 +1618,18 @@ BEGIN
     FROM game_rounds
     WHERE status = 'active';
     
-    -- Tính tổng số tiền đặt cược trong các lượt chơi đang diễn ra
-    SELECT COALESCE(SUM(amount), 0) INTO total_bet_amount
+    -- Tính số liệu cược
+    SELECT 
+        COALESCE(SUM(b.amount), 0),
+        COUNT(*)
+    INTO 
+        total_bet_amount,
+        active_bets_count
     FROM bets b
     JOIN game_rounds gr ON b.game_round_id = gr.id
     WHERE gr.status = 'active';
     
-    -- Đếm số lượng đặt cược đang hoạt động
-    SELECT COUNT(*) INTO active_bets_count
-    FROM bets b
-    JOIN game_rounds gr ON b.game_round_id = gr.id
-    WHERE gr.status = 'active';
-    
-    -- Tính tổng số tiền đã trả cho jackpot
+    -- Tính tổng tiền jackpot đã trả
     SELECT COALESCE(SUM(amount), 0) INTO total_jackpot_payouts
     FROM transactions
     WHERE type = 'win'
@@ -1612,34 +1637,33 @@ BEGIN
       AND description LIKE '%jackpot%';
     
     -- Tính toán jackpot dựa trên công thức:
-    -- Jackpot cơ bản + (Tổng tiền đặt cược * tỷ lệ đóng góp) - Tổng đã trả
     jackpot_amount := base_jackpot + (total_bet_amount * jackpot_contribution_rate);
     
-    -- Tăng jackpot dựa trên số lượng đặt cược đang hoạt động
+    -- Tăng jackpot khi có nhiều người chơi
     IF active_bets_count > 50 THEN
         jackpot_amount := jackpot_amount * active_multiplier;
     END IF;
     
-    -- Nếu không có lượt chơi active, reset jackpot về giá trị cơ bản
+    -- Reset jackpot khi không có game
     IF current_active_games = 0 THEN
         jackpot_amount := base_jackpot;
     END IF;
     
-    -- Trừ đi số tiền jackpot đã trả 
+    -- Trừ tiền đã trả
     jackpot_amount := jackpot_amount - total_jackpot_payouts;
     
-    -- Đảm bảo jackpot không âm và không nhỏ hơn giá trị cơ bản
+    -- Đảm bảo jackpot không dưới giá trị cơ bản
     IF jackpot_amount < base_jackpot THEN
         jackpot_amount := base_jackpot;
     END IF;
     
-    -- Random thêm một chút để tạo cảm giác jackpot đang tăng
-    jackpot_amount := jackpot_amount + (random() * 10000);
+    -- Random nhỏ để tạo cảm giác tăng dần
+    jackpot_amount := jackpot_amount + (random() * 1000);
     
-    -- Làm tròn để không có số lẻ
+    -- Làm tròn số
     jackpot_amount := ROUND(jackpot_amount, -3);
     
-    -- Trả về JSON với các thông tin chi tiết
+    -- Trả về JSON
     RETURN json_build_object(
         'jackpot_amount', jackpot_amount,
         'base_jackpot', base_jackpot,

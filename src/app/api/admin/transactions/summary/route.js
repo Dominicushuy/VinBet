@@ -42,7 +42,7 @@ export async function GET(request) {
     const endDate = validatedParams.endDate ? new Date(validatedParams.endDate).toISOString() : null
 
     // Call the RPC function to get admin transaction summary
-    const { data: summary, error } = await supabase.rpc('get_admin_transaction_summary', {
+    const { data: summary, error } = await supabase.rpc('get_transaction_summary', {
       p_start_date: startDate,
       p_end_date: endDate
     })
