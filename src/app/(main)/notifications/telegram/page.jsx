@@ -9,11 +9,6 @@ export const metadata = {
 export default function TelegramConnectPage() {
   return (
     <div className='space-y-6'>
-      <div>
-        <h2 className='text-2xl font-bold tracking-tight'>Kết nối Telegram</h2>
-        <p className='text-muted-foreground'>Nhận thông báo quan trọng qua Telegram</p>
-      </div>
-
       <TelegramConnect />
     </div>
   )

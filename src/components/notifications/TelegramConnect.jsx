@@ -1,4 +1,3 @@
-// src/components/notifications/TelegramConnect.jsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -12,8 +11,9 @@ import { QRCodeSVG } from 'qrcode.react'
 import { Copy, AlertCircle, Check, Loader2, Send, QrCode } from 'lucide-react'
 import { fetchData, postData } from '@/utils/fetchUtils'
 import { Badge } from '@/components/ui/badge'
+import { useTheme } from 'next-themes'
 
-export default function TelegramConnect() {
+export function TelegramConnect() {
   const [loading, setLoading] = useState(true)
   const [telegramStatus, setTelegramStatus] = useState(null)
   const [telegramId, setTelegramId] = useState('')
@@ -24,6 +24,8 @@ export default function TelegramConnect() {
   const [disconnecting, setDisconnecting] = useState(false)
   const [testingConnection, setTestingConnection] = useState(false)
   const { toast } = useToast()
+  const { resolvedTheme } = useTheme()
+  const isDarkMode = resolvedTheme === 'dark'
 
   // Bot username - used for QR code and links
   const botUsername = 'vinbet_notifications_bot'
@@ -61,7 +63,7 @@ export default function TelegramConnect() {
   const generateVerificationCode = async () => {
     try {
       setConnecting(true)
-      const response = await postData('/api/notifications/telegram/generate-code', {})
+      const response = await postData('/api/telegram/generate-code', {})
 
       if (response.code) {
         setVerificationCode(response.code)
@@ -195,7 +197,7 @@ export default function TelegramConnect() {
         <CardHeader className='space-y-1'>
           <div className='flex items-center justify-between'>
             <CardTitle className='flex items-center'>
-              <Check className='mr-2 h-5 w-5 text-green-500' />
+              <Check className='mr-2 h-5 w-5 text-success' />
               Telegram đã kết nối
             </CardTitle>
             <Badge variant='success' className='px-3 py-1'>
@@ -209,8 +211,8 @@ export default function TelegramConnect() {
           </CardDescription>
         </CardHeader>
         <CardContent className='space-y-4'>
-          <Alert className='bg-green-50 border-green-200'>
-            <Check className='h-4 w-4 text-green-500' />
+          <Alert variant='success'>
+            <Check className='h-4 w-4 text-success' />
             <AlertTitle>Thông tin kết nối</AlertTitle>
             <AlertDescription className='pt-2'>
               <div className='flex flex-col space-y-2'>
@@ -358,8 +360,8 @@ export default function TelegramConnect() {
                   </div>
                 </div>
 
-                <Alert className='bg-amber-50 border-amber-200'>
-                  <AlertCircle className='h-4 w-4 text-amber-500' />
+                <Alert variant='warning'>
+                  <AlertCircle className='h-4 w-4 text-warning' />
                   <AlertTitle>Lưu ý</AlertTitle>
                   <AlertDescription>Mã xác thực có hiệu lực trong 30 phút.</AlertDescription>
                 </Alert>
@@ -379,12 +381,12 @@ export default function TelegramConnect() {
 
           <TabsContent value='qrcode' className='space-y-4'>
             <div className='flex flex-col items-center justify-center space-y-4'>
-              <div className='border p-4 rounded-lg bg-white'>
+              <div className='border p-4 rounded-lg bg-card'>
                 <QRCodeSVG
                   value={verificationCode ? `https://t.me/${botUsername}?start=verify_${verificationCode}` : botUrl}
                   size={200}
-                  bgColor={'#ffffff'}
-                  fgColor={'#000000'}
+                  bgColor={isDarkMode ? '#1e293b' : '#ffffff'}
+                  fgColor={isDarkMode ? '#ffffff' : '#000000'}
                   level={'M'}
                   includeMargin={true}
                 />

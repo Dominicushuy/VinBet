@@ -10,10 +10,10 @@ const Tabs = TabsPrimitive.Root
 
 const TabsList = React.forwardRef(({ className, variant = 'default', ...props }, ref) => {
   const variantStyles = {
-    default: 'bg-gray-100/40 dark:bg-gray-800/40',
-    outline: 'border border-gray-200 dark:border-gray-800 bg-transparent',
+    default: 'bg-muted',
+    outline: 'border border-input bg-transparent',
     pills: 'gap-2 p-1',
-    underline: 'border-b border-gray-200 dark:border-gray-800 bg-transparent'
+    underline: 'border-b border-input bg-transparent'
   }
 
   return (
@@ -32,11 +32,10 @@ TabsList.displayName = TabsPrimitive.List.displayName
 
 const TabsTrigger = React.forwardRef(({ className, variant = 'default', ...props }, ref) => {
   const variantStyles = {
-    default: 'data-[state=active]:bg-white dark:data-[state=active]:bg-gray-950 data-[state=active]:shadow-sm',
-    outline:
-      'data-[state=active]:border-primary data-[state=active]:text-primary dark:data-[state=active]:border-primary',
+    default: 'data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm',
+    outline: 'data-[state=active]:border-primary data-[state=active]:text-primary',
     pills:
-      'rounded-full border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground dark:data-[state=active]:bg-primary',
+      'rounded-full border border-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground',
     underline:
       'rounded-none border-b-2 border-transparent px-4 data-[state=active]:border-primary data-[state=active]:text-primary shadow-none'
   }
@@ -46,7 +45,7 @@ const TabsTrigger = React.forwardRef(({ className, variant = 'default', ...props
       ref={ref}
       className={cn(
         'relative inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all',
-        'hover:bg-gray-50 dark:hover:bg-gray-800/50',
+        'hover:bg-muted/80',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         'disabled:pointer-events-none disabled:opacity-50',
         'data-[state=active]:text-foreground',
@@ -94,27 +93,27 @@ const TabsDemo = () => {
         <TabsTrigger value='notifications'>Notifications</TabsTrigger>
       </TabsList>
       <TabsContent value='account'>
-        <div className='p-6 bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm'>
+        <div className='p-6 bg-card rounded-lg border border-border shadow-sm'>
           <h3 className='text-lg font-medium mb-2'>Account Settings</h3>
-          <p className='text-gray-500 dark:text-gray-400'>Update your account information and preferences.</p>
+          <p className='text-muted-foreground'>Update your account information and preferences.</p>
         </div>
       </TabsContent>
       <TabsContent value='password'>
-        <div className='p-6 bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm'>
+        <div className='p-6 bg-card rounded-lg border border-border shadow-sm'>
           <h3 className='text-lg font-medium mb-2'>Password Management</h3>
-          <p className='text-gray-500 dark:text-gray-400'>Change your password and security settings.</p>
+          <p className='text-muted-foreground'>Change your password and security settings.</p>
         </div>
       </TabsContent>
       <TabsContent value='settings'>
-        <div className='p-6 bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm'>
+        <div className='p-6 bg-card rounded-lg border border-border shadow-sm'>
           <h3 className='text-lg font-medium mb-2'>General Settings</h3>
-          <p className='text-gray-500 dark:text-gray-400'>Manage your application preferences and settings.</p>
+          <p className='text-muted-foreground'>Manage your application preferences and settings.</p>
         </div>
       </TabsContent>
       <TabsContent value='notifications'>
-        <div className='p-6 bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm'>
+        <div className='p-6 bg-card rounded-lg border border-border shadow-sm'>
           <h3 className='text-lg font-medium mb-2'>Notification Preferences</h3>
-          <p className='text-gray-500 dark:text-gray-400'>Control how and when you receive notifications.</p>
+          <p className='text-muted-foreground'>Control how and when you receive notifications.</p>
         </div>
       </TabsContent>
     </Tabs>
