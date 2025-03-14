@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { toast } from 'react-hot-toast'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -26,6 +26,245 @@ import {
   Command
 } from 'lucide-react'
 import { fetchData, postData } from '@/utils/fetchUtils'
+import { cn } from '@/lib/utils'
+
+// Bot Info Tab Component
+const BotInfoTab = ({ botInfo, onCopyToken, copied }) => {
+  if (!botInfo?.success) {
+    return (
+      <Alert variant='destructive'>
+        <AlertTriangle className='h-4 w-4' />
+        <AlertDescription>Không thể kết nối đến bot. Vui lòng kiểm tra cấu hình.</AlertDescription>
+      </Alert>
+    )
+  }
+
+  return (
+    <div className='space-y-4'>
+      <div className='rounded-md border p-4'>
+        <h3 className='text-sm font-medium mb-2'>Thông tin Bot Token</h3>
+        <div className='flex items-center space-x-2'>
+          <div className='bg-muted p-2 rounded-md flex-1 text-sm'>
+            {botInfo.token_configured ? (
+              <>
+                <span>{'*'.repeat(Math.max(0, (botInfo.token_length || 45) - 8))}</span>
+                <span className='font-mono'>{botInfo.bot_info?.id?.toString().slice(-8) || 'XXXXXXXX'}</span>
+              </>
+            ) : (
+              <span className='text-red-500'>Token chưa được cấu hình!</span>
+            )}
+          </div>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() => onCopyToken(botInfo.bot_info?.id || '')}
+            disabled={!botInfo.token_configured}
+          >
+            {copied ? <Check className='h-4 w-4' /> : <Copy className='h-4 w-4' />}
+          </Button>
+        </div>
+      </div>
+
+      <div className='space-y-2'>
+        <h3 className='text-sm font-medium'>Thông tin chi tiết Bot</h3>
+        <Table>
+          <TableBody>
+            <TableRow>
+              <TableCell className='font-medium'>Bot ID</TableCell>
+              <TableCell>{botInfo.bot?.id ?? 'N/A'}</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className='font-medium'>Username</TableCell>
+              <TableCell>@{botInfo.bot?.username ?? 'N/A'}</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className='font-medium'>Tên hiển thị</TableCell>
+              <TableCell>{botInfo.bot?.first_name ?? 'N/A'}</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className='font-medium'>Môi trường</TableCell>
+              <TableCell>{botInfo.environment ?? 'development'}</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className='font-medium'>Chế độ vận hành</TableCell>
+              <TableCell>{botInfo.mode ?? 'Long Polling'}</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className='font-medium'>Trạng thái</TableCell>
+              <TableCell>
+                <Badge variant={botInfo.success ? 'success' : 'destructive'}>
+                  {botInfo.success ? 'Online' : 'Offline'}
+                </Badge>
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className='font-medium'>Token đã cấu hình</TableCell>
+              <TableCell>
+                <Badge variant={botInfo.token_configured ? 'success' : 'destructive'}>
+                  {botInfo.token_configured ? 'Có' : 'Không'}
+                </Badge>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  )
+}
+
+// Commands Tab Component
+const CommandsTab = ({ commandsData, loadingCommands, onUpdateCommands, isUpdating }) => {
+  return (
+    <div className='space-y-4'>
+      <div className='flex justify-between items-center'>
+        <h3 className='text-sm font-medium'>Bot Commands</h3>
+        <Button variant='outline' size='sm' onClick={onUpdateCommands} disabled={isUpdating}>
+          {isUpdating ? <RefreshCw className='h-4 w-4 mr-2 animate-spin' /> : <Command className='h-4 w-4 mr-2' />}
+          Cập nhật Commands
+        </Button>
+      </div>
+
+      {loadingCommands ? (
+        <div className='space-y-3'>
+          <Skeleton className='h-10 w-full' />
+          <Skeleton className='h-10 w-full' />
+          <Skeleton className='h-10 w-full' />
+        </div>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Command</TableHead>
+              <TableHead>Mô tả</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {!commandsData?.commands || commandsData.commands.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={2} className='text-center py-4'>
+                  Không có commands nào được cấu hình
+                </TableCell>
+              </TableRow>
+            ) : (
+              commandsData.commands.map((cmd, index) => (
+                <TableRow key={index}>
+                  <TableCell className='font-mono'>/{cmd.command}</TableCell>
+                  <TableCell>{cmd.description}</TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      )}
+    </div>
+  )
+}
+
+// Handlers Tab Component
+const HandlersTab = ({ onUpdateHandlers, isUpdating }) => {
+  return (
+    <div className='space-y-4'>
+      <div className='flex justify-between items-center'>
+        <h3 className='text-sm font-medium'>Bot Handlers</h3>
+        <Button variant='outline' size='sm' onClick={onUpdateHandlers} disabled={isUpdating}>
+          {isUpdating ? <RefreshCw className='h-4 w-4 mr-2 animate-spin' /> : <Terminal className='h-4 w-4 mr-2' />}
+          Cập nhật Handlers
+        </Button>
+      </div>
+
+      <div className='space-y-3'>
+        <div className='border rounded-md p-4'>
+          <div className='flex items-center space-x-2 mb-2'>
+            <MessageSquare className='h-4 w-4 text-primary' />
+            <h4 className='font-medium text-sm'>Command Handlers</h4>
+          </div>
+          <ul className='text-sm space-y-1 ml-6 list-disc'>
+            <li>
+              <span className='font-mono'>/start</span> - Khởi động bot và chào mừng
+            </li>
+            <li>
+              <span className='font-mono'>/help</span> - Hiển thị trợ giúp
+            </li>
+            <li>
+              <span className='font-mono'>/status</span> - Kiểm tra trạng thái kết nối
+            </li>
+            <li>
+              <span className='font-mono'>/verify_CODE</span> - Xác thực tài khoản
+            </li>
+            <li>
+              <span className='font-mono'>/disconnect</span> - Ngắt kết nối tài khoản
+            </li>
+            <li>
+              <span className='font-mono'>/ping</span> - Kiểm tra bot còn hoạt động không
+            </li>
+          </ul>
+        </div>
+
+        <div className='border rounded-md p-4'>
+          <div className='flex items-center space-x-2 mb-2'>
+            <Terminal className='h-4 w-4 text-primary' />
+            <h4 className='font-medium text-sm'>Chat Handlers</h4>
+          </div>
+          <p className='text-sm text-muted-foreground'>
+            Bot xử lý các lệnh đặc biệt và tạo thông báo, như xác thực tài khoản và cập nhật trạng thái.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Webhook Form Component
+const WebhookForm = ({
+  webhookUrl,
+  setWebhookUrl,
+  onUpdateWebhook,
+  onClearWebhook,
+  onSetupProduction,
+  isUpdating,
+  isClearing,
+  isSettingUp,
+  environment
+}) => {
+  return (
+    <div className='space-y-3'>
+      <div className='grid gap-2'>
+        <Label htmlFor='webhookUrl'>URL Webhook</Label>
+        <div className='flex gap-2'>
+          <Input
+            id='webhookUrl'
+            placeholder='https://yourdomain.com/api/telegram/webhook'
+            value={webhookUrl}
+            onChange={e => setWebhookUrl(e.target.value)}
+          />
+          <Button variant='outline' onClick={onUpdateWebhook} disabled={isUpdating} aria-label='Update webhook'>
+            {isUpdating ? <RefreshCw className='h-4 w-4' /> : <Link className='h-4 w-4' />}
+          </Button>
+        </div>
+      </div>
+
+      <div className='flex flex-col sm:flex-row gap-2'>
+        <Button variant='outline' size='sm' onClick={onClearWebhook} disabled={isClearing} className='w-full sm:w-auto'>
+          {isClearing ? <RefreshCw className='h-4 w-4 mr-2 animate-spin' /> : <Zap className='h-4 w-4 mr-2' />}
+          Xóa Webhook
+        </Button>
+
+        {environment === 'production' && (
+          <Button
+            variant='default'
+            size='sm'
+            onClick={onSetupProduction}
+            disabled={isSettingUp}
+            className='w-full sm:w-auto'
+          >
+            {isSettingUp ? <RefreshCw className='h-4 w-4 mr-2 animate-spin' /> : <Server className='h-4 w-4 mr-2' />}
+            Thiết lập cho Production
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export default function TelegramStatusPage() {
   const [webhookUrl, setWebhookUrl] = useState('')
@@ -40,7 +279,8 @@ export default function TelegramStatusPage() {
   } = useQuery({
     queryKey: ['telegram', 'health'],
     queryFn: () => fetchData('/api/telegram/health'),
-    refetchInterval: 60000 // Refetch every minute
+    refetchInterval: 60000, // Refetch every minute
+    staleTime: 55000
   })
 
   // Webhook Info
@@ -51,11 +291,16 @@ export default function TelegramStatusPage() {
   } = useQuery({
     queryKey: ['telegram', 'webhook-info'],
     queryFn: () => fetchData('/api/telegram/webhook'),
-    refetchInterval: 120000 // Refetch every 2 minutes
+    refetchInterval: 120000, // Refetch every 2 minutes
+    staleTime: 110000
   })
 
   // Commands List
-  const { data: commandsData, isLoading: loadingCommands } = useQuery({
+  const {
+    data: commandsData,
+    isLoading: loadingCommands,
+    refetch: refetchCommands
+  } = useQuery({
     queryKey: ['telegram', 'commands'],
     queryFn: () => fetchData('/api/telegram/commands'),
     staleTime: 5 * 60 * 1000 // 5 minutes
@@ -80,6 +325,7 @@ export default function TelegramStatusPage() {
     mutationFn: url => postData('/api/telegram/update-webhook', { webhookUrl: url }),
     onSuccess: () => {
       toast.success('Webhook đã được cập nhật thành công')
+      setWebhookUrl('') // Reset input after success
       refetchWebhookInfo()
     },
     onError: error => {
@@ -102,6 +348,7 @@ export default function TelegramStatusPage() {
     mutationFn: () => postData('/api/telegram/update-commands', {}),
     onSuccess: () => {
       toast.success('Commands đã được cập nhật thành công')
+      refetchCommands()
     },
     onError: error => {
       toast.error(`Không thể cập nhật commands: ${error.message || 'Lỗi không xác định'}`)
@@ -134,24 +381,32 @@ export default function TelegramStatusPage() {
   })
 
   // Handle copy token to clipboard
-  const handleCopyToken = text => {
-    navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+  const handleCopyToken = useCallback(async text => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      toast.success('Đã sao chép token vào clipboard')
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Lỗi khi sao chép:', err)
+      toast.error('Không thể sao chép token')
+    }
+  }, [])
 
   // Handle update webhook
-  const handleUpdateWebhook = () => {
+  const handleUpdateWebhook = useCallback(() => {
     if (!webhookUrl) {
       toast.error('Vui lòng nhập URL webhook')
       return
     }
     updateWebhookMutation.mutate(webhookUrl)
-  }
+  }, [webhookUrl, updateWebhookMutation])
 
-  // Format webhook info
-  const formatWebhookInfo = info => {
-    if (!info) return 'Không có thông tin'
+  // Format webhook info with memoization
+  const formattedWebhookInfo = useMemo(() => {
+    if (!webhookInfo?.webhook_info) return 'Không có thông tin'
+
+    const info = webhookInfo.webhook_info
     return (
       <div className='space-y-2 text-sm'>
         <div>
@@ -172,11 +427,41 @@ export default function TelegramStatusPage() {
         </div>
       </div>
     )
+  }, [webhookInfo])
+
+  // Loading states for Overview Cards
+  if (loadingBotInfo && loadingWebhookInfo) {
+    return (
+      <div className='space-y-6'>
+        <div className='flex items-center justify-between'>
+          <h1 className='text-2xl font-bold tracking-tight'>Quản lý Telegram</h1>
+        </div>
+
+        <div className='grid gap-4 md:grid-cols-2'>
+          <Skeleton className='h-64 w-full' />
+          <Skeleton className='h-64 w-full' />
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className='space-y-6'>
-      {/* Overview Cards */}
+      {/* <div className='flex items-center justify-between'>
+        <h1 className='text-2xl font-bold tracking-tight'>Quản lý Telegram</h1>
+      </div> */}
+
+      {/* <div className='flex items-center space-x-1 border-b'>
+        <div
+          className={cn(
+            'px-3 py-2 text-sm font-medium transition-colors border-b-2',
+            activeTab === 'info' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'
+          )}
+        >
+          Trạng thái Bot
+        </div>
+      </div> */}
+
       <div className='grid gap-4 md:grid-cols-2'>
         {/* Bot Status Card */}
         <Card>
@@ -210,19 +495,19 @@ export default function TelegramStatusPage() {
                 <div className='rounded-md bg-muted p-3'>
                   <div className='grid grid-cols-2 gap-2 text-sm'>
                     <div className='text-muted-foreground'>Username:</div>
-                    <div className='font-medium'>@{botInfo?.bot?.username || 'N/A'}</div>
+                    <div className='font-medium'>@{botInfo?.bot?.username ?? 'N/A'}</div>
 
                     <div className='text-muted-foreground'>Bot ID:</div>
-                    <div className='font-medium'>{botInfo?.bot?.id || 'N/A'}</div>
+                    <div className='font-medium'>{botInfo?.bot?.id ?? 'N/A'}</div>
 
                     <div className='text-muted-foreground'>Tên:</div>
-                    <div className='font-medium'>{botInfo?.bot?.first_name || 'N/A'}</div>
+                    <div className='font-medium'>{botInfo?.bot?.first_name ?? 'N/A'}</div>
 
                     <div className='text-muted-foreground'>Môi trường:</div>
-                    <div className='font-medium'>{botInfo?.environment || 'development'}</div>
+                    <div className='font-medium'>{botInfo?.environment ?? 'development'}</div>
 
                     <div className='text-muted-foreground'>Chế độ:</div>
-                    <div className='font-medium'>{botInfo?.mode || 'N/A'}</div>
+                    <div className='font-medium'>{botInfo?.mode ?? 'N/A'}</div>
                   </div>
                 </div>
 
@@ -231,9 +516,9 @@ export default function TelegramStatusPage() {
                     variant='outline'
                     size='sm'
                     onClick={() => restartMutation.mutate()}
-                    disabled={restartMutation.isLoading}
+                    disabled={restartMutation.isPending}
                   >
-                    {restartMutation.isLoading ? (
+                    {restartMutation.isPending ? (
                       <RefreshCw className='h-4 w-4 mr-2 animate-spin' />
                     ) : (
                       <Power className='h-4 w-4 mr-2' />
@@ -245,9 +530,9 @@ export default function TelegramStatusPage() {
                     variant='outline'
                     size='sm'
                     onClick={() => updateHandlersMutation.mutate()}
-                    disabled={updateHandlersMutation.isLoading}
+                    disabled={updateHandlersMutation.isPending}
                   >
-                    {updateHandlersMutation.isLoading ? (
+                    {updateHandlersMutation.isPending ? (
                       <RefreshCw className='h-4 w-4 mr-2 animate-spin' />
                     ) : (
                       <Terminal className='h-4 w-4 mr-2' />
@@ -289,7 +574,7 @@ export default function TelegramStatusPage() {
               <div className='space-y-4'>
                 <div className='rounded-md bg-muted p-3'>
                   {webhookInfo?.webhook_info ? (
-                    formatWebhookInfo(webhookInfo.webhook_info)
+                    formattedWebhookInfo
                   ) : (
                     <div className='text-sm text-muted-foreground'>
                       Webhook chưa được cấu hình. Sử dụng chế độ Long Polling.
@@ -297,62 +582,17 @@ export default function TelegramStatusPage() {
                   )}
                 </div>
 
-                <div className='space-y-3'>
-                  <div className='grid gap-2'>
-                    <Label htmlFor='webhookUrl'>URL Webhook</Label>
-                    <div className='flex gap-2'>
-                      <Input
-                        id='webhookUrl'
-                        placeholder='https://yourdomain.com/api/telegram/webhook'
-                        value={webhookUrl}
-                        onChange={e => setWebhookUrl(e.target.value)}
-                      />
-                      <Button
-                        variant='outline'
-                        onClick={handleUpdateWebhook}
-                        disabled={updateWebhookMutation.isLoading}
-                      >
-                        {updateWebhookMutation.isLoading ? (
-                          <RefreshCw className='h-4 w-4' />
-                        ) : (
-                          <Link className='h-4 w-4' />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className='flex flex-col gap-2'>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => clearWebhookMutation.mutate()}
-                      disabled={clearWebhookMutation.isLoading}
-                    >
-                      {clearWebhookMutation.isLoading ? (
-                        <RefreshCw className='h-4 w-4 mr-2 animate-spin' />
-                      ) : (
-                        <Zap className='h-4 w-4 mr-2' />
-                      )}
-                      Xóa Webhook
-                    </Button>
-
-                    {process.env.NODE_ENV === 'production' && (
-                      <Button
-                        variant='default'
-                        size='sm'
-                        onClick={() => setupProductionMutation.mutate()}
-                        disabled={setupProductionMutation.isLoading}
-                      >
-                        {setupProductionMutation.isLoading ? (
-                          <RefreshCw className='h-4 w-4 mr-2 animate-spin' />
-                        ) : (
-                          <Server className='h-4 w-4 mr-2' />
-                        )}
-                        Thiết lập cho Production
-                      </Button>
-                    )}
-                  </div>
-                </div>
+                <WebhookForm
+                  webhookUrl={webhookUrl}
+                  setWebhookUrl={setWebhookUrl}
+                  onUpdateWebhook={handleUpdateWebhook}
+                  onClearWebhook={() => clearWebhookMutation.mutate()}
+                  onSetupProduction={() => setupProductionMutation.mutate()}
+                  isUpdating={updateWebhookMutation.isPending}
+                  isClearing={clearWebhookMutation.isPending}
+                  isSettingUp={setupProductionMutation.isPending}
+                  environment={botInfo?.environment}
+                />
               </div>
             )}
           </CardContent>
@@ -378,200 +618,23 @@ export default function TelegramStatusPage() {
             </TabsList>
 
             <TabsContent value='info' className='space-y-4'>
-              {loadingBotInfo ? (
-                <div className='space-y-3'>
-                  <Skeleton className='h-4 w-full' />
-                  <Skeleton className='h-4 w-3/4' />
-                  <Skeleton className='h-4 w-5/6' />
-                </div>
-              ) : !botInfo?.success ? (
-                <Alert variant='destructive'>
-                  <AlertTriangle className='h-4 w-4' />
-                  <AlertDescription>Không thể kết nối đến bot. Vui lòng kiểm tra cấu hình.</AlertDescription>
-                </Alert>
-              ) : (
-                <div className='space-y-4'>
-                  <div className='rounded-md border p-4'>
-                    <h3 className='text-sm font-medium mb-2'>Thông tin Bot Token</h3>
-                    <div className='flex items-center space-x-2'>
-                      <div className='bg-muted p-2 rounded-md flex-1 text-sm'>
-                        {botInfo.token_configured ? (
-                          <>
-                            <span>{'*'.repeat(Math.max(0, (botInfo.token_length || 45) - 8))}</span>
-                            <span className='font-mono'>
-                              {botInfo.bot_info?.id?.toString().slice(-8) || 'XXXXXXXX'}
-                            </span>
-                          </>
-                        ) : (
-                          <span className='text-red-500'>Token chưa được cấu hình!</span>
-                        )}
-                      </div>
-                      <Button
-                        variant='outline'
-                        size='sm'
-                        onClick={() => handleCopyToken(botInfo.bot_info?.id || '')}
-                        disabled={!botInfo.token_configured}
-                      >
-                        {copied ? <Check className='h-4 w-4' /> : <Copy className='h-4 w-4' />}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className='space-y-2'>
-                    <h3 className='text-sm font-medium'>Thông tin chi tiết Bot</h3>
-                    <Table>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell className='font-medium'>Bot ID</TableCell>
-                          <TableCell>{botInfo.bot?.id || 'N/A'}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className='font-medium'>Username</TableCell>
-                          <TableCell>@{botInfo.bot?.username || 'N/A'}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className='font-medium'>Tên hiển thị</TableCell>
-                          <TableCell>{botInfo.bot?.first_name || 'N/A'}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className='font-medium'>Môi trường</TableCell>
-                          <TableCell>{botInfo.environment || 'development'}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className='font-medium'>Chế độ vận hành</TableCell>
-                          <TableCell>{botInfo.mode || 'Long Polling'}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className='font-medium'>Trạng thái</TableCell>
-                          <TableCell>
-                            <Badge variant={botInfo.success ? 'success' : 'destructive'}>
-                              {botInfo.success ? 'Online' : 'Offline'}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className='font-medium'>Token đã cấu hình</TableCell>
-                          <TableCell>
-                            <Badge variant={botInfo.token_configured ? 'success' : 'destructive'}>
-                              {botInfo.token_configured ? 'Có' : 'Không'}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              )}
+              <BotInfoTab botInfo={botInfo} onCopyToken={handleCopyToken} copied={copied} />
             </TabsContent>
 
             <TabsContent value='commands' className='space-y-4'>
-              <div className='flex justify-between items-center'>
-                <h3 className='text-sm font-medium'>Bot Commands</h3>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => updateCommandsMutation.mutate()}
-                  disabled={updateCommandsMutation.isLoading}
-                >
-                  {updateCommandsMutation.isLoading ? (
-                    <RefreshCw className='h-4 w-4 mr-2 animate-spin' />
-                  ) : (
-                    <Command className='h-4 w-4 mr-2' />
-                  )}
-                  Cập nhật Commands
-                </Button>
-              </div>
-
-              {loadingCommands ? (
-                <div className='space-y-3'>
-                  <Skeleton className='h-10 w-full' />
-                  <Skeleton className='h-10 w-full' />
-                  <Skeleton className='h-10 w-full' />
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Command</TableHead>
-                      <TableHead>Mô tả</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {!commandsData || !commandsData.commands ? (
-                      <TableRow>
-                        <TableCell colSpan={2} className='text-center py-4'>
-                          Không có commands nào được cấu hình
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      commandsData.commands.map((cmd, index) => (
-                        <TableRow key={index}>
-                          <TableCell className='font-mono'>/{cmd.command}</TableCell>
-                          <TableCell>{cmd.description}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              )}
+              <CommandsTab
+                commandsData={commandsData}
+                loadingCommands={loadingCommands}
+                onUpdateCommands={() => updateCommandsMutation.mutate()}
+                isUpdating={updateCommandsMutation.isPending}
+              />
             </TabsContent>
 
             <TabsContent value='handlers' className='space-y-4'>
-              <div className='flex justify-between items-center'>
-                <h3 className='text-sm font-medium'>Bot Handlers</h3>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => updateHandlersMutation.mutate()}
-                  disabled={updateHandlersMutation.isLoading}
-                >
-                  {updateHandlersMutation.isLoading ? (
-                    <RefreshCw className='h-4 w-4 mr-2 animate-spin' />
-                  ) : (
-                    <Terminal className='h-4 w-4 mr-2' />
-                  )}
-                  Cập nhật Handlers
-                </Button>
-              </div>
-
-              <div className='space-y-3'>
-                <div className='border rounded-md p-4'>
-                  <div className='flex items-center space-x-2 mb-2'>
-                    <MessageSquare className='h-4 w-4 text-primary' />
-                    <h4 className='font-medium text-sm'>Command Handlers</h4>
-                  </div>
-                  <ul className='text-sm space-y-1 ml-6 list-disc'>
-                    <li>
-                      <span className='font-mono'>/start</span> - Khởi động bot và chào mừng
-                    </li>
-                    <li>
-                      <span className='font-mono'>/help</span> - Hiển thị trợ giúp
-                    </li>
-                    <li>
-                      <span className='font-mono'>/status</span> - Kiểm tra trạng thái kết nối
-                    </li>
-                    <li>
-                      <span className='font-mono'>/verify_CODE</span> - Xác thực tài khoản
-                    </li>
-                    <li>
-                      <span className='font-mono'>/disconnect</span> - Ngắt kết nối tài khoản
-                    </li>
-                    <li>
-                      <span className='font-mono'>/ping</span> - Kiểm tra bot còn hoạt động không
-                    </li>
-                  </ul>
-                </div>
-
-                <div className='border rounded-md p-4'>
-                  <div className='flex items-center space-x-2 mb-2'>
-                    <Terminal className='h-4 w-4 text-primary' />
-                    <h4 className='font-medium text-sm'>Chat Handlers</h4>
-                  </div>
-                  <p className='text-sm text-muted-foreground'>
-                    Bot xử lý các lệnh đặc biệt và tạo thông báo, như xác thực tài khoản và cập nhật trạng thái.
-                  </p>
-                </div>
-              </div>
+              <HandlersTab
+                onUpdateHandlers={() => updateHandlersMutation.mutate()}
+                isUpdating={updateHandlersMutation.isPending}
+              />
             </TabsContent>
           </Tabs>
         </CardContent>
