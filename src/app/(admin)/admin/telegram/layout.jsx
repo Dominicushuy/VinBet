@@ -9,7 +9,7 @@ export default function TelegramAdminLayout({ children }) {
   const pathname = usePathname()
 
   const tabs = [
-    { name: 'Tổng quan', href: '/admin/telegram/oveview', exact: true },
+    { name: 'Tổng quan', href: '/admin/telegram/overview', exact: true },
     { name: 'Trạng thái Bot', href: '/admin/telegram/status' },
     { name: 'Kết nối', href: '/admin/telegram/connections' },
     { name: 'Thông báo', href: '/admin/telegram/notifications' },

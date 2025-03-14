@@ -46,6 +46,8 @@ export function ResultDialog({ open, onClose, onSubmit, isLoading, game, betStat
     return format(new Date(date), 'HH:mm, dd/MM/yyyy')
   }
 
+  if (!game) return null
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className='sm:max-w-md'>

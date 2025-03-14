@@ -1,19 +1,39 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { fetchData } from '@/utils/fetchUtils'
-import { format, subDays } from 'date-fns'
-import { vi } from 'date-fns/locale'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Button } from '@/components/ui/button'
-import { DateRangePicker } from '@/components/ui/date-range-picker'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
 import { StatsChart } from '@/components/admin/telegram/StatsChart'
-import { RefreshCw, Users, Bell, MessageSquare, ChevronDown } from 'lucide-react'
+import { fetchData } from '@/utils/fetchUtils'
+import { Users, Bell, MessageSquare, RefreshCw } from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { AlertCircle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { format, subDays } from 'date-fns'
+import { vi } from 'date-fns/locale'
+import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+
+// Tách thành component riêng để tái sử dụng theo DRY principle
+const StatCard = ({ title, value, icon, subtitle, isLoading, textColor }) => (
+  <Card>
+    <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+      <CardTitle className='text-sm font-medium'>{title}</CardTitle>
+      {icon}
+    </CardHeader>
+    <CardContent>
+      {isLoading ? (
+        <Skeleton className='h-6 w-20' />
+      ) : (
+        <div className={`text-2xl font-bold ${textColor || ''}`}>{value}</div>
+      )}
+      <p className='text-xs text-muted-foreground'>{subtitle}</p>
+    </CardContent>
+  </Card>
+)
 
 export default function TelegramStatsPage() {
   const [dateRange, setDateRange] = useState({
@@ -24,11 +44,12 @@ export default function TelegramStatsPage() {
 
   // Fetch Telegram Stats
   const {
-    data: statsData,
-    isLoading: loadingStats,
+    data: telegramStats,
+    isLoading: statsLoading,
+    error: statsError,
     refetch: refetchStats
   } = useQuery({
-    queryKey: ['telegram', 'stats', dateRange],
+    queryKey: ['admin', 'telegram-stats', format(dateRange.from, 'yyyy-MM-dd'), format(dateRange.to, 'yyyy-MM-dd')],
     queryFn: () =>
       fetchData(
         `/api/admin/telegram/stats?startDate=${format(dateRange.from, 'yyyy-MM-dd')}&endDate=${format(
@@ -36,123 +57,119 @@ export default function TelegramStatsPage() {
           'yyyy-MM-dd'
         )}`
       ),
-    keepPreviousData: true
+    placeholderData: oldData => oldData, // Replaced deprecated keepPreviousData
+    staleTime: 55000, // Tối ưu để tránh re-fetch không cần thiết
+    retry: 2
   })
 
   // Fetch User Stats
-  const { data: userStats, isLoading: loadingUserStats } = useQuery({
-    queryKey: ['telegram', 'user-stats'],
+  const {
+    data: userStats,
+    isLoading: loadingUserStats,
+    error: userStatsError,
+    refetch: refetchUserStats
+  } = useQuery({
+    queryKey: ['admin', 'telegram-user-stats'],
     queryFn: () => fetchData('/api/admin/telegram/user-stats'),
-    staleTime: 5 * 60 * 1000 // 5 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2
   })
 
-  // Calculate summary stats
-  const calculateSummary = () => {
-    if (!statsData || !statsData.stats) return null
+  // Xử lý lỗi API - được cải thiện
+  const hasErrors = statsError || userStatsError
 
-    const stats = statsData.stats
-    const summary = statsData.summary || {}
+  // Memoize số liệu để tránh tính toán lại khi re-render
+  const summary = useMemo(() => {
+    if (!telegramStats || !telegramStats.stats) return null
+
+    const stats = telegramStats.stats
+    const summaryData = telegramStats.summary || {}
 
     return {
-      totalNotificationsSent: summary.total_notifications_sent || 0,
-      totalNewConnections: summary.total_new_connections || 0,
-      totalDisconnections: summary.total_disconnections || 0,
-      totalBotInteractions: summary.total_bot_interactions || 0,
+      totalNotificationsSent: summaryData.total_notifications_sent || 0,
+      totalNewConnections: summaryData.total_new_connections || 0,
+      totalDisconnections: summaryData.total_disconnections || 0,
+      totalBotInteractions: summaryData.total_bot_interactions || 0,
       totalActivity: stats.reduce((acc, day) => acc + day.total_activity || 0, 0),
-      avgDailyNotifications: Math.round(summary.total_notifications_sent / stats.length) || 0,
+      avgDailyNotifications: Math.round(summaryData.total_notifications_sent / stats.length) || 0,
       mostActiveDay:
         stats.length > 0
           ? stats.reduce((max, day) => (day.total_activity > max.total_activity ? day : max), stats[0])
           : null
     }
-  }
+  }, [telegramStats])
 
-  const summary = calculateSummary()
+  // Hàm để refresh tất cả data
+  const refreshAllData = () => {
+    refetchStats()
+    refetchUserStats()
+  }
 
   return (
     <div className='space-y-6'>
-      {/* Control Panel */}
-      <div className='flex flex-col md:flex-row justify-between gap-4'>
+      {/* Header với refresh button */}
+      <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4'>
         <div>
           <h1 className='text-2xl font-bold tracking-tight'>Thống kê Telegram</h1>
           <p className='text-muted-foreground'>Phân tích dữ liệu kết nối và hoạt động của Telegram Bot</p>
         </div>
-        <div className='flex items-center gap-2'>
+        <div className='flex items-center gap-2 w-full sm:w-auto'>
           <DateRangePicker dateRange={dateRange} onChange={setDateRange} />
-          <Button variant='outline' size='icon' onClick={() => refetchStats()}>
+          <Button variant='outline' size='icon' onClick={refreshAllData}>
             <RefreshCw className='h-4 w-4' />
           </Button>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
-        <Card>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Thông báo đã gửi</CardTitle>
-            <Bell className='h-4 w-4 text-muted-foreground' />
-          </CardHeader>
-          <CardContent>
-            <div className='text-2xl font-bold'>
-              {loadingStats ? <Skeleton className='h-6 w-20' /> : summary?.totalNotificationsSent.toLocaleString()}
-            </div>
-            <p className='text-xs text-muted-foreground'>
-              Trung bình {summary?.avgDailyNotifications || 0} thông báo/ngày
-            </p>
-          </CardContent>
-        </Card>
+      {/* Error Alert */}
+      {hasErrors && (
+        <Alert variant='destructive'>
+          <AlertCircle className='h-4 w-4 mr-2' />
+          <AlertDescription>
+            {statsError ? 'Không thể tải thống kê Telegram. ' : ''}
+            {userStatsError ? 'Không thể tải thông kê người dùng Telegram. ' : ''}
+            Vui lòng thử lại sau.
+          </AlertDescription>
+        </Alert>
+      )}
 
-        <Card>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Kết nối mới</CardTitle>
-            <Users className='h-4 w-4 text-muted-foreground' />
-          </CardHeader>
-          <CardContent>
-            <div className='text-2xl font-bold'>
-              {loadingStats ? <Skeleton className='h-6 w-20' /> : summary?.totalNewConnections.toLocaleString()}
-            </div>
-            <p className='text-xs text-muted-foreground'>{summary?.totalDisconnections || 0} ngắt kết nối</p>
-          </CardContent>
-        </Card>
+      {/* Cải thiện responsive */}
+      <div className='grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'>
+        <StatCard
+          title='Người dùng kết nối'
+          value={`${telegramStats?.summary?.connection_rate?.toFixed(1) || '0'}%`}
+          icon={<Users className='h-4 w-4 text-muted-foreground' />}
+          subtitle='Tỷ lệ người dùng đã kết nối'
+          isLoading={statsLoading}
+        />
 
-        <Card>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Lệnh Bot</CardTitle>
-            <MessageSquare className='h-4 w-4 text-muted-foreground' />
-          </CardHeader>
-          <CardContent>
-            <div className='text-2xl font-bold'>
-              {loadingStats ? <Skeleton className='h-6 w-20' /> : summary?.totalBotInteractions.toLocaleString()}
-            </div>
-            <p className='text-xs text-muted-foreground'>Tương tác với bot</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title='Kết nối mới'
+          value={telegramStats?.summary?.total_new_connections?.toLocaleString() || '0'}
+          icon={<Users className='h-4 w-4 text-muted-foreground' />}
+          subtitle='Tổng số kết nối mới'
+          isLoading={statsLoading}
+        />
 
-        <Card>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Ngày hoạt động nhất</CardTitle>
-            <ChevronDown className='h-4 w-4 text-muted-foreground' />
-          </CardHeader>
-          <CardContent>
-            <div className='text-2xl font-bold'>
-              {loadingStats ? (
-                <Skeleton className='h-6 w-20' />
-              ) : summary?.mostActiveDay ? (
-                format(new Date(summary.mostActiveDay.date), 'dd/MM/yyyy', { locale: vi })
-              ) : (
-                'N/A'
-              )}
-            </div>
-            <p className='text-xs text-muted-foreground'>
-              {summary?.mostActiveDay ? summary.mostActiveDay.total_activity : 0} hoạt động
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title='Thông báo đã gửi'
+          value={telegramStats?.summary?.total_notifications_sent?.toLocaleString() || '0'}
+          icon={<Bell className='h-4 w-4 text-muted-foreground' />}
+          subtitle={`Trung bình ${summary?.avgDailyNotifications || 0} thông báo/ngày`}
+          isLoading={statsLoading}
+        />
+
+        <StatCard
+          title='Tương tác Bot'
+          value={telegramStats?.summary?.total_bot_interactions?.toLocaleString() || '0'}
+          icon={<MessageSquare className='h-4 w-4 text-muted-foreground' />}
+          subtitle='Tổng lượng tương tác'
+          isLoading={statsLoading}
+        />
       </div>
 
-      {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className='w-full sm:w-auto'>
           <TabsTrigger value='overview'>Tổng quan</TabsTrigger>
           <TabsTrigger value='daily'>Hoạt động hàng ngày</TabsTrigger>
           <TabsTrigger value='users'>Thống kê người dùng</TabsTrigger>
@@ -160,17 +177,18 @@ export default function TelegramStatsPage() {
 
         <TabsContent value='overview' className='space-y-4 mt-6'>
           <Card>
-            {/* <CardHeader>
-              <CardTitle>Biểu đồ hoạt động</CardTitle>
-              <CardDescription>Thống kê hoạt động Telegram theo thời gian</CardDescription>
-            </CardHeader> */}
-            <CardContent>
-              {loadingStats ? (
+            <CardContent className='pt-6'>
+              {statsLoading ? (
                 <div className='h-80 w-full flex items-center justify-center'>
                   <Skeleton className='h-full w-full' />
                 </div>
+              ) : statsError ? (
+                <Alert variant='destructive' className='mb-4'>
+                  <AlertCircle className='h-4 w-4 mr-2' />
+                  <AlertDescription>Không thể tải dữ liệu biểu đồ</AlertDescription>
+                </Alert>
               ) : (
-                <StatsChart data={statsData?.stats || []} />
+                <StatsChart data={telegramStats?.stats || []} />
               )}
             </CardContent>
           </Card>
@@ -188,6 +206,11 @@ export default function TelegramStatsPage() {
                     <Skeleton className='h-4 w-3/4' />
                     <Skeleton className='h-4 w-5/6' />
                   </div>
+                ) : userStatsError ? (
+                  <Alert variant='destructive' className='mb-4'>
+                    <AlertCircle className='h-4 w-4 mr-2' />
+                    <AlertDescription>Không thể tải thống kê kết nối</AlertDescription>
+                  </Alert>
                 ) : (
                   <div className='space-y-4'>
                     <div className='flex items-center justify-between'>
@@ -227,6 +250,11 @@ export default function TelegramStatsPage() {
                     <Skeleton className='h-4 w-3/4' />
                     <Skeleton className='h-4 w-5/6' />
                   </div>
+                ) : userStatsError ? (
+                  <Alert variant='destructive' className='mb-4'>
+                    <AlertCircle className='h-4 w-4 mr-2' />
+                    <AlertDescription>Không thể tải thống kê thông báo</AlertDescription>
+                  </Alert>
                 ) : (
                   <div className='space-y-4'>
                     <div className='flex items-center justify-between'>
@@ -284,16 +312,21 @@ export default function TelegramStatsPage() {
               <CardDescription>Thống kê chi tiết theo từng ngày trong khoảng thời gian</CardDescription>
             </CardHeader>
             <CardContent>
-              {loadingStats ? (
+              {statsLoading ? (
                 <div className='space-y-3'>
                   <Skeleton className='h-10 w-full' />
                   <Skeleton className='h-10 w-full' />
                   <Skeleton className='h-10 w-full' />
                 </div>
-              ) : !statsData?.stats || statsData.stats.length === 0 ? (
+              ) : statsError ? (
+                <Alert variant='destructive' className='mb-4'>
+                  <AlertCircle className='h-4 w-4 mr-2' />
+                  <AlertDescription>Không thể tải dữ liệu hàng ngày</AlertDescription>
+                </Alert>
+              ) : !telegramStats?.stats || telegramStats.stats.length === 0 ? (
                 <div className='text-center py-8 text-muted-foreground'>Không có dữ liệu cho khoảng thời gian này</div>
               ) : (
-                <div className='rounded-md border'>
+                <div className='rounded-md border overflow-auto'>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -306,7 +339,7 @@ export default function TelegramStatsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {statsData.stats.map(day => (
+                      {telegramStats.stats.map(day => (
                         <TableRow key={day.date}>
                           <TableCell>{format(new Date(day.date), 'dd/MM/yyyy', { locale: vi })}</TableCell>
                           <TableCell>{day.notifications_sent || 0}</TableCell>
@@ -357,9 +390,14 @@ export default function TelegramStatsPage() {
                   <Skeleton className='h-4 w-3/4' />
                   <Skeleton className='h-80 w-full' />
                 </div>
+              ) : userStatsError ? (
+                <Alert variant='destructive' className='mb-4'>
+                  <AlertCircle className='h-4 w-4 mr-2' />
+                  <AlertDescription>Không thể tải thống kê người dùng</AlertDescription>
+                </Alert>
               ) : (
                 <div className='space-y-6'>
-                  <div className='grid gap-4 md:grid-cols-3'>
+                  <div className='grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3'>
                     <div className='border rounded-md p-4'>
                       <div className='text-sm font-medium text-muted-foreground mb-1'>Tổng người dùng</div>
                       <div className='text-2xl font-bold'>{userStats?.totalUsers || 0}</div>
@@ -378,7 +416,7 @@ export default function TelegramStatsPage() {
 
                   <div>
                     <h3 className='text-sm font-medium mb-3'>Thống kê kết nối theo thời gian</h3>
-                    <div className='border rounded-md'>
+                    <div className='border rounded-md overflow-auto'>
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -435,7 +473,7 @@ export default function TelegramStatsPage() {
 
                   <div>
                     <h3 className='text-sm font-medium mb-3'>Thống kê cài đặt thông báo Telegram</h3>
-                    <div className='border rounded-md'>
+                    <div className='border rounded-md overflow-auto'>
                       <Table>
                         <TableHeader>
                           <TableRow>

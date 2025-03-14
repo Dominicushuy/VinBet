@@ -97,7 +97,6 @@ export const adminMenuItems = [
   {
     title: 'Telegram',
     icon: <MessageSquare className='w-5 h-5' />,
-    href: '/admin/telegram',
     group: 'telegram',
     subitems: [
       {
@@ -121,13 +120,12 @@ export const adminMenuItems = [
         href: '/admin/telegram/stats'
       }
     ]
-  },
-
-  {
-    title: 'Cài đặt',
-    icon: <Settings className='w-5 h-5' />,
-    href: '/admin/settings'
   }
+  // {
+  //   title: 'Cài đặt',
+  //   icon: <Settings className='w-5 h-5' />,
+  //   href: '/admin/settings'
+  // }
 ]
 
 export const adminSupportMenuItems = [

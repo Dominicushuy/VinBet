@@ -21,6 +21,7 @@ import { toast } from 'react-hot-toast'
 import { ResponsiveAdminMenu } from './ResponsiveAdminMenu'
 import { useAuth } from '@/hooks/useAuth'
 import { useNotificationsQuery } from '@/hooks/queries/useNotificationQueries'
+import { MessageSquare } from 'lucide-react'
 
 export function AdminHeader({ userProfile }) {
   const { theme, setTheme } = useTheme()
@@ -138,7 +139,7 @@ export function AdminHeader({ userProfile }) {
 
                 <DropdownMenuGroup>
                   <DropdownMenuItem asChild>
-                    <Link href='/admin/profile' className='cursor-pointer flex items-center'>
+                    <Link href='/admin/profile/info' className='cursor-pointer flex items-center'>
                       <User size={16} className='mr-2' />
                       Thông tin cá nhân
                     </Link>
@@ -150,9 +151,9 @@ export function AdminHeader({ userProfile }) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href='/admin/settings' className='cursor-pointer flex items-center'>
-                      <Settings size={16} className='mr-2' />
-                      Cài đặt hệ thống
+                    <Link href='/admin/telegram/overview' className='cursor-pointer flex items-center'>
+                      <MessageSquare size={16} className='mr-2' />
+                      Cài đặt Telegram
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>

@@ -1,4 +1,3 @@
-// src/hooks/useGameFilters.js
 import { useState, useCallback, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
@@ -168,7 +167,41 @@ export function useGameFilters() {
     [router, searchParams]
   )
 
+  // Create a structured filters object for component use
+  const filters = useMemo(
+    () => ({
+      status,
+      fromDate,
+      toDate,
+      page,
+      pageSize,
+      search: searchQuery
+    }),
+    [status, fromDate, toDate, page, pageSize, searchQuery]
+  )
+
+  // Handler functions with expected names
+  const handleStatusFilter = useCallback(newStatus => {
+    setStatus(newStatus)
+  }, [])
+
+  const handleDateFilter = useCallback((from, to) => {
+    setFromDate(from)
+    setToDate(to)
+  }, [])
+
+  const handleSearch = useCallback(query => {
+    setSearchQuery(query)
+  }, [])
+
+  const handlePageSizeChange = useCallback(size => {
+    setPageSize(size)
+  }, [])
+
   return {
+    // Include the structured filters object
+    filters,
+
     // State
     searchQuery,
     setSearchQuery,
@@ -195,6 +228,12 @@ export function useGameFilters() {
     applyFilters,
     resetFilters,
     handlePageChange,
-    removeFilter
+    removeFilter,
+
+    // Helper functions with expected names
+    handleStatusFilter,
+    handleDateFilter,
+    handleSearch,
+    handlePageSizeChange
   }
 }
