@@ -209,3 +209,12 @@ CREATE TABLE IF NOT EXISTS telegram_verification (
 -- Tạo index cho hiệu suất truy vấn
 CREATE INDEX IF NOT EXISTS idx_telegram_verification_code ON telegram_verification(code);
 CREATE INDEX IF NOT EXISTS idx_telegram_verification_profile_id ON telegram_verification(profile_id);
+
+-- 1. Chỉ thêm các trường mới vào bảng profiles
+ALTER TABLE profiles
+ADD COLUMN IF NOT EXISTS telegram_username TEXT,
+ADD COLUMN IF NOT EXISTS telegram_connected_at TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS telegram_settings JSONB DEFAULT '{"receive_win_notifications": true, "receive_deposit_notifications": true, "receive_withdrawal_notifications": true, "receive_login_alerts": true, "receive_system_notifications": true}';
+
+-- Thêm index để tìm kiếm nhanh nếu chưa có
+CREATE INDEX IF NOT EXISTS idx_profiles_telegram_id ON profiles(telegram_id);

@@ -82,3 +82,130 @@ CREATE POLICY "Only admin can insert admin logs" ON admin_logs FOR INSERT TO pub
 CREATE POLICY "Users can subscribe to their own notifications" ON notifications
 FOR SELECT TO authenticated
 USING (auth.uid() = profile_id);
+
+DROP POLICY IF EXISTS "Users can read own telegram data" ON profiles;
+DROP POLICY IF EXISTS "Users can update own telegram data" ON profiles;
+DROP POLICY IF EXISTS "Admins can read all telegram data" ON profiles;
+DROP POLICY IF EXISTS "Admins can update all telegram data" ON profiles;
+
+-- Policies cho người dùng thường
+CREATE POLICY "Users can read own telegram data" ON profiles
+FOR SELECT
+USING (auth.uid() = id);
+
+CREATE POLICY "Users can update own telegram data" ON profiles
+FOR UPDATE
+USING (auth.uid() = id)
+WITH CHECK (
+  auth.uid() = id AND (
+    -- Chỉ cho phép cập nhật các trường Telegram
+    EXISTS (
+      SELECT 1 FROM jsonb_object_keys(to_jsonb(profiles)) AS key
+      WHERE key IN ('telegram_id', 'telegram_username', 'telegram_settings')
+    )
+  )
+);
+
+-- Policies cho admin
+CREATE POLICY "Admins can read all telegram data" ON profiles
+FOR SELECT
+USING (EXISTS (
+  SELECT 1 FROM profiles
+  WHERE profiles.id = auth.uid() AND profiles.is_admin = true
+));
+
+CREATE POLICY "Admins can update all telegram data" ON profiles
+FOR UPDATE
+USING (EXISTS (
+  SELECT 1 FROM profiles
+  WHERE profiles.id = auth.uid() AND profiles.is_admin = true
+));
+
+-- Drop existing policies nếu có
+DROP POLICY IF EXISTS "Admins can read own preferences" ON admin_preferences;
+DROP POLICY IF EXISTS "Admins can update own preferences" ON admin_preferences;
+DROP POLICY IF EXISTS "Admins can view all admin sessions" ON admin_sessions;
+DROP POLICY IF EXISTS "Admins can manage admin sessions" ON admin_sessions;
+DROP POLICY IF EXISTS "Users can read own telegram verification" ON telegram_verification;
+DROP POLICY IF EXISTS "Admins can read all telegram verification" ON telegram_verification;
+
+-- Policies cho bảng admin_preferences
+CREATE POLICY "Admins can read own preferences" ON admin_preferences
+FOR SELECT
+USING (
+  auth.uid() = admin_id AND EXISTS (
+    SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true
+  )
+);
+
+CREATE POLICY "Admins can update own preferences" ON admin_preferences
+FOR UPDATE
+USING (
+  auth.uid() = admin_id AND EXISTS (
+    SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true
+  )
+)
+WITH CHECK (
+  auth.uid() = admin_id AND EXISTS (
+    SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true
+  )
+);
+
+CREATE POLICY "Admins can insert own preferences" ON admin_preferences
+FOR INSERT
+WITH CHECK (
+  auth.uid() = admin_id AND EXISTS (
+    SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true
+  )
+);
+
+-- Policies cho bảng admin_sessions
+CREATE POLICY "Admins can view all admin sessions" ON admin_sessions
+FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true
+  )
+);
+
+CREATE POLICY "Admins can manage own sessions" ON admin_sessions
+FOR ALL
+USING (
+  admin_id = auth.uid() AND EXISTS (
+    SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true
+  )
+);
+
+-- Policies cho bảng telegram_verification
+CREATE POLICY "Users can read own telegram verification" ON telegram_verification
+FOR SELECT
+USING (
+  profile_id = auth.uid()
+);
+
+CREATE POLICY "System can insert telegram verification" ON telegram_verification
+FOR INSERT
+WITH CHECK (
+  profile_id = auth.uid() OR EXISTS (
+    SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true
+  )
+);
+
+CREATE POLICY "Users can update own telegram verification" ON telegram_verification
+FOR UPDATE
+USING (
+  profile_id = auth.uid()
+);
+
+CREATE POLICY "Admins can read all telegram verification" ON telegram_verification
+FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true
+  )
+);
+
+-- Đừng quên bật RLS cho các bảng này
+ALTER TABLE admin_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE telegram_verification ENABLE ROW LEVEL SECURITY;
