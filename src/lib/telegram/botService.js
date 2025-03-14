@@ -1,3 +1,5 @@
+// src/lib/telegram/botService.js
+
 import { Telegraf } from 'telegraf'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
@@ -17,27 +19,20 @@ class TelegramBotService {
   }
 
   initialize() {
-    // Kiểm tra xem đã khởi tạo gần đây chưa để tránh khởi tạo lại quá nhanh
-    const now = Date.now()
-    if (now - globalAny.botInstance.lastInitTime < 3000) {
-      console.log('⚠️ Đã có yêu cầu khởi tạo gần đây, chờ một chút...')
-      return new Promise(resolve => {
-        setTimeout(() => {
-          resolve(this.isReady() ? globalAny.botInstance.bot : this._initializeBot())
-        }, 3000)
-      })
+    if (process.env.NODE_ENV === 'production') {
+      const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN)
+
+      // Trong production, sử dụng webhook
+      this._setupHandlers(bot)
+      globalAny.botInstance.bot = bot
+      globalAny.botInstance.isRunning = true
+      this.isInitialized = true
+      console.log('⚡ Telegram bot đã khởi tạo với webhook mode')
+      return bot
+    } else {
+      // Trong dev, sử dụng polling
+      return this._initializeBot()
     }
-
-    // Cập nhật thời gian khởi tạo
-    globalAny.botInstance.lastInitTime = now
-
-    // Nếu đã khởi tạo rồi thì trả về bot hiện tại
-    if (this.isInitialized && globalAny.botInstance.bot && globalAny.botInstance.isRunning) {
-      console.log('⚠️ Bot đã được khởi tạo trước đó')
-      return Promise.resolve(globalAny.botInstance.bot)
-    }
-
-    return this._initializeBot()
   }
 
   async _initializeBot() {
@@ -57,8 +52,8 @@ class TelegramBotService {
         // Gọi getUpdates với timeout=0 và offset=-1 để reset kết nối
         await cleanupBot.telegram.getUpdates(0, 100, -1)
 
-        // Đợi một chút để đảm bảo kết nối cũ đã bị hủy
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        // Tăng thời gian chờ lên 5 giây để đảm bảo kết nối cũ đã bị hủy
+        await new Promise(resolve => setTimeout(resolve, 5000))
       } catch (cleanupError) {
         console.warn('⚠️ Lỗi khi cleanup bot cũ:', cleanupError.message)
       }
@@ -509,6 +504,24 @@ Bạn sẽ không nhận được thông báo qua Telegram nữa.
 
   isReady() {
     return this.isInitialized && globalAny.botInstance.bot !== null && globalAny.botInstance.isRunning
+  }
+
+  reloadHandlers() {
+    if (!this.isReady() || !globalAny.botInstance.bot) {
+      console.error('❌ Bot chưa được khởi tạo, không thể cập nhật handlers')
+      return false
+    }
+
+    const bot = globalAny.botInstance.bot
+
+    // Xóa tất cả handlers hiện tại
+    bot.telegram.middleware.handlers = []
+
+    // Thiết lập lại handlers
+    this._setupHandlers(bot)
+
+    console.log('✅ Đã cập nhật handlers thành công')
+    return true
   }
 }
 

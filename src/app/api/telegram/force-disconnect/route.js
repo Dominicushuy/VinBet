@@ -1,3 +1,4 @@
+// src/app/api/telegram/force-disconnect/route.js
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
@@ -5,33 +6,26 @@ import { Telegraf } from 'telegraf'
 
 export async function POST() {
   try {
-    // Tạo instance bot mới trực tiếp để tránh sử dụng service hiện tại
-    const token = process.env.TELEGRAM_BOT_TOKEN
+    console.log('🔄 Thực hiện force-disconnect Telegram bot...')
 
-    if (!token) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Token không được cấu hình'
-        },
-        { status: 400 }
-      )
-    }
+    // Tạo bot instance tạm thời (không lưu trữ, chỉ để thực hiện cleanup)
+    const tempBot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN)
 
-    const telegraf = new Telegraf(token)
+    // Xóa webhook và bỏ các updates đang chờ
+    await tempBot.telegram.deleteWebhook({ drop_pending_updates: true })
 
-    // Xóa webhook và bỏ qua tất cả updates đang chờ
-    await telegraf.telegram.deleteWebhook({ drop_pending_updates: true })
+    // Sử dụng getUpdates với timeout ngắn và offset -1 để reset kết nối
+    await tempBot.telegram.getUpdates(1, 100, -1)
 
-    // Đợi để đảm bảo các kết nối cũ đã đóng
+    // Thêm thời gian chờ dài hơn để đảm bảo API đã xử lý yêu cầu
     await new Promise(resolve => setTimeout(resolve, 5000))
 
     return NextResponse.json({
       success: true,
-      message: 'Đã xóa webhook và ngắt kết nối bot. Khởi động lại ứng dụng để khởi tạo lại bot.'
+      message: 'Đã thực hiện force-disconnect thành công. Bây giờ bạn có thể khởi động lại bot.'
     })
   } catch (error) {
-    console.error('Error clearing webhook:', error)
+    console.error('❌ Lỗi khi thực hiện force-disconnect:', error)
     return NextResponse.json(
       {
         success: false,
@@ -40,4 +34,13 @@ export async function POST() {
       { status: 500 }
     )
   }
+}
+
+export async function GET() {
+  return NextResponse.json({
+    message: 'Sử dụng phương thức POST để ngắt kết nối bot Telegram',
+    method: 'POST',
+    usage: 'Sử dụng API này để ngắt kết nối bot hiện tại trước khi khởi động lại',
+    warning: 'Thao tác này sẽ buộc bot ngắt kết nối hiện tại và làm mất các updates đang chờ.'
+  })
 }
