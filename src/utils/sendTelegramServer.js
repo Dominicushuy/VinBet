@@ -104,25 +104,16 @@ export async function sendCustomTelegramNotification(userId, title, content, add
  * @param {Object} betInfo - Thông tin về cược
  * @param {number|string} betInfo.chosenNumber - Số người chơi đã chọn
  * @param {number|string} betInfo.result - Kết quả của trò chơi
- * @param {boolean} [isSkipError=true] - Bỏ qua lỗi khi gửi thông báo
  * @param {Object} [additionalData={}] - Dữ liệu bổ sung (tùy chọn)
  * @returns {Promise<Object>} Kết quả từ API
  */
-export async function sendWinTelegramNotification(
-  userId,
-  amount,
-  gameId,
-  betInfo,
-  isSkipError = true,
-  additionalData = {}
-) {
+export async function sendWinTelegramNotification(userId, amount, gameId, betInfo, additionalData = {}) {
   return sendTelegramNotification({
     notificationType: 'win',
     userId,
     amount,
     gameId,
     betInfo,
-    isSkipError,
     ...additionalData
   })
 }
