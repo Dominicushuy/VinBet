@@ -54,7 +54,12 @@ export function CreateGameDialog({ open, onClose, onSubmit, isLoading }) {
   })
 
   const handleSubmit = data => {
-    onSubmit(data)
+    const dataSubmit = {
+      startTime: new Date(data.startTime).toISOString(),
+      endTime: new Date(data.endTime).toISOString()
+    }
+
+    onSubmit(dataSubmit)
   }
 
   const handleClose = () => {

@@ -414,3 +414,31 @@ CREATE POLICY telegram_stats_update_policy ON telegram_stats
 -- Chỉ admin mới có thể xóa thống kê
 CREATE POLICY telegram_stats_delete_policy ON telegram_stats
   FOR DELETE USING (auth.is_admin());
+
+
+-- Cập nhật policy hiện tại
+DROP POLICY IF EXISTS bets_select_policy ON bets;
+CREATE POLICY bets_select_policy ON bets 
+  FOR SELECT USING (
+    profile_id = auth.uid() OR auth.is_admin() OR EXISTS (
+      -- Allow viewing all bets for leaderboard display
+      SELECT 1 FROM game_rounds gr
+      WHERE gr.id = game_round_id
+    )
+  );
+
+
+-- Cập nhật policy cho profiles để cho phép xem thông tin cơ bản cho leaderboard
+DROP POLICY IF EXISTS profiles_select_policy ON profiles;
+CREATE POLICY profiles_select_policy ON profiles 
+  FOR SELECT USING (
+    -- Người dùng có thể thấy profile của họ
+    id = auth.uid() 
+    -- Admin thấy tất cả
+    OR auth.is_admin() 
+    -- Cho phép xem những thông tin cơ bản của các profile khác
+    OR EXISTS (
+      SELECT 1 FROM bets b
+      WHERE b.profile_id = profiles.id
+    )
+  );

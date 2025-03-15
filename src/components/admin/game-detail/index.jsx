@@ -63,7 +63,7 @@ export function AdminGameDetail({ gameId }) {
     updateGameMutation.mutate(
       {
         id: gameId,
-        data: { status }
+        data: status
       },
       {
         onSuccess: () => {
@@ -93,7 +93,7 @@ export function AdminGameDetail({ gameId }) {
     updateGameMutation.mutate(
       {
         id: gameId,
-        data: { status: 'cancelled' }
+        data: 'cancelled'
       },
       {
         onSuccess: () => {

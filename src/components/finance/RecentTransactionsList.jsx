@@ -92,7 +92,7 @@ export function RecentTransactionsList({ transactions }) {
         return '+'
       case 'withdrawal':
       case 'bet':
-        return '-'
+        return ''
       default:
         return ''
     }

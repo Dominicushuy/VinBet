@@ -45,6 +45,7 @@ export function BetForm({ gameRound, className }) {
   const [formValues, setFormValues] = useState(null)
   const [selectedNumber, setSelectedNumber] = useState(null)
   const [preferredTab, setPreferredTab] = useState('quick')
+  const [formattedAmount, setFormattedAmount] = useState('10,000')
 
   // Place bet mutation
   const placeBetMutation = usePlaceBetMutation()
@@ -136,6 +137,37 @@ export function BetForm({ gameRound, className }) {
   // Handle quick amount selection
   const handleQuickAmountSelect = amount => {
     form.setValue('amount', amount)
+  }
+
+  // Parse formatted input back to number
+  const parseFormattedNumber = formattedValue => {
+    // Remove all non-digits
+    const numericValue = formattedValue.replace(/\D/g, '')
+    return numericValue ? parseInt(numericValue) : 0
+  }
+
+  // Format number input with thousands separators
+  const formatNumberInput = value => {
+    // Remove non-digit characters
+    const numericValue = value.replace(/\D/g, '')
+
+    // Format with thousands separators
+    if (numericValue) {
+      return new Intl.NumberFormat('vi-VN').format(parseInt(numericValue))
+    }
+    return ''
+  }
+
+  // Handle custom amount input change
+  const handleCustomAmountChange = e => {
+    const inputValue = e.target.value
+    const numericValue = parseFormattedNumber(inputValue)
+
+    // Update the formatted display
+    setFormattedAmount(formatNumberInput(numericValue.toString()))
+
+    // Update the form value with numeric value
+    form.setValue('amount', numericValue)
   }
 
   // Check if game is active
@@ -279,9 +311,14 @@ export function BetForm({ gameRound, className }) {
                   <FormItem>
                     <FormLabel className='flex items-center justify-between'>
                       <span>Số tiền cược (₫)</span>
-                      <Badge variant='outline' className='font-normal'>
-                        Tối thiểu: 10,000₫
-                      </Badge>
+                      <div className='flex items-center gap-2'>
+                        <Badge variant='outline' className='font-normal'>
+                          Tối thiểu: 10,000₫
+                        </Badge>
+                        <Badge variant='outline' className='font-normal'>
+                          Tối đa: 10,000,000₫
+                        </Badge>
+                      </div>
                     </FormLabel>
                     <Tabs defaultValue='quick' value={preferredTab} onValueChange={v => setPreferredTab(v)}>
                       <TabsList className='grid grid-cols-2 mb-2'>
@@ -315,10 +352,12 @@ export function BetForm({ gameRound, className }) {
                               placeholder='Nhập số tiền cược'
                               className='pl-9'
                               {...field}
-                              onChange={e => {
-                                const value = parseFloat(e.target.value)
-                                field.onChange(isNaN(value) ? 0 : value)
-                              }}
+                              // onChange={e => {
+                              //   const value = parseFloat(e.target.value)
+                              //   field.onChange(isNaN(value) ? 0 : value)
+                              // }}
+                              value={formattedAmount}
+                              onChange={handleCustomAmountChange}
                             />
                           </div>
                         </FormControl>

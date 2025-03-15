@@ -62,74 +62,73 @@ RETURNS TRIGGER AS $$
 BEGIN
   -- Chỉ xử lý khi trạng thái chuyển sang completed
   IF NEW.status = 'completed' AND OLD.status != 'completed' AND NEW.result IS NOT NULL THEN
-    BEGIN -- Bắt đầu transaction block
-      -- Cập nhật tất cả các cược thắng trong một query
-      WITH winning_bets AS (
-        UPDATE bets
-        SET 
-          status = 'won',
-          updated_at = NOW()
-        WHERE 
-          game_round_id = NEW.id 
-          AND status = 'pending'
-          AND chosen_number = NEW.result
-        RETURNING id, profile_id, potential_win
-      )
-      -- Cộng tiền thắng vào số dư người dùng
-      UPDATE profiles p
-      SET 
-        balance = p.balance + wb.potential_win,
-        updated_at = NOW()
-      FROM winning_bets wb
-      WHERE p.id = wb.profile_id;
-
-      -- Tạo giao dịch cho tất cả người thắng
-      INSERT INTO transactions (
-        profile_id,
-        amount,
-        type,
-        status,
-        reference_id,
-        description
-      )
-      SELECT 
-        profile_id,
-        potential_win,
-        'win',
-        'completed',
-        id,
-        'Win from game round ' || NEW.id
-      FROM winning_bets;
-
-      -- Tạo thông báo cho tất cả người thắng
-      INSERT INTO notifications (
-        profile_id,
-        title,
-        content,
-        type,
-        reference_id
-      )
-      SELECT 
-        profile_id,
-        'You won!',
-        'Congratulations! You won ' || potential_win || ' from game round.',
-        'game',
-        NEW.id
-      FROM winning_bets;
-
-      -- Cập nhật tất cả cược thua trong một query
-      UPDATE bets
-      SET 
-        status = 'lost',
-        updated_at = NOW()
-      WHERE 
-        game_round_id = NEW.id 
-        AND status = 'pending'
-        AND chosen_number != NEW.result;
+    -- Tạo bảng tạm để lưu thông tin các cược thắng
+    CREATE TEMPORARY TABLE temp_winning_bets ON COMMIT DROP AS
+    SELECT id, profile_id, potential_win
+    FROM bets
+    WHERE 
+      game_round_id = NEW.id 
+      AND status = 'pending'
+      AND chosen_number = NEW.result;
       
-    EXCEPTION WHEN OTHERS THEN
-      RAISE;
-    END;
+    -- Cập nhật trạng thái cược thắng
+    UPDATE bets
+    SET 
+      status = 'won',
+      updated_at = NOW()
+    WHERE id IN (SELECT id FROM temp_winning_bets);
+    
+    -- Cộng tiền thắng vào số dư người dùng
+    UPDATE profiles p
+    SET 
+      balance = p.balance + twb.potential_win,
+      updated_at = NOW()
+    FROM temp_winning_bets twb
+    WHERE p.id = twb.profile_id;
+
+    -- Tạo giao dịch cho tất cả người thắng
+    INSERT INTO transactions (
+      profile_id,
+      amount,
+      type,
+      status,
+      reference_id,
+      description
+    )
+    SELECT 
+      profile_id,
+      potential_win,
+      'win',
+      'completed',
+      id,
+      'Win from game round ' || NEW.id
+    FROM temp_winning_bets;
+
+    -- Tạo thông báo cho tất cả người thắng
+    INSERT INTO notifications (
+      profile_id,
+      title,
+      content,
+      type,
+      reference_id
+    )
+    SELECT 
+      profile_id,
+      'You won!',
+      'Chúc mừng! Bạn đã thắng ' || potential_win || ' từ lượt chơi.',
+      'game',
+      NEW.id
+    FROM temp_winning_bets;
+    
+    -- Cập nhật tất cả cược thua trong một query
+    UPDATE bets
+    SET 
+      status = 'lost',
+      updated_at = NOW()
+    WHERE 
+      game_round_id = NEW.id 
+      AND status = 'pending'
+      AND chosen_number != NEW.result;
   END IF;
   
   RETURN NEW;
@@ -402,6 +401,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function để lấy danh sách game rounds theo bộ lọc
+-- Cập nhật function để lấy danh sách game rounds với thêm thông tin về cược
 CREATE OR REPLACE FUNCTION get_game_rounds(
   status_filter TEXT DEFAULT NULL,
   from_date TIMESTAMP WITH TIME ZONE DEFAULT NULL,
@@ -418,6 +418,8 @@ RETURNS TABLE (
   created_by UUID,
   created_at TIMESTAMP WITH TIME ZONE,
   updated_at TIMESTAMP WITH TIME ZONE,
+  bets_count BIGINT,            -- Thêm trường thông tin số lượng cược
+  total_amount DECIMAL(15, 2),  -- Thêm trường thông tin tổng tiền cược
   total_count BIGINT
 ) AS $$
 DECLARE
@@ -431,17 +433,28 @@ BEGIN
     gr.start_time,
     gr.end_time,
     gr.result,
-    gr.status, -- Sửa: chỉ định rõ gr.status thay vì status
+    gr.status,
     gr.created_by,
     gr.created_at,
     gr.updated_at,
+    COALESCE(bets_summary.bet_count, 0) AS bets_count,   -- Lấy số lượng cược
+    COALESCE(bets_summary.bet_amount, 0) AS total_amount, -- Lấy tổng tiền cược
     COUNT(*) OVER() AS total_count
   FROM 
     game_rounds gr
+  -- Left join với subquery tính toán số lượng và tổng tiền cược
+  LEFT JOIN (
+    SELECT 
+      game_round_id,
+      COUNT(*) as bet_count,
+      SUM(amount) as bet_amount
+    FROM bets
+    GROUP BY game_round_id
+  ) AS bets_summary ON gr.id = bets_summary.game_round_id
   WHERE
-    (status_filter IS NULL OR gr.status = status_filter) -- Sửa: gr.status
-    AND (from_date IS NULL OR gr.start_time >= from_date) -- Sửa: gr.start_time
-    AND (to_date IS NULL OR gr.start_time <= to_date) -- Sửa: gr.start_time
+    (status_filter IS NULL OR gr.status = status_filter)
+    AND (from_date IS NULL OR gr.start_time >= from_date)
+    AND (to_date IS NULL OR gr.start_time <= to_date)
   ORDER BY
     gr.start_time DESC
   LIMIT
@@ -466,7 +479,7 @@ DECLARE
   v_new_bet_id UUID;
   v_multiplier DECIMAL(15, 2) := 9.0; -- Giá trị cố định
   v_min_bet_amount DECIMAL(15, 2) := 1.00;
-  v_max_bet_amount DECIMAL(15, 2) := 1000000.00;
+  v_max_bet_amount DECIMAL(15, 2) := 10000000.00;
 BEGIN
   -- Validation đầu vào
   IF p_profile_id IS NULL THEN
@@ -1936,3 +1949,65 @@ BEGIN
   GROUP BY n.type;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Thêm vào database của bạn
+CREATE OR REPLACE FUNCTION public.get_game_leaderboard(p_game_id UUID)
+RETURNS TABLE (
+  top_bets JSONB,
+  top_winners JSONB
+) SECURITY DEFINER AS $$
+DECLARE
+  v_top_bets JSONB;
+  v_top_winners JSONB;
+BEGIN
+  -- Lấy top người đặt cược nhiều nhất
+  SELECT jsonb_agg(bet_data) INTO v_top_bets
+  FROM (
+    SELECT 
+      b.id,
+      b.amount,
+      b.chosen_number,
+      b.created_at,
+      jsonb_build_object(
+        'id', p.id,
+        'username', p.username,
+        'display_name', p.display_name,
+        'avatar_url', p.avatar_url
+      ) AS profile
+    FROM bets b
+    JOIN profiles p ON b.profile_id = p.id
+    WHERE b.game_round_id = p_game_id
+    ORDER BY b.amount DESC
+    LIMIT 10
+  ) AS bet_data;
+
+  -- Lấy top người thắng cuộc
+  SELECT jsonb_agg(win_data) INTO v_top_winners
+  FROM (
+    SELECT 
+      b.id,
+      b.amount,
+      b.chosen_number,
+      b.potential_win,
+      b.created_at,
+      jsonb_build_object(
+        'id', p.id,
+        'username', p.username,
+        'display_name', p.display_name,
+        'avatar_url', p.avatar_url
+      ) AS profile
+    FROM bets b
+    JOIN profiles p ON b.profile_id = p.id
+    WHERE b.game_round_id = p_game_id
+    AND b.status = 'won'
+    ORDER BY b.potential_win DESC
+    LIMIT 10
+  ) AS win_data;
+
+  -- Đảm bảo không trả về null
+  v_top_bets := COALESCE(v_top_bets, '[]'::jsonb);
+  v_top_winners := COALESCE(v_top_winners, '[]'::jsonb);
+
+  RETURN QUERY SELECT v_top_bets, v_top_winners;
+END;
+$$ LANGUAGE plpgsql;

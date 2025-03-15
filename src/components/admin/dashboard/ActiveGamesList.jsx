@@ -109,7 +109,7 @@ export function ActiveGamesList() {
           <div className='flex justify-between items-center mt-2 text-sm'>
             <div className='flex items-center'>
               <Users className='h-3.5 w-3.5 mr-1' />
-              <span>{(game.bets_count && game.bets_count.count) || 0} lượt cược</span>
+              <span>{(game.bets_count && game.bets_count[0]?.count) || 0} lượt cược</span>
             </div>
             <span className='text-xs font-medium'>
               {game.start_time ? safeFormat(game.start_time, 'HH:mm, dd/MM/yyyy') : 'N/A'}

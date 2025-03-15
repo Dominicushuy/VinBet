@@ -65,7 +65,7 @@ export function ResultDialog({ open, onClose, onSubmit, isLoading, game, betStat
                   </div>
                   <div>
                     <p className='text-muted-foreground'>Số lượt cược:</p>
-                    <p>{betStats.total_bets}</p>
+                    <p>{betStats?.total_bets}</p>
                   </div>
                   <div>
                     <p className='text-muted-foreground'>Bắt đầu:</p>

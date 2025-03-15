@@ -179,10 +179,10 @@ export function GameCard({ game, className }) {
           )}
 
           {/* Participants Count */}
-          {game.bets_count > 0 && (
+          {game.bets_count?.length > 0 && (
             <div className='absolute bottom-3 right-3 bg-black/30 text-white rounded-md px-2 py-1 text-xs flex items-center backdrop-blur-sm'>
               <Users className='mr-1 h-3 w-3' />
-              {game.bets_count} người chơi
+              {(game.bets_count && game.bets_count[0]?.count) || 0} người chơi
             </div>
           )}
         </div>

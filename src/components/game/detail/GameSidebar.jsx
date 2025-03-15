@@ -86,7 +86,7 @@ export default function GameSidebar({ game, activeTab, setActiveTab }) {
             </div>
             <div className='flex justify-between items-center'>
               <span className='text-sm text-muted-foreground'>Người tham gia:</span>
-              <div className='font-medium'>{game.bets_count?.count || 0}</div>
+              <div className='font-medium'>{(game.bets_count && game.bets_count[0]?.count) || 0}</div>
             </div>
             {isActive && (
               <div className='flex justify-between items-center'>

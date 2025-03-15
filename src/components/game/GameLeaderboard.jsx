@@ -157,13 +157,13 @@ export default function GameLeaderboard({ gameId, isCompleted = false }) {
                           <TableCell>
                             <div className='flex items-center gap-2'>
                               <Avatar className='h-6 w-6'>
-                                <AvatarImage src={bet.profile.avatar_url || ''} />
+                                <AvatarImage src={bet?.profile?.avatar_url || ''} />
                                 <AvatarFallback>
-                                  {(bet.profile.display_name || bet.profile.username || 'U')[0].toUpperCase()}
+                                  {(bet.profile?.display_name || bet.profile?.username || 'U')[0].toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
                               <span className='font-medium truncate max-w-[120px]'>
-                                {bet.profile.display_name || bet.profile.username}
+                                {bet.profile?.display_name || bet.profile?.username}
                               </span>
                             </div>
                           </TableCell>

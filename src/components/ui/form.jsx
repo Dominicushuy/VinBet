@@ -12,7 +12,6 @@ const Form = FormProvider
 const FormFieldContext = React.createContext({})
 
 const FormField = props => {
-  // props ở đây bao gồm name, control, render, ...v.v.
   return (
     <FormFieldContext.Provider value={{ name: props.name }}>
       <Controller {...props} />
@@ -36,22 +35,34 @@ FormItem.displayName = 'FormItem'
 const useFormField = () => {
   const fieldContext = React.useContext(FormFieldContext)
   const itemContext = React.useContext(FormItemContext)
-  const { getFieldState, formState } = useFormContext()
+  const formContext = useFormContext()
 
   if (!fieldContext) {
     throw new Error('useFormField should be used within <FormField>')
   }
 
-  const fieldState = getFieldState(fieldContext.name, formState)
+  if (!formContext) {
+    throw new Error('useFormField should be used within a FormProvider')
+  }
+
+  const { name } = fieldContext
   const { id } = itemContext
+  const { formState } = formContext
+
+  // Safely access form state properties
+  const error = formState?.errors?.[name]
+  const touched = formState?.touchedFields?.[name]
+  const dirty = formState?.dirtyFields?.[name]
 
   return {
     id,
-    name: fieldContext.name,
+    name,
     formItemId: `${id}-form-item`,
     formDescriptionId: `${id}-form-item-description`,
     formMessageId: `${id}-form-item-message`,
-    ...fieldState
+    error,
+    touched,
+    dirty
   }
 }
 

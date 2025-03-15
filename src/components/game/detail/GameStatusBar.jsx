@@ -8,6 +8,8 @@ import { Progress } from '@/components/ui/progress'
 import { Users } from 'lucide-react'
 
 export default function GameStatusBar({ game }) {
+  // console.log('game', game)
+
   const [timeLeft, setTimeLeft] = useState('')
   const [progressPercentage, setProgressPercentage] = useState(0)
   const [isLive, setIsLive] = useState(false)
@@ -24,6 +26,7 @@ export default function GameStatusBar({ game }) {
   }, [progressPercentage])
 
   // Update time and progress
+  // Update time and progress
   useEffect(() => {
     if (!game) return
 
@@ -33,7 +36,8 @@ export default function GameStatusBar({ game }) {
       const endTime = new Date(game.end_time)
       const totalDuration = endTime.getTime() - startTime.getTime()
 
-      if (now >= startTime && now < endTime) {
+      // Kiểm tra status và thời gian để xác định isLive
+      if (game.status === 'active' && now < endTime) {
         setIsLive(true)
         const elapsed = now.getTime() - startTime.getTime()
         const progress = Math.min((elapsed / totalDuration) * 100, 100)
@@ -44,7 +48,7 @@ export default function GameStatusBar({ game }) {
           addSuffix: false
         })
         setTimeLeft(`Kết thúc trong ${timeRemaining}`)
-      } else if (now < startTime) {
+      } else if (game.status === 'scheduled' && now < startTime) {
         setIsLive(false)
         setProgressPercentage(0)
 
@@ -53,7 +57,7 @@ export default function GameStatusBar({ game }) {
           addSuffix: false
         })
         setTimeLeft(`Bắt đầu trong ${timeToStart}`)
-      } else {
+      } else if (game.status === 'completed' || now >= endTime) {
         setIsLive(false)
         setProgressPercentage(100)
         setTimeLeft('Đã kết thúc')
@@ -64,7 +68,7 @@ export default function GameStatusBar({ game }) {
     const intervalId = setInterval(updateTimeAndProgress, 60000)
 
     return () => clearInterval(intervalId)
-  }, [game?.start_time, game?.end_time])
+  }, [game])
 
   // Should not render if no game data
   if (!game) return null
@@ -87,7 +91,7 @@ export default function GameStatusBar({ game }) {
               <div className='flex gap-1 items-center text-sm text-muted-foreground'>
                 <span className='ml-6 sm:ml-2'>{timeLeft}</span>
                 <Users className='h-4 w-4 ml-3 mr-1' />
-                <span>{game.bets_count?.count || 0} người chơi</span>
+                <span>{game.bets_count[0]?.count || 0} lượt cược</span>
               </div>
             </div>
           </motion.div>

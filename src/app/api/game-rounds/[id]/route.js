@@ -46,8 +46,8 @@ export async function GET(request, { params }) {
   }
 }
 
-// PATCH: Cập nhật trạng thái của một game round
-export async function PATCH(request, { params }) {
+// PUT: Cập nhật trạng thái của một game round
+export async function PUT(request, { params }) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 

@@ -69,7 +69,7 @@ export async function GET(request, { params }) {
 
     return NextResponse.json({
       gameRound,
-      betStats: betStats || {
+      betStats: betStats[0] || {
         total_bets: 0,
         winning_bets: 0,
         total_bet_amount: 0,

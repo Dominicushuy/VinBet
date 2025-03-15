@@ -43,7 +43,7 @@ export async function GET(request) {
 
     // Gọi function để lấy game rounds
     const { data, error } = await supabase.rpc('get_game_rounds', {
-      status_filter: status,
+      status_filter: status === 'all' ? null : status,
       from_date: fromDate,
       to_date: toDate,
       page_number: page,
