@@ -70,7 +70,8 @@ export async function GET(request, { params }) {
                 betInfo: {
                   chosenNumber: winner.chosen_number,
                   result: gameRound.result
-                }
+                },
+                isSkipResponse: true
               })
             })
           } catch (error) {

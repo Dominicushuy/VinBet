@@ -73,11 +73,50 @@ export function PaymentRequestTimeline({ request }) {
 }
 
 // Component cho từng mục trong timeline
-function TimelineItem({ icon, title, time, color, content }) {
+
+export function TimelineItem({ icon, title, time, color, content }) {
+  // Xác định các lớp màu với độ tương phản cao hơn trong chế độ tối
+  const getContentColorClasses = () => {
+    switch (color) {
+      case 'blue':
+        return 'bg-blue-50 text-blue-800 dark:bg-blue-900/40 dark:text-blue-100'
+      case 'yellow':
+      case 'amber':
+        return 'bg-amber-50 text-amber-800 dark:bg-amber-900/50 dark:text-amber-100'
+      case 'orange':
+        return 'bg-orange-50 text-orange-800 dark:bg-orange-900/50 dark:text-orange-100'
+      case 'green':
+        return 'bg-green-50 text-green-800 dark:bg-green-900/40 dark:text-green-100'
+      case 'red':
+        return 'bg-red-50 text-red-800 dark:bg-red-900/40 dark:text-red-100'
+      default:
+        return `bg-${color}-50 text-${color}-800 dark:bg-${color}-900/40 dark:text-${color}-100`
+    }
+  }
+
+  // Xác định các lớp màu cho icon
+  const getIconColorClasses = () => {
+    switch (color) {
+      case 'blue':
+        return 'bg-blue-600 text-white dark:bg-blue-500'
+      case 'yellow':
+      case 'amber':
+        return 'bg-amber-500 text-amber-950 dark:bg-amber-400 dark:text-amber-950'
+      case 'orange':
+        return 'bg-orange-500 text-white dark:bg-orange-400 dark:text-orange-950'
+      case 'green':
+        return 'bg-green-600 text-white dark:bg-green-500'
+      case 'red':
+        return 'bg-red-600 text-white dark:bg-red-500'
+      default:
+        return `bg-${color}-600 text-white dark:bg-${color}-500`
+    }
+  }
+
   return (
     <div className='relative'>
       <div
-        className={`absolute -left-[30px] flex items-center justify-center w-6 h-6 rounded-full bg-${color}-100 text-${color}-600 border-2 border-white`}
+        className={`absolute -left-[30px] flex items-center justify-center w-6 h-6 rounded-full ${getIconColorClasses()} border-2 border-background dark:border-background`}
       >
         {icon}
       </div>
@@ -86,7 +125,7 @@ function TimelineItem({ icon, title, time, color, content }) {
         <div className='text-sm text-muted-foreground'>
           {format(new Date(time), 'HH:mm:ss, dd/MM/yyyy', { locale: vi })}
         </div>
-        <div className={`text-sm ${color === 'blue' ? 'bg-muted/50' : `bg-${color}-50`} p-2 rounded-md`}>{content}</div>
+        <div className={`text-sm ${getContentColorClasses()} p-2 rounded-md`}>{content}</div>
       </div>
     </div>
   )

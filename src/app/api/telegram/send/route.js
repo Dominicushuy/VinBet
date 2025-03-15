@@ -11,7 +11,7 @@ import {
   sendWinNotification,
   sendLoginNotification,
   sendSecurityAlert
-} from '@/utils/telegramBotHelper' // Sử dụng helper mới
+} from '@/utils/telegramBotHelper'
 
 // Schema validation tùy theo loại thông báo
 const notificationSchemas = {
@@ -56,31 +56,39 @@ export async function POST(request) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
+    // Parse body và xác định loại thông báo
+    const body = await request.json()
+    const { notificationType, userId, isSkipResponse, ...data } = body
+
+    // Helper function to respond based on isSkipResponse flag
+    const respondIf = (responseData, status = 200) => {
+      if (isSkipResponse) {
+        return new Response(null, { status: 204 }) // Return empty response with 204 No Content
+      }
+      return NextResponse.json(responseData, { status })
+    }
+
     // Kiểm tra quyền gửi thông báo
     const { data: sessionData } = await supabase.auth.getSession()
     if (!sessionData.session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return respondIf({ error: 'Unauthorized' }, 401)
     }
-
-    // Parse body và xác định loại thông báo
-    const body = await request.json()
-    const { notificationType, userId, ...data } = body
 
     // Validate body theo schema tương ứng
     if (!notificationType || !notificationSchemas[notificationType]) {
-      return NextResponse.json({ error: 'Không hỗ trợ loại thông báo này' }, { status: 400 })
+      return respondIf({ error: 'Không hỗ trợ loại thông báo này' }, 400)
     }
 
     let validatedData
     try {
       validatedData = notificationSchemas[notificationType].parse(body)
     } catch (error) {
-      return NextResponse.json(
+      return respondIf(
         {
           error: 'Dữ liệu không hợp lệ',
           details: error.errors
         },
-        { status: 400 }
+        400
       )
     }
 
@@ -92,12 +100,12 @@ export async function POST(request) {
       .single()
 
     if (userError || !userData?.telegram_id) {
-      return NextResponse.json(
+      return respondIf(
         {
           error: 'User không tồn tại hoặc chưa kết nối Telegram',
           success: false
         },
-        { status: 404 }
+        404
       )
     }
 
@@ -116,7 +124,7 @@ export async function POST(request) {
 
     const settingKey = notificationMap[notificationType]
     if (settingKey && telegramSettings[settingKey] === false) {
-      return NextResponse.json({
+      return respondIf({
         success: false,
         message: 'Người dùng đã tắt nhận thông báo loại này'
       })
@@ -160,11 +168,15 @@ export async function POST(request) {
         break
     }
 
-    return NextResponse.json({
+    return respondIf({
       success: sendResult,
       message: sendResult ? 'Đã gửi thông báo thành công' : 'Không thể gửi thông báo'
     })
   } catch (error) {
+    // Handle error with the same response logic
+    if (error.isSkipResponse) {
+      return new Response(null, { status: 204 })
+    }
     return handleApiError(error, 'Không thể gửi thông báo Telegram')
   }
 }

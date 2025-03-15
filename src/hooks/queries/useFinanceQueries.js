@@ -108,7 +108,38 @@ export function useUploadPaymentProofMutation() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ requestId, file }) => financeApi.uploadPaymentProof(requestId, file),
+    mutationFn: async ({ requestId, file }) => {
+      try {
+        const formData = new FormData()
+        formData.append('proof', file)
+        formData.append('requestId', requestId)
+
+        console.log('Uploading file:', {
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          requestId
+        })
+
+        const response = await fetch('/api/payment-requests/upload-proof', {
+          method: 'POST',
+          body: formData
+        })
+
+        if (!response.ok) {
+          // Xử lý error response đầy đủ hơn
+          const errorData = await response.json().catch(() => ({
+            error: `HTTP error! status: ${response.status}`
+          }))
+          throw new Error(errorData.error || 'Không thể upload bằng chứng thanh toán')
+        }
+
+        return response.json()
+      } catch (error) {
+        console.error('Upload mutation error:', error)
+        throw error
+      }
+    },
     onSuccess: () => {
       toast.success('Bằng chứng thanh toán đã được tải lên')
       queryClient.invalidateQueries({
@@ -116,6 +147,7 @@ export function useUploadPaymentProofMutation() {
       })
     },
     onError: error => {
+      console.error('Upload error in mutation:', error)
       toast.error(error.message || 'Không thể tải lên bằng chứng thanh toán')
     }
   })

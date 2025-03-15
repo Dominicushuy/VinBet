@@ -1,5 +1,3 @@
-// src/components/finance/deposit-steps/Step1Form.jsx
-
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -10,6 +8,7 @@ import { RadioGroup } from '@/components/ui/radio-group'
 import { PaymentMethodCard } from '@/components/finance/PaymentMethodCard'
 import { DollarSign, Loader2, ArrowRight } from 'lucide-react'
 import { formatCurrency } from '@/utils/formatUtils'
+import { useState, useEffect } from 'react'
 
 const depositFormSchema = z.object({
   amount: z
@@ -31,13 +30,41 @@ const depositFormSchema = z.object({
 })
 
 export function Step1Form({ onSubmit, isLoading, config }) {
+  // Find the first bank payment method ID
+  const getDefaultPaymentMethod = () => {
+    // Find first payment method with type/category "bank"
+    const bankMethod = config.payment_methods.find(method => method.type === 'bank' || method.category === 'bank')
+
+    // If no bank method found, use the first payment method
+    return bankMethod?.id || config.payment_methods[0]?.id || ''
+  }
+
   const form = useForm({
     resolver: zodResolver(depositFormSchema),
     defaultValues: {
       amount: 100000,
-      paymentMethod: ''
+      paymentMethod: getDefaultPaymentMethod()
     }
   })
+
+  // State to track the formatted display value
+  const [formattedAmount, setFormattedAmount] = useState('100,000')
+
+  // Format number with thousand separators
+  const formatNumber = value => {
+    return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  }
+
+  // Parse formatted string back to number
+  const parseFormattedNumber = formattedValue => {
+    return parseInt(formattedValue.replace(/,/g, '')) || 0
+  }
+
+  // Initialize formatted value when form loads
+  useEffect(() => {
+    const currentAmount = form.getValues('amount')
+    setFormattedAmount(formatNumber(currentAmount))
+  }, [])
 
   return (
     <Form {...form}>
@@ -52,13 +79,28 @@ export function Step1Form({ onSubmit, isLoading, config }) {
                 <div className='relative'>
                   <DollarSign className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
                   <Input
-                    type='number'
+                    type='text'
                     placeholder='100,000'
                     className='pl-10'
-                    {...field}
+                    value={formattedAmount}
                     onChange={e => {
-                      const value = parseInt(e.target.value)
-                      field.onChange(isNaN(value) ? 0 : value)
+                      // Remove non-numeric characters for processing
+                      const rawValue = e.target.value.replace(/[^\d]/g, '')
+
+                      // Convert to number for form validation
+                      const numericValue = rawValue ? parseInt(rawValue) : 0
+
+                      // Update the formatted display value
+                      setFormattedAmount(rawValue ? formatNumber(rawValue) : '')
+
+                      // Update the actual form value
+                      field.onChange(numericValue)
+                    }}
+                    onBlur={e => {
+                      // Ensure consistent formatting on blur
+                      const numericValue = parseFormattedNumber(formattedAmount)
+                      setFormattedAmount(numericValue ? formatNumber(numericValue) : '')
+                      field.onBlur()
                     }}
                   />
                 </div>
@@ -80,7 +122,7 @@ export function Step1Form({ onSubmit, isLoading, config }) {
               <FormControl>
                 <RadioGroup
                   onValueChange={field.onChange}
-                  defaultValue={field.value}
+                  value={field.value}
                   className='grid gap-4 grid-cols-1 md:grid-cols-3'
                 >
                   {config.payment_methods.map(method => (

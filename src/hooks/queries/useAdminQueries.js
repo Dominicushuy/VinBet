@@ -46,8 +46,11 @@ const withTimeout = async (promise, timeoutMs = TIMEOUTS.default) => {
 export const adminApi = {
   // Lấy danh sách các payment requests
   getPaymentRequests: async params => {
+    // Đảm bảo type chỉ chấp nhận 'deposit' hoặc 'withdrawal'
+    const validTypes = ['deposit', 'withdrawal']
+
     const queryString = buildQueryString({
-      type: params?.type,
+      type: params?.type && validTypes.includes(params.type) ? params.type : undefined,
       status: params?.status,
       page: params?.page,
       pageSize: params?.pageSize,

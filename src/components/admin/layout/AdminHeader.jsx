@@ -3,7 +3,7 @@
 import { useCallback, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Bell, Sun, Moon, Search, User, LogOut, Settings, Menu, Shield, Activity, CreditCard, Zap } from 'lucide-react'
+import { Bell, Sun, Moon, Search, User, LogOut, Shield, Activity, CreditCard, MessageSquare, Home } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +21,6 @@ import { toast } from 'react-hot-toast'
 import { ResponsiveAdminMenu } from './ResponsiveAdminMenu'
 import { useAuth } from '@/hooks/useAuth'
 import { useNotificationsQuery } from '@/hooks/queries/useNotificationQueries'
-import { MessageSquare } from 'lucide-react'
 
 export function AdminHeader({ userProfile }) {
   const { theme, setTheme } = useTheme()
@@ -102,7 +101,7 @@ export function AdminHeader({ userProfile }) {
                 <Bell size={20} />
                 {notificationData?.count > 0 && (
                   <span
-                    className='absolute top-0 right-0 flex h-3 w-3 rounded-full 
+                    className='absolute top-0 right-0 flex h-3 w-3 rounded-full   
                   bg-red-500 text-white items-center justify-center text-[0.6rem]'
                   >
                     {notificationData.count}
@@ -135,6 +134,17 @@ export function AdminHeader({ userProfile }) {
                     </div>
                   </div>
                 </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+
+                {/* New group for main site navigation */}
+                <DropdownMenuGroup>
+                  <DropdownMenuItem asChild>
+                    <Link href='/' className='cursor-pointer flex items-center'>
+                      <Home size={16} className='mr-2' />
+                      Về Trang Chủ
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
 
                 <DropdownMenuGroup>

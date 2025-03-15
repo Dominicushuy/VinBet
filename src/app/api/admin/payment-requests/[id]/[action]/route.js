@@ -101,7 +101,8 @@ export async function POST(request, { params }) {
             notificationType: 'deposit',
             userId: paymentRequest.profile_id,
             amount: paymentRequest.amount,
-            transactionId: paymentRequest.id
+            transactionId: paymentRequest.id,
+            isSkipResponse: true
           })
         })
       } // Gửi thông báo nếu là withdrawal
@@ -113,7 +114,8 @@ export async function POST(request, { params }) {
             notificationType: 'withdrawal',
             userId: paymentRequest.profile_id,
             amount: paymentRequest.amount,
-            paymentMethod: paymentRequest.payment_method
+            paymentMethod: paymentRequest.payment_method,
+            isSkipResponse: true
           })
         })
       }
