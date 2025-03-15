@@ -73,7 +73,7 @@ export async function GET(request, { params }) {
                   chosenNumber: winner.chosen_number,
                   result: gameRound.result
                 },
-                isSkipResponse: true
+                isSkipError: true
               })
             })
           } catch (error) {
