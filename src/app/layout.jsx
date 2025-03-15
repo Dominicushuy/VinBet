@@ -19,12 +19,12 @@ export const metadata = {
     title: 'VinBet - Cá cược hiện đại',
     description:
       'Khám phá hệ thống nhiều module: Quản lý người dùng, Game & Cược, Tài chính, Thông báo, Referral, và Admin Dashboard cho quản trị toàn diện.',
-    url: 'https://vinbet.netlify.app',
+    url: 'https://vinbet.vercel.app',
     images: [
       {
-        url: '/images/og-image.jpg',
-        width: 1200,
-        height: 630,
+        url: 'logo.png',
+        width: 1024,
+        height: 1024,
         alt: 'VinBet Online Betting'
       }
     ]
@@ -35,7 +35,7 @@ export const metadata = {
     title: 'VinBet - Nền tảng cá cược tích hợp đa tính năng',
     description:
       'Cung cấp các chức năng gồm đăng nhập, đăng ký, quản lý tài khoản, nạp/rút tiền, đặt cược, thông báo, giới thiệu bạn bè, và hệ thống admin mạnh mẽ.',
-    images: ['/images/og-image.jpg']
+    images: ['logo.png']
   }
 }
 
