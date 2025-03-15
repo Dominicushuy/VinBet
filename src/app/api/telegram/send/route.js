@@ -53,43 +53,35 @@ const notificationSchemas = {
 }
 
 export async function POST(request) {
-  // Parse body và xác định loại thông báo
-  const body = await request.json()
-  const { notificationType, isSkipError, ...data } = body
-
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    // Helper function to handle errors based on isSkipError flag
-    const handleError = (errorMessage, status = 400) => {
-      if (isSkipError) {
-        // If isSkipError is true, return a success response instead of an error
-        return NextResponse.json({
-          success: true,
-          message: 'Request processed without returning errors',
-          _suppressed: errorMessage // Optional: include suppressed error for debugging
-        })
-      }
-      // Otherwise return the normal error response
-      return NextResponse.json({ error: errorMessage, success: false }, { status })
-    }
+    // Parse body và xác định loại thông báo
+    const body = await request.json()
+    const { notificationType, ...data } = body
 
     // Kiểm tra quyền gửi thông báo
     const { data: sessionData } = await supabase.auth.getSession()
     if (!sessionData.session) {
-      return handleError('Unauthorized', 401)
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Validate body theo schema tương ứng
     if (!notificationType || !notificationSchemas[notificationType]) {
-      return handleError('Không hỗ trợ loại thông báo này', 400)
+      return NextResponse.json({ error: 'Không hỗ trợ loại thông báo này' }, { status: 400 })
     }
 
     let validatedData
     try {
       validatedData = notificationSchemas[notificationType].parse(body)
     } catch (error) {
-      return handleError('Dữ liệu không hợp lệ', 400)
+      return NextResponse.json(
+        {
+          error: 'Dữ liệu không hợp lệ',
+          details: error.errors
+        },
+        { status: 400 }
+      )
     }
 
     // Lấy Telegram ID từ database
@@ -100,7 +92,13 @@ export async function POST(request) {
       .single()
 
     if (userError || !userData?.telegram_id) {
-      return handleError('User không tồn tại hoặc chưa kết nối Telegram', 404)
+      return NextResponse.json(
+        {
+          error: 'User không tồn tại hoặc chưa kết nối Telegram',
+          success: false
+        },
+        { status: 404 }
+      )
     }
 
     const telegramId = userData.telegram_id
@@ -118,7 +116,10 @@ export async function POST(request) {
 
     const settingKey = notificationMap[notificationType]
     if (settingKey && telegramSettings[settingKey] === false) {
-      return handleError('Người dùng đã tắt nhận thông báo loại này')
+      return NextResponse.json({
+        success: false,
+        message: 'Người dùng đã tắt nhận thông báo loại này'
+      })
     }
 
     // Gửi thông báo theo loại sử dụng helper mới
@@ -159,28 +160,11 @@ export async function POST(request) {
         break
     }
 
-    // If failed to send but isSkipError is true, return success anyway
-    if (!sendResult && isSkipError) {
-      return NextResponse.json({
-        success: true,
-        message: 'Request processed without returning errors',
-        _suppressed: 'Không thể gửi thông báo'
-      })
-    }
-
     return NextResponse.json({
       success: sendResult,
       message: sendResult ? 'Đã gửi thông báo thành công' : 'Không thể gửi thông báo'
     })
   } catch (error) {
-    // Handle unexpected errors while still respecting isSkipError
-    if (isSkipError || (typeof body === 'object' && isSkipError)) {
-      return NextResponse.json({
-        success: true,
-        message: 'Request processed without returning errors',
-        _suppressed: 'Unexpected error occurred'
-      })
-    }
     return handleApiError(error, 'Không thể gửi thông báo Telegram')
   }
 }
