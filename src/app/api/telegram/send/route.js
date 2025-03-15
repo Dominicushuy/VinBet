@@ -84,6 +84,16 @@ export async function POST(request) {
       )
     }
 
+    // Skip sending notifications in development environment
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[DEV MODE] Skipped sending ${notificationType} notification to user ${validatedData.userId}`)
+      return NextResponse.json({
+        success: true,
+        message: 'Thông báo đã được bỏ qua trong môi trường development',
+        skipped: true
+      })
+    }
+
     // Lấy Telegram ID từ database
     const { data: userData, error: userError } = await supabase
       .from('profiles')

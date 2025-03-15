@@ -1,4 +1,3 @@
-// src/components/finance/withdrawal-steps/Step1Form.jsx
 'use client'
 
 import { useForm } from 'react-hook-form'
@@ -11,10 +10,28 @@ import { Textarea } from '@/components/ui/textarea'
 import { PaymentMethodCard } from '@/components/finance/PaymentMethodCard'
 import { Wallet, Loader2, ArrowRight } from 'lucide-react'
 import { formatCurrency } from '@/utils/formatUtils'
+import { useState, useEffect } from 'react'
+
+// Hàm chuyển đổi chuỗi đã format thành số nguyên
+const parseFormattedNumber = value => {
+  if (!value) return 0
+  return parseInt(value.replace(/[^\d]/g, ''))
+}
+
+// Hàm format số thành chuỗi có dấu phân cách hàng ngàn
+const formatNumberWithCommas = value => {
+  if (!value) return ''
+  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
 
 export function Step1Form({ onSubmit, isLoading, config, userBalance }) {
-  // Schema cho withdrawal form
-  const withdrawalFormSchema = z.object({
+  // State lưu giá trị đã format của input amount
+  const [formattedAmount, setFormattedAmount] = useState(formatNumberWithCommas(config.min_withdrawal))
+  // State để lưu trữ schema validation hiện tại
+  const [validationSchema, setValidationSchema] = useState(null)
+
+  // Schema cơ bản cho withdrawal form
+  const baseSchema = z.object({
     amount: z
       .number({
         required_error: 'Vui lòng nhập số tiền',
@@ -33,12 +50,12 @@ export function Step1Form({ onSubmit, isLoading, config, userBalance }) {
       }),
     paymentMethod: z.string({
       required_error: 'Vui lòng chọn phương thức rút tiền'
-    })
+    }),
+    notes: z.string().optional()
   })
 
-  // Dựa vào phương thức thanh toán đã chọn, thêm schema cho các field bắt buộc
+  // Khởi tạo form
   const form = useForm({
-    resolver: zodResolver(withdrawalFormSchema),
     defaultValues: {
       amount: config.min_withdrawal,
       paymentMethod: '',
@@ -48,6 +65,68 @@ export function Step1Form({ onSubmit, isLoading, config, userBalance }) {
 
   // Watch form values
   const watchPaymentMethod = form.watch('paymentMethod')
+  const watchAmount = form.watch('amount')
+
+  // Cập nhật schema validation khi payment method thay đổi
+  useEffect(() => {
+    if (watchPaymentMethod) {
+      const selectedMethod = config.withdrawal_methods.find(method => method.id === watchPaymentMethod)
+
+      if (selectedMethod && selectedMethod.fields) {
+        // Xây dựng schema mở rộng với các trường dynamic
+        let schemaExtension = {}
+
+        selectedMethod.fields.forEach(field => {
+          if (field.required) {
+            schemaExtension[field.name] = z.string().min(1, `${field.label} là bắt buộc`)
+          } else {
+            schemaExtension[field.name] = z.string().optional()
+          }
+
+          // Đảm bảo trường được đăng ký trong form
+          if (!form.getValues(field.name)) {
+            form.setValue(field.name, '')
+          }
+        })
+
+        // Tạo schema mới kết hợp với baseSchema
+        const newSchema = baseSchema.extend(schemaExtension)
+        setValidationSchema(newSchema)
+
+        // Cập nhật resolver với schema mới
+        form.clearErrors()
+        form.reset(form.getValues(), {
+          resolver: zodResolver(newSchema)
+        })
+      }
+    } else {
+      // Nếu không có phương thức nào được chọn, sử dụng schema cơ bản
+      setValidationSchema(baseSchema)
+      form.reset(form.getValues(), {
+        resolver: zodResolver(baseSchema)
+      })
+    }
+  }, [watchPaymentMethod])
+
+  // Cập nhật formatted amount khi amount thay đổi từ bên ngoài
+  useEffect(() => {
+    if (typeof watchAmount === 'number' && watchAmount >= 0) {
+      setFormattedAmount(formatNumberWithCommas(watchAmount))
+    }
+  }, [watchAmount])
+
+  // Form submit handler lấy tất cả dữ liệu cần thiết
+  const handleFormSubmit = async data => {
+    try {
+      // Tất cả dữ liệu đã được xác thực và đăng ký với form
+      console.log('Dữ liệu form trước khi gửi:', data)
+
+      // Gọi hàm submit được truyền vào từ component cha
+      await onSubmit(data)
+    } catch (error) {
+      console.error('Lỗi khi submit form:', error)
+    }
+  }
 
   // Render payment method form fields
   const renderPaymentMethodFields = () => {
@@ -98,7 +177,7 @@ export function Step1Form({ onSubmit, isLoading, config, userBalance }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className='space-y-6'>
         <div className='flex items-center justify-between bg-muted/50 p-3 rounded-md'>
           <span>Số dư có thể rút:</span>
           <span className='font-semibold text-primary'>{formatCurrency(userBalance)}</span>
@@ -114,13 +193,25 @@ export function Step1Form({ onSubmit, isLoading, config, userBalance }) {
                 <div className='relative'>
                   <Wallet className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
                   <Input
-                    type='number'
+                    type='text'
                     placeholder='100,000'
                     className='pl-10'
-                    {...field}
+                    value={formattedAmount}
                     onChange={e => {
-                      const value = parseInt(e.target.value)
-                      field.onChange(isNaN(value) ? config.min_withdrawal : value)
+                      // Chỉ cho phép nhập số và dấu phẩy
+                      const rawValue = e.target.value.replace(/[^\d,]/g, '')
+                      setFormattedAmount(rawValue)
+
+                      // Cập nhật giá trị số thực cho form validation
+                      const numericValue = parseFormattedNumber(rawValue)
+                      field.onChange(numericValue)
+                    }}
+                    onBlur={() => {
+                      // Format lại khi blur để đảm bảo hiển thị đúng
+                      const numericValue = parseFormattedNumber(formattedAmount)
+                      const formatted = formatNumberWithCommas(numericValue)
+                      setFormattedAmount(formatted)
+                      field.onChange(numericValue)
                     }}
                   />
                 </div>

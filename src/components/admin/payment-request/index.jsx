@@ -1,9 +1,9 @@
 // src/components/admin/payment-request/index.jsx
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { format } from 'date-fns'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useAdminPaymentRequestsQuery } from '@/hooks/queries/useAdminQueries'
@@ -18,7 +18,17 @@ import { PaymentRequestsTableSkeleton } from './list/PaymentRequestsTableSkeleto
 
 export function AdminPaymentRequestsManagement() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+
   const [selectedType, setSelectedType] = useState('deposit')
+
+  useEffect(() => {
+    const typeParam = searchParams.get('type')
+    if (typeParam) {
+      setSelectedType(typeParam)
+    }
+  }, [searchParams])
+
   const [selectedStatus, setSelectedStatus] = useState('pending')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)

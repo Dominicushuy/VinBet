@@ -40,8 +40,8 @@ export function NotificationProvider({ children }) {
     const checkAndSendLoginNotification = async () => {
       if (!user?.id || !profile?.telegram_id || !clientInfo) return
 
-      // Skip notifications in development mode if desired
-      if (clientInfo.isDevelopment && process.env.NEXT_PUBLIC_DISABLE_DEV_NOTIFICATIONS === 'true') {
+      // Skip all notifications in development mode - no environment variable needed
+      if (clientInfo.isDevelopment) {
         console.log('Login notification skipped in development mode')
         return
       }

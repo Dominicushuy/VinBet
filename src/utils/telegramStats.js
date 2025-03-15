@@ -1,5 +1,4 @@
 // src/utils/telegramStats.js
-import { supabaseAdmin } from '@/lib/supabase/admin'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 

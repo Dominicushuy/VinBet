@@ -1,4 +1,3 @@
-// src/components/finance/WithdrawalFlowSteps.jsx
 'use client'
 
 import { useState, useCallback, useMemo } from 'react'
@@ -30,9 +29,11 @@ export function WithdrawalFlowSteps({ userBalance, config }) {
     return method
   }, [getSelectedMethodDetails])
 
-  // Handle step 1 form submission
+  // Handle step 1 form submission - Được cải tiến
   const handleStep1Submit = useCallback(
     async data => {
+      console.log('Form data từ Step1Form:', data)
+
       setWatchAmount(data.amount)
       setSelectedMethod(data.paymentMethod)
 
@@ -41,25 +42,32 @@ export function WithdrawalFlowSteps({ userBalance, config }) {
       setTransferCode(code)
 
       try {
-        // Parse payment details from form data
+        // Cải tiến: Xử lý paymentDetails đúng cách
         const paymentDetails = {}
 
-        // Extract form fields based on selected method
+        // Lấy xác định phương thức rút tiền đã chọn
         const method = config.withdrawal_methods.find(m => m.id === data.paymentMethod)
+
         if (method && method.fields) {
+          // Trích xuất tất cả các trường liên quan từ form data
           method.fields.forEach(field => {
-            if (data[field.name]) {
+            // Lưu ý: Không kiểm tra truthy value để tránh bỏ qua giá trị hợp lệ
+            if (field.name in data) {
               paymentDetails[field.name] = data[field.name]
             }
           })
         }
 
-        // Add notes if provided
+        // Thêm notes nếu có
         if (data.notes) {
           paymentDetails.notes = data.notes
         }
 
-        // Create withdrawal request
+        console.log('Phương thức đã chọn:', method)
+        console.log('Các trường của phương thức:', method?.fields)
+        console.log('Payment details trước khi gửi:', paymentDetails)
+
+        // Tạo yêu cầu rút tiền
         const result = await createWithdrawalMutation.mutateAsync({
           amount: data.amount,
           paymentMethod: data.paymentMethod,
