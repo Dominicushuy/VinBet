@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { handleApiError } from '@/utils/errorHandler'
+import { sendWinTelegramNotification } from '@/utils/sendTelegramServer'
 
 export async function GET(request, { params }) {
   try {
@@ -58,27 +59,10 @@ export async function GET(request, { params }) {
       // Gửi thông báo Telegram
       for (const winner of winners || []) {
         if (winner.profiles?.telegram_id) {
-          const urlSendTelegram = `${process.env.NEXT_PUBLIC_SITE_URL}/api/telegram/send`
-
-          try {
-            await fetch(urlSendTelegram, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                notificationType: 'win',
-                userId: winner.profile_id,
-                amount: winner.potential_win,
-                gameId: gameRoundId,
-                betInfo: {
-                  chosenNumber: winner.chosen_number,
-                  result: gameRound.result
-                },
-                isSkipError: true
-              })
-            })
-          } catch (error) {
-            console.error('Failed to send Telegram notification:', error)
-          }
+          await sendWinTelegramNotification(winner.profile_id, winner.potential_win, gameRoundId, {
+            chosenNumber: winner.chosen_number,
+            result: gameRound.result
+          })
         }
       }
     }

@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createAdminApiHandler } from '@/utils/adminAuthHandler'
+import { sendCustomTelegramNotification } from '@/utils/sendTelegramServer'
 
 export const POST = createAdminApiHandler(async (request, _, { supabase, user }) => {
   try {
@@ -28,18 +29,13 @@ export const POST = createAdminApiHandler(async (request, _, { supabase, user })
     }
 
     // Gửi tin nhắn thử nghiệm
-    const result = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/telegram/send`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        notificationType: 'custom',
-        userId: userId,
-        title: '🛠️ Kiểm tra kết nối Telegram',
-        message: `Đây là tin nhắn thử nghiệm được gửi bởi admin.\n\nXin chào ${
-          profile.display_name || profile.username || 'người dùng'
-        }!\n\nKết nối Telegram của bạn đang hoạt động bình thường.\n\nThời gian: ${new Date().toLocaleString('vi-VN')}`
-      })
-    }).then(res => res.json())
+    const result = await sendCustomTelegramNotification(
+      userId,
+      '🛠️ Kiểm tra kết nối Telegram',
+      `Đây là tin nhắn thử nghiệm được gửi bởi admin.\n\nXin chào ${
+        profile.display_name || profile.username || 'người dùng'
+      }!\n\nKết nối Telegram của bạn đang hoạt động bình thường.\n\nThời gian: ${new Date().toLocaleString('vi-VN')}`
+    )
 
     if (!result.success) {
       throw new Error(result.message || 'Không thể gửi tin nhắn thử nghiệm')

@@ -7,6 +7,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { handleApiError } from '@/utils/errorHandler'
+import { sendDepositTelegramNotification, sendWithdrawalTelegramNotification } from '@/utils/sendTelegramServer'
 
 const actionSchema = z.object({
   notes: z.string().optional()
@@ -71,7 +72,7 @@ export async function POST(request, { params }) {
     // Kiểm tra payment request có tồn tại không
     const { data: paymentRequest, error: checkError } = await supabase
       .from('payment_requests')
-      .select('id, status, type, amount, profile_id')
+      .select('id, status, type, amount, profile_id, payment_method')
       .eq('id', requestId)
       .single()
 
@@ -92,32 +93,17 @@ export async function POST(request, { params }) {
         p_notes: validatedData.notes || null
       })
 
-      // Gửi thông báo Telegram nếu là deposit
-      const urlSendTelegram = `${process.env.NEXT_PUBLIC_SITE_URL}/api/telegram/send`
-
       if (paymentRequest.type === 'deposit') {
-        await fetch(urlSendTelegram, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            notificationType: 'deposit',
-            userId: paymentRequest.profile_id,
-            amount: paymentRequest.amount,
-            transactionId: paymentRequest.id
-          })
-        })
+        // Loại bỏ await - gửi thông báo Telegram mà không đợi
+        sendDepositTelegramNotification(paymentRequest.profile_id, paymentRequest.amount, paymentRequest.id)
       } // Gửi thông báo nếu là withdrawal
       else if (paymentRequest.type === 'withdrawal') {
-        await fetch(urlSendTelegram, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            notificationType: 'withdrawal',
-            userId: paymentRequest.profile_id,
-            amount: paymentRequest.amount,
-            paymentMethod: paymentRequest.payment_method
-          })
-        })
+        // Loại bỏ await - gửi thông báo Telegram mà không đợi
+        sendWithdrawalTelegramNotification(
+          paymentRequest.profile_id,
+          paymentRequest.amount,
+          paymentRequest.payment_method
+        )
       }
     } else {
       result = await supabase.rpc('reject_payment_request', {
@@ -134,8 +120,8 @@ export async function POST(request, { params }) {
       )
     }
 
-    // Create admin log
-    await supabase.from('admin_logs').insert({
+    // Create admin log - loại bỏ await (không đợi ghi log)
+    supabase.from('admin_logs').insert({
       admin_id: sessionData.session.user.id,
       action: action === 'approve' ? 'APPROVE_PAYMENT' : 'REJECT_PAYMENT',
       entity_type: 'payment_requests',

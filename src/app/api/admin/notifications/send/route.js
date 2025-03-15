@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createAdminApiHandler } from '@/utils/adminAuthHandler'
 import { z } from 'zod'
+import { sendCustomTelegramNotification } from '@/utils/sendTelegramServer'
 
 const sendNotificationSchema = z.object({
   title: z.string().min(3, 'Tiêu đề cần ít nhất 3 ký tự'),
@@ -81,16 +82,7 @@ export const POST = createAdminApiHandler(async (request, _, { supabase, user })
 
     const telegramResults = await Promise.allSettled(
       targetUserIds.map(async userId => {
-        return fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/telegram/send`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            notificationType: 'custom',
-            userId,
-            title,
-            message: content
-          })
-        })
+        return sendCustomTelegramNotification(userId, title, content)
       })
     )
 
