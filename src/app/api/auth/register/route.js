@@ -24,16 +24,13 @@ export async function POST(request) {
     // Lấy referrer ID nếu có mã giới thiệu
     const referredBy = validatedData.referralCode ? await getReferrerId(supabase, validatedData.referralCode) : null
 
-    // Đăng ký qua Supabase Auth
-    const { data, error } = await supabase.auth.signUp({
+    // Đăng ký qua người dùng bằng supabaseAmin và skip email verification
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email: validatedData.email,
       password: validatedData.password,
-      options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/callback`,
-        data: {
-          referred_by: referredBy,
-          full_name: validatedData.fullName
-        }
+      email_confirm: true,
+      user_metadata: {
+        display_name: validatedData.fullName
       }
     })
 

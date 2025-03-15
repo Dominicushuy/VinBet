@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -24,21 +24,31 @@ export function NotificationDetail({ id }) {
   const markReadMutation = useMarkNotificationReadMutation()
   const deleteNotificationMutation = useDeleteNotificationMutation()
   const [hasMarkedRead, setHasMarkedRead] = useState(false)
+  const isMarkingRef = useRef(false) // Add this ref to track marking state
 
   useEffect(() => {
+    // Only run this effect once when data first loads
     const markAsRead = async () => {
-      if (data?.notification && !data.notification.is_read && !hasMarkedRead) {
-        try {
-          await markReadMutation.mutateAsync(id)
-          setHasMarkedRead(true)
-        } catch (error) {
-          console.error('Failed to mark notification as read:', error)
-        }
+      // Skip if already marking or has marked, or if notification is already read
+      if (isMarkingRef.current || hasMarkedRead || !data?.notification || data.notification.is_read) {
+        return
+      }
+
+      try {
+        isMarkingRef.current = true // Set marking state
+        await markReadMutation.mutateAsync(id)
+        setHasMarkedRead(true)
+      } catch (error) {
+        console.error('Failed to mark notification as read:', error)
+      } finally {
+        isMarkingRef.current = false
       }
     }
 
     markAsRead()
-  }, [data, id, markReadMutation, hasMarkedRead])
+
+    // No need to clean up since we're using the ref to track state
+  }, [id]) // Only depend on the id, not data or the mutation
 
   const handleBack = () => {
     router.push('/notifications')
@@ -48,7 +58,7 @@ export function NotificationDetail({ id }) {
     try {
       await deleteNotificationMutation.mutateAsync(id)
       toast.success('Đã xóa thông báo')
-      handleBack()
+      // handleBack()
     } catch (error) {
       toast.error('Không thể xóa thông báo')
     }

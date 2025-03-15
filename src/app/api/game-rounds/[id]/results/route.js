@@ -58,8 +58,10 @@ export async function GET(request, { params }) {
       // Gửi thông báo Telegram
       for (const winner of winners || []) {
         if (winner.profiles?.telegram_id) {
+          const urlSendTelegram = `${process.env.NEXT_PUBLIC_SITE_URL}/api/telegram/send`
+
           try {
-            await fetch('/api/telegram/send', {
+            await fetch(urlSendTelegram, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({

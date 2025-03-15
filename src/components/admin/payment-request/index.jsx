@@ -66,8 +66,9 @@ export function AdminPaymentRequestsManagement() {
   }, [])
 
   const handleFilterChange = useCallback((type, status) => {
-    if (type !== undefined) setSelectedType(type)
-    if (status !== undefined) setSelectedStatus(status)
+    // Remove the conditional checks to allow setting to undefined
+    if (type !== undefined || type === undefined) setSelectedType(type)
+    if (status !== undefined || status === undefined) setSelectedStatus(status)
     setPage(1) // Reset to first page when changing filters
   }, [])
 

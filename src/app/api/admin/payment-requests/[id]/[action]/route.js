@@ -93,8 +93,10 @@ export async function POST(request, { params }) {
       })
 
       // Gửi thông báo Telegram nếu là deposit
+      const urlSendTelegram = `${process.env.NEXT_PUBLIC_SITE_URL}/api/telegram/send`
+
       if (paymentRequest.type === 'deposit') {
-        await fetch('/api/telegram/send', {
+        await fetch(urlSendTelegram, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -107,7 +109,7 @@ export async function POST(request, { params }) {
         })
       } // Gửi thông báo nếu là withdrawal
       else if (paymentRequest.type === 'withdrawal') {
-        await fetch('/api/telegram/send', {
+        await fetch(urlSendTelegram, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useState, useMemo } from 'react'
+import { memo, useState, useMemo, cloneElement } from 'react'
 import Link from 'next/link'
 import { Check, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -84,7 +84,7 @@ export const NotificationItem = memo(function NotificationItem({
       >
         <div className='flex gap-4'>
           {isSelectMode && (
-            <div className='flex-shrink-0 flex items-start pt-1'>
+            <div className='flex-shrink-0 flex items-center self-start pt-1'>
               <Checkbox
                 checked={isSelected}
                 onCheckedChange={onToggleSelect}
@@ -94,11 +94,24 @@ export const NotificationItem = memo(function NotificationItem({
             </div>
           )}
 
-          <div className={cn('flex-shrink-0 p-2 rounded-full', statusBadgeClass)}>{notificationIcon}</div>
+          {/* Badge đã sửa lại để icon nằm chính giữa */}
+          <div className='flex-shrink-0 self-start'>
+            <div className={cn('w-9 h-9 inline-flex items-center justify-center rounded-full', statusBadgeClass)}>
+              {cloneElement(notificationIcon, {
+                className: 'w-4 h-4',
+                size: 16
+              })}
+            </div>
+          </div>
 
-          <div className='flex-grow space-y-1 min-w-0'>
+          <div className='flex-grow space-y-1.5 min-w-0'>
             <div className='flex justify-between items-start gap-2'>
-              <h4 className={cn('font-medium line-clamp-1', !notification.is_read && 'text-primary')}>
+              <h4
+                className={cn(
+                  'font-medium line-clamp-1 text-sm',
+                  !notification.is_read && 'text-primary font-semibold'
+                )}
+              >
                 {notification.title}
               </h4>
               <span className='text-xs text-muted-foreground whitespace-nowrap flex-shrink-0'>{timeAgoString}</span>
@@ -107,22 +120,27 @@ export const NotificationItem = memo(function NotificationItem({
             <p className='text-sm text-muted-foreground line-clamp-2'>{notification.content}</p>
 
             {!isSelectMode && (
-              <div className='flex justify-end gap-2 pt-1'>
+              <div className='flex justify-end gap-2 pt-2'>
                 {!notification.is_read && (
-                  <Button size='sm' variant='ghost' className='h-8' onClick={handleMarkRead}>
-                    <Check className='h-4 w-4 mr-1' />
-                    Đánh dấu đã đọc
+                  <Button
+                    size='sm'
+                    variant='ghost'
+                    className='h-8 rounded-md hover:bg-primary/10'
+                    onClick={handleMarkRead}
+                  >
+                    <Check className='h-4 w-4 mr-1.5' />
+                    <span className='text-xs'>Đánh dấu đã đọc</span>
                   </Button>
                 )}
 
                 <Button
                   size='sm'
                   variant='ghost'
-                  className='h-8 text-destructive hover:text-destructive'
+                  className='h-8 rounded-md text-destructive hover:bg-destructive/10 hover:text-destructive'
                   onClick={handleDelete}
                 >
-                  <Trash2 className='h-4 w-4 mr-1' />
-                  Xóa
+                  <Trash2 className='h-4 w-4 mr-1.5' />
+                  <span className='text-xs'>Xóa</span>
                 </Button>
               </div>
             )}
