@@ -47,7 +47,7 @@ export async function POST(request) {
         id: data.user.id,
         email: validatedData.email,
         username: generateUsername(validatedData.email),
-        full_name: validatedData.fullName,
+        display_name: validatedData.fullName,
         referral_code: referralCode,
         referred_by: referredBy,
         balance: 0,
