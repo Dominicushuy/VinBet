@@ -1,4 +1,4 @@
-import { format, addHours } from 'date-fns'
+import { format, addHours, addMinutes } from 'date-fns'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -45,11 +45,13 @@ const createGameRoundSchema = z
   )
 
 export function CreateGameDialog({ open, onClose, onSubmit, isLoading }) {
+  const startTime = format(addMinutes(new Date(), 5), "yyyy-MM-dd'T'HH:mm")
+
   const form = useForm({
     resolver: zodResolver(createGameRoundSchema),
     defaultValues: {
-      startTime: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-      endTime: format(addHours(new Date(), 1), "yyyy-MM-dd'T'HH:mm")
+      startTime,
+      endTime: format(addHours(startTime, 1), "yyyy-MM-dd'T'HH:mm")
     }
   })
 

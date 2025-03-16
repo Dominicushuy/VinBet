@@ -171,7 +171,9 @@ function GameCard({ game, index }) {
 }
 
 export function GameCardShowcase({ type, count = 6 }) {
-  const { data: fetchedGames, isLoading } = useGamesByTypeQuery(type)
+  const { data: fetchedGamesData, isLoading } = useGamesByTypeQuery(type)
+
+  const fetchedGames = Array.isArray(fetchedGamesData) ? fetchedGamesData : []
 
   if (isLoading) {
     return <GameListSkeleton count={count} />

@@ -11,7 +11,6 @@ import {
   Clock,
   Trophy,
   Users,
-  ExternalLink,
   Calendar,
   Timer,
   Ban,
@@ -43,7 +42,8 @@ export function GameListItem({ game, className }) {
       const endTime = new Date(game.end_time)
       const totalDuration = endTime.getTime() - startTime.getTime()
 
-      if (now >= startTime && now < endTime) {
+      // Check game status first
+      if (game.status === 'active') {
         // Game is active
         setIsLive(true)
         const elapsed = now.getTime() - startTime.getTime()
@@ -66,7 +66,7 @@ export function GameListItem({ game, className }) {
             addSuffix: false
           })}`
         )
-      } else if (now < startTime) {
+      } else if (game.status === 'scheduled') {
         // Game is upcoming
         setIsLive(false)
         setProgressPercentage(0)
@@ -85,12 +85,18 @@ export function GameListItem({ game, className }) {
             addSuffix: false
           })}`
         )
-      } else {
-        // Game is completed or cancelled
+      } else if (game.status === 'completed') {
+        // Game is completed
         setIsLive(false)
         setProgressPercentage(100)
         setTimeState('normal')
         setTimeLeft('Đã kết thúc')
+      } else if (game.status === 'cancelled') {
+        // Game is cancelled
+        setIsLive(false)
+        setProgressPercentage(0)
+        setTimeState('normal')
+        setTimeLeft('Đã hủy')
       }
     }
 
@@ -99,7 +105,7 @@ export function GameListItem({ game, className }) {
     const intervalId = setInterval(updateTimeAndProgress, 15000) // Update more frequently
 
     return () => clearInterval(intervalId)
-  }, [game.start_time, game.end_time])
+  }, [game.start_time, game.end_time, game.status])
 
   // Get status badge with appropriate styling
   const getStatusBadge = () => {
@@ -158,6 +164,9 @@ export function GameListItem({ game, className }) {
 
   // Get text color based on time state
   const getTimeTextColor = () => {
+    if (game.status === 'cancelled') {
+      return 'text-red-600 dark:text-red-400 font-medium'
+    }
     if (timeState === 'urgent') {
       return 'text-red-600 dark:text-red-400 font-medium'
     }
@@ -172,6 +181,9 @@ export function GameListItem({ game, className }) {
 
   // Get progress bar color
   const getProgressColor = () => {
+    if (game.status === 'cancelled') {
+      return 'bg-gradient-to-r from-red-500 to-red-600'
+    }
     if (progressPercentage > 80) {
       return 'bg-gradient-to-r from-amber-500 to-red-500'
     }
@@ -181,12 +193,34 @@ export function GameListItem({ game, className }) {
     return 'bg-gradient-to-r from-green-500 to-emerald-400'
   }
 
+  // Get the appropriate time icon based on status
+  const getTimeIcon = () => {
+    if (game.status === 'cancelled') {
+      return <Ban className='h-4 w-4 text-red-500' />
+    }
+    if (isLive) {
+      return timeState === 'urgent' ? (
+        <Flame className='h-4 w-4 text-red-500' />
+      ) : (
+        <Clock className='h-4 w-4 text-green-500' />
+      )
+    }
+    if (game.status === 'scheduled') {
+      return <Timer className='h-4 w-4 text-blue-500' />
+    }
+    return <Clock className='h-4 w-4 text-muted-foreground' />
+  }
+
+  // console.log(game)
+
   return (
     <Card
       className={cn(
         'overflow-hidden transition-all duration-300 hover:shadow-lg group',
-        isLive
+        game.status === 'active'
           ? 'border-green-500/30 hover:border-green-500/50 shadow-sm shadow-green-500/5'
+          : game.status === 'cancelled'
+          ? 'border-red-500/30 hover:border-red-500/50 shadow-sm shadow-red-500/5'
           : 'hover:border-primary/50',
         isJackpot
           ? 'border-amber-500/50 bg-gradient-to-r from-amber-50/50 to-transparent dark:from-amber-950/50 dark:to-transparent shadow-sm shadow-amber-500/10'
@@ -197,7 +231,7 @@ export function GameListItem({ game, className }) {
     >
       <CardContent className='p-0'>
         <div className='relative w-full'>
-          {isLive && (
+          {(isLive || game.status === 'completed' || game.status === 'cancelled') && (
             <Progress
               value={progressPercentage}
               className='h-1.5 rounded-none absolute top-0 left-0 right-0 z-10 bg-gray-100 dark:bg-gray-800'
@@ -266,17 +300,7 @@ export function GameListItem({ game, className }) {
 
               {/* Time information */}
               <div className={cn('flex items-center text-sm gap-1.5 mb-1.5', getPulseAnimation())}>
-                {isLive ? (
-                  timeState === 'urgent' ? (
-                    <Flame className='h-4 w-4 text-red-500' />
-                  ) : (
-                    <Clock className='h-4 w-4 text-green-500' />
-                  )
-                ) : game.status === 'scheduled' ? (
-                  <Timer className='h-4 w-4 text-blue-500' />
-                ) : (
-                  <Clock className='h-4 w-4 text-muted-foreground' />
-                )}
+                {getTimeIcon()}
                 <span className={getTimeTextColor()}>{timeLeft}</span>
               </div>
 
@@ -317,6 +341,9 @@ export function GameListItem({ game, className }) {
                       ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-md shadow-amber-500/20'
                       : '',
                     game.status === 'completed' ? 'bg-secondary hover:bg-secondary/80' : '',
+                    game.status === 'cancelled'
+                      ? 'bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-800/50 dark:text-red-400 border-red-200 dark:border-red-800/50'
+                      : '',
                     isLive && !isJackpot
                       ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 shadow-md shadow-green-500/20'
                       : '',
@@ -325,7 +352,7 @@ export function GameListItem({ game, className }) {
                       : ''
                   )}
                 >
-                  {isLive ? (
+                  {game.status === 'active' ? (
                     timeState === 'urgent' ? (
                       <>
                         Tham gia ngay!
@@ -347,7 +374,7 @@ export function GameListItem({ game, className }) {
                     </>
                   ) : (
                     <>
-                      Chi tiết <ChevronRight className='ml-1 h-4 w-4' />
+                      Chi tiết <Ban className='ml-1 h-4 w-4' />
                     </>
                   )}
                 </Button>

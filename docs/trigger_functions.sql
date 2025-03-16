@@ -1815,9 +1815,9 @@ BEGIN
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Tạo trigger
+-- Tạo lại trigger
 DROP TRIGGER IF EXISTS telegram_welcome_notification ON profiles;
 CREATE TRIGGER telegram_welcome_notification
 AFTER UPDATE OF telegram_id ON profiles
